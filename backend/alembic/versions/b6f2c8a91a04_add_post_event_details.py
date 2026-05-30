@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.add_column("events", sa.Column("pass_packages", sa.JSON(), nullable=True))
     op.add_column("events", sa.Column("lineup", sa.JSON(), nullable=True))
-    op.add_column("events", sa.Column("after_party_enabled", sa.Boolean(), nullable=True, server_default=sa.text("0")))
+    op.add_column("events", sa.Column("after_party_enabled", sa.Boolean(), nullable=True, server_default=sa.text("false")))
     op.add_column("events", sa.Column("after_party_location", sa.String(), nullable=True))
     op.add_column("events", sa.Column("after_party_time", sa.String(), nullable=True))
 

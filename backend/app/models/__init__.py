@@ -15,10 +15,12 @@ from app.models.staff import StaffAssignment
 from app.models.ticket_purchase import TicketPurchase
 from app.models.password_reset import PasswordResetToken
 from app.models.trial_usage import TrialUsage
+from app.models.subscription import Subscription
+from app.models.community_post import CommunityPost
 
 all_models = [
     User, Event, Guest, InviteMessage, InviteBatch, QRCode, CheckIn,
     Payment, AuditLog, EventSetting, SupportTicket, Attachment,
     FlierAsset, AccreditationRequest, StaffAssignment, TicketPurchase,
-    PasswordResetToken, TrialUsage,
+    PasswordResetToken, TrialUsage, Subscription, CommunityPost,
 ]
