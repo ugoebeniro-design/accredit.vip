@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_WHATSAPP_FROM: str = ""
     RESEND_API_KEY: str = ""
+    SENDGRID_API_KEY: str = ""
+    SENDGRID_FROM_EMAIL: str = "Accredit.vip <invites@accredit.vip>"
     TERMII_API_KEY: str = ""
     AFRICASTALKING_API_KEY: str = ""
     AFRICASTALKING_USERNAME: str = ""
