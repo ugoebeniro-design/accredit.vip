@@ -51,6 +51,7 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
         phone=req.phone,
         password_hash=hash_password(req.password),
         verification_token=verification_token,
+        verification_token_expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
         verification_channel=channel,
     )
     db.add(user)
@@ -117,9 +118,12 @@ async def verify_account(req: VerifyRequest, db: AsyncSession = Depends(get_db))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or already verified token")
+    if user.verification_token_expires_at and user.verification_token_expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Verification token has expired. Request a new one.")
 
     user.is_verified = True
     user.verification_token = None
+    user.verification_token_expires_at = None
     await db.commit()
     return {"message": "Account verified successfully"}
 
@@ -134,6 +138,7 @@ async def resend_verification(
 
     verification_token = secrets.token_urlsafe(32)
     user.verification_token = verification_token
+    user.verification_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
     await db.commit()
 
     verify_link = f"{settings.FRONTEND_URL}/verify?token={verification_token}"

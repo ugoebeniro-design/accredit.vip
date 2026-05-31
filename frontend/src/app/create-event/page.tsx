@@ -440,14 +440,14 @@ export default function CreateEventPage() {
             </div>
 
             <div className="rounded-2xl border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-600">
                 Choose one to get started
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => {
-                    setMode("invite");
+                    setMode((current) => current === "invite" ? null : "invite");
                     setMessage("");
                     setError("");
                     setTrialComplete(false);
@@ -495,7 +495,7 @@ export default function CreateEventPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setMode("event");
+                    setMode((current) => current === "event" ? null : "event");
                     setForm((current) => ({ ...current, details_to_be_communicated: false }));
                     setMessage("");
                     setError("");
