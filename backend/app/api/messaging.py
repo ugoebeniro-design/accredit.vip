@@ -117,7 +117,8 @@ async def send_invites(
 
         try:
             if req.channel == "email" and guest.email:
-                ok = await send_email(guest.email, subject, html)
+                from_addr = f"{event.host_name} via Accredit.vip <noreply@wristbandsng.com>"
+                ok = await send_email(guest.email, subject, html, from_addr=from_addr)
             elif req.channel == "whatsapp" and guest.phone:
                 ok = await send_whatsapp(guest.phone, body)
             elif req.channel == "sms" and guest.phone:
