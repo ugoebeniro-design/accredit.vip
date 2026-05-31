@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     STORAGE_KEY: str = ""
     STORAGE_SECRET: str = ""
     PAYSTACK_SECRET_KEY: str = ""
+    PAYSTACK_PUBLIC_KEY: str = ""
     FLUTTERWAVE_SECRET_KEY: str = ""
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
