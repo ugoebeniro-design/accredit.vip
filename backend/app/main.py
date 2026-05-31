@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import init_db
 from app.core.rate_limit import RateLimitMiddleware
-from app.api import auth, events, guests, qr_codes, verification, payments, admin, rsvp, messaging, tickets, uploads, contact, trials, subscriptions, posts
+from app.api import auth, events, guests, qr_codes, verification, payments, admin, rsvp, messaging, tickets, uploads, contact, trials, subscriptions, posts, ai
 
 
 @asynccontextmanager
@@ -50,6 +50,7 @@ app.include_router(contact.router, prefix="/api/v1", tags=["Contact"])
 app.include_router(trials.router, prefix="/api/v1/trials", tags=["Trials"])
 app.include_router(subscriptions.router, prefix="/api/v1", tags=["Subscriptions"])
 app.include_router(posts.router, prefix="/api/v1", tags=["Community Posts"])
+app.include_router(ai.router, prefix="/api/v1/ai", tags=["AI"])
 
 
 @app.get("/api/v1/health")

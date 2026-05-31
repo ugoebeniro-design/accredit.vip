@@ -1,21 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { aiChat } from "@/lib/api/ai";
 
 type Message = {
   role: "user" | "assistant";
   text: string;
-};
-
-const FAQ: Record<string, string> = {
-  "create event": "To create an event, go to your Dashboard and click 'Create Event'. You can choose between 'Post Invite' (private) or 'Post Event' (public with ticketing).",
-  "add guests": "After creating an event, open it and use the 'Add Guest' form. You can also import guests via CSV with columns: name, phone, email.",
-  "send invites": "Use the 'Send Invites' section in your event detail page. Choose Email, WhatsApp, or SMS channel. Each guest gets an RSVP link.",
-  "ticket": "To sell tickets, create a 'Post Event' type and set a ticket price. Buyers pay via Paystack and receive a QR ticket.",
-  "qr": "Generate QR codes for each guest from the event detail page. Use the QR Verify endpoint to scan at the door.",
-  "rsvp": "Guests receive an RSVP link via their invite. They can Accept, Decline, or Maybe. You see real-time stats on the event page.",
-  "pricing": "Pricing is by delivery channel for 1-100 guests: Email is ₦100k, WhatsApp is ₦200k, and SMS is ₦300k. QR codes are included.",
-  "contact": "Use the Contact page or email support@accredit.vip. We typically respond within 24 hours.",
 };
 
 const GREETING = "Hi! I'm the Accredit.vip assistant. Ask me about creating events, managing guests, sending invites, ticketing, QR codes, or anything else!";
@@ -24,6 +14,7 @@ export function AIAssistant() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([{ role: "assistant", text: GREETING }]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [showTooltip, setShowTooltip] = useState(true);
@@ -82,28 +73,24 @@ export function AIAssistant() {
     };
   }, [dragging]);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || loading) return;
 
     const userMsg: Message = { role: "user", text };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setLoading(true);
 
-    const lower = text.toLowerCase();
-    let reply = "I'm not sure about that. Try asking about: creating events, adding guests, sending invites, ticketing, QR codes, RSVP, or pricing.";
-
-    for (const [key, answer] of Object.entries(FAQ)) {
-      if (lower.includes(key)) {
-        reply = answer;
-        break;
-      }
-    }
-
-    setTimeout(() => {
+    try {
+      const reply = await aiChat([...messages, userMsg]);
       setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
-    }, 400);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", text: "Sorry, I couldn't process that. Try again later." }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -141,7 +128,7 @@ export function AIAssistant() {
               onChange={(e) => setInput(e.target.value)}
               className="flex-1 h-9 rounded-lg border border-input bg-background px-3 py-2 text-sm"
             />
-            <button type="submit" className="h-9 px-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium">Send</button>
+              <button type="submit" disabled={loading} className="h-9 px-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50">{loading ? "..." : "Send"}</button>
           </form>
         </div>
       )}

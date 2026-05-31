@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { apiClient } from "@/lib/api-client";
+import { aiChat, generateFlier } from "@/lib/api/ai";
 
 type Mode = "invite" | "event";
 type Channel = "email" | "whatsapp" | "sms";
@@ -200,6 +201,7 @@ export default function CreateEventPage() {
     image_prompt: "",
     custom_category: "",
     generated_image_ready: false,
+    generated_image_url: "",
     description: "",
   });
   const [passPackages, setPassPackages] = useState<PassPackage[]>([
@@ -286,10 +288,10 @@ export default function CreateEventPage() {
     updateLineup(index, { headshotSource: "ai", generatedHeadshot: true, attachHeadshot: true });
   };
 
-  const generateMessage = () => {
+  const generateMessage = async () => {
     if (!hydrated || !mode) return;
     setAiGenerating(true);
-    window.setTimeout(() => {
+    try {
       const dateLine = detailsToBeCommunicated ? "to be communicated" : form.event_date || "your selected date";
       const timeLine = detailsToBeCommunicated ? "to be communicated" : form.event_time || "your selected time";
       const venueLine = detailsToBeCommunicated ? "to be communicated" : form.venue || "the venue";
@@ -314,37 +316,38 @@ export default function CreateEventPage() {
             .join(", ")} for updates.`
         : "";
 
-      const qrText =
-        form.qr_delivery === "with_qr"
-          ? " This invite includes a unique animated QR code for smooth entry."
-          : form.qr_delivery === "qr_later"
-          ? " Unique animated accreditation QR codes can be sent later with updated access details."
-          : "";
-
-      const generated =
-        mode === "event"
-          ? `Join us for ${title}, hosted by ${host}. Date: ${dateLine}. Time: ${timeLine} ${selectedTimezone.label}. Venue: ${venueLine}.${passText}${lineupText}${afterPartyText}${socialText}`
-          : `You are warmly invited to ${title}, hosted by ${host}. Date: ${dateLine}. Time: ${timeLine}. Venue: ${venueLine}.${qrText}${form.male_dress_code ? ` Male dress code: ${form.male_dress_code}.` : ""}${form.female_dress_code ? ` Female dress code: ${form.female_dress_code}.` : ""} Kindly RSVP when you receive your invitation.`;
-
-      setForm((current) => ({ ...current, description: generated }));
+      const context = `Write a warm invitation message for ${mode === "event" ? "a public event" : "a private invite"}: ${title} hosted by ${host}. Date: ${dateLine}, Time: ${timeLine}. Venue: ${venueLine}.${passText}${lineupText}${afterPartyText}${socialText}`;
+      const reply = await aiChat([{ role: "user", text: `Generate a concise but warm invitation message based on these details:\n${context}` }]);
+      setForm((current) => ({ ...current, description: reply }));
+    } catch {
+      setForm((current) => ({ ...current, description: "Unable to generate message. Please write manually." }));
+    } finally {
       setAiGenerating(false);
-    }, 450);
+    }
   };
 
-  const generateImage = () => {
+  const generateImage = async () => {
     if (!hydrated || !mode) return;
     setAiImageGenerating(true);
-    window.setTimeout(() => {
+    try {
+      const prompt = `Premium ${mode === "event" ? form.category : form.event_type} design for ${form.title || "the event"} with elegant typography and rich event atmosphere.`;
+      const url = await generateFlier(prompt);
       setForm((current) => ({
         ...current,
         media_source: "ai",
         generated_image_ready: true,
-        image_prompt:
-          current.image_prompt ||
-          `Premium ${mode === "event" ? current.category : current.event_type} design for ${current.title || "the event"} with elegant typography and rich event atmosphere.`,
+        generated_image_url: url,
+        image_prompt: current.image_prompt || prompt,
       }));
+    } catch {
+      setForm((current) => ({
+        ...current,
+        media_source: "ai",
+        generated_image_ready: true,
+      }));
+    } finally {
       setAiImageGenerating(false);
-    }, 500);
+    }
   };
 
   const runTrial = async (e: React.FormEvent) => {
@@ -1238,14 +1241,17 @@ export default function CreateEventPage() {
 
               <div className="mt-8 overflow-hidden rounded-xl bg-white text-[#07182f]">
                 <div
-                  className="flex min-h-48 flex-col justify-end p-5 text-white"
+                  className="flex min-h-48 flex-col justify-end p-5 text-white bg-cover bg-center"
                   style={{
                     background:
-                      form.media_source === "ai" && form.generated_image_ready
+                      form.generated_image_url
+                        ? `linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.2)), url(${form.generated_image_url})`
+                        : form.media_source === "ai" && form.generated_image_ready
                         ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
                         : form.uploaded_image_name
                         ? "linear-gradient(135deg, #20304a 0%, #6d254f 55%, #0f172a 100%)"
                         : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)",
+                    backgroundSize: form.generated_image_url ? "cover" : undefined,
                   }}
                 >
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-white/68">
