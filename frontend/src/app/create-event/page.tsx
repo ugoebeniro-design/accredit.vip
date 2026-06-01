@@ -46,12 +46,14 @@ const DEFAULT_FORM = {
   generated_image_url: "",
   description: "",
   qr_message: "",
+  invite_template: "elegant" as InviteTemplate,
 };
 
 type Mode = "invite" | "event";
 type Channel = "email" | "whatsapp" | "sms";
 type QrDeliveryOption = "with_qr" | "without_qr" | "qr_later";
 type SocialPlatform = "instagram" | "x" | "facebook" | "tiktok" | "linkedin" | "website" | "other";
+type InviteTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate";
 type SocialHandle = { platform: SocialPlatform; handle: string };
 type PassPackage = { name: string; price: string };
 type LineupPerson = {
@@ -101,6 +103,14 @@ const socialPlatforms: Array<{ value: SocialPlatform; label: string; placeholder
   { value: "linkedin", label: "LinkedIn", placeholder: "linkedin.com/company/yourbrand" },
   { value: "website", label: "Website", placeholder: "https://yourwebsite.com" },
   { value: "other", label: "Other", placeholder: "Handle or link" },
+];
+
+const inviteTemplates: Array<{ value: InviteTemplate; label: string; description: string; icon: string }> = [
+  { value: "elegant", label: "Elegant", description: "Classic, sophisticated look with refined fonts", icon: "✨" },
+  { value: "bold", label: "Bold", description: "Eye-catching with vibrant colors and modern style", icon: "⚡" },
+  { value: "minimal", label: "Minimal", description: "Clean and simple with plenty of white space", icon: "◻️" },
+  { value: "vibrant", label: "Vibrant", description: "Fun and colorful with playful design", icon: "🎨" },
+  { value: "corporate", label: "Corporate", description: "Professional business-ready style", icon: "💼" },
 ];
 
 const guestRanges = [
@@ -1172,6 +1182,29 @@ export default function CreateEventPage() {
                           />
                           <span>{channelLabels[channel]}</span>
                           <span className="ml-auto text-xs text-[#94a3b8]">{formatNaira(pricing[channel])}/100</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
+                    <legend className="px-2 text-sm font-semibold text-[#23466f]">Invitation template</legend>
+                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-5">
+                      {inviteTemplates.map((template) => (
+                        <label key={template.value} className={`flex cursor-pointer flex-col gap-2 rounded-xl border-2 p-3 text-sm transition-all ${
+                          form.invite_template === template.value
+                            ? "border-[#E91E8C] bg-pink-50"
+                            : "border-[#edf2f7] bg-white hover:border-[#E91E8C]/50"
+                        }`}>
+                          <span className="text-2xl text-center">{template.icon}</span>
+                          <span className="font-bold text-[#23466f]">{template.label}</span>
+                          <span className="text-xs leading-4 text-[#64748b]">{template.description}</span>
+                          <input
+                            type="radio"
+                            checked={form.invite_template === template.value}
+                            onChange={() => setForm({ ...form, invite_template: template.value })}
+                            className="h-4 w-4 accent-[#E91E8C] mt-2"
+                          />
                         </label>
                       ))}
                     </div>
