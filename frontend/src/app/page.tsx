@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { EventsCarousel } from "@/components/shared/events-carousel";
+import { GetStartedGuide } from "@/components/shared/get-started-guide";
 
 export const metadata = {
   title: "accredit.vip — Premium Event Infrastructure for Africa",
@@ -1166,6 +1167,7 @@ export default function HomePage() {
         </div>
       </section>
 
+      <GetStartedGuide />
       <Footer />
     </div>
   );

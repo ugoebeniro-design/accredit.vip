@@ -102,7 +102,7 @@ async def use_trial(
         "message": "Trial used. Create an account to continue.",
     }
 
-    # Handle invite trial - send preview email
+    # Handle invite trial - generate and send flyer via all channels
     if req.trial_type == "invite":
         test_email = req.payload.get("test_email")
         if not test_email:
@@ -116,92 +116,58 @@ async def use_trial(
         delivery_channels = req.payload.get("delivery_channels", [])
         guest_count = req.payload.get("guest_count", "100+")
 
-        # Generate HTML for test invite email
-        html = f"""
-        <html>
-        <head>
-            <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif; color: #333; background: #f5f5f5; margin: 0; padding: 20px; }}
-                .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-                .header {{ background: linear-gradient(135deg, #E91E8C 0%, #d0147a 100%); color: white; padding: 40px 20px; text-align: center; }}
-                .header h1 {{ margin: 0; font-size: 28px; font-weight: bold; }}
-                .content {{ padding: 40px 20px; }}
-                .section {{ margin-bottom: 30px; }}
-                .label {{ color: #999; font-size: 12px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }}
-                .value {{ margin-top: 8px; font-size: 16px; font-weight: 500; color: #0D1B2A; }}
-                .channels {{ margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }}
-                .channel-badge {{ background: #f0f0f0; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: #666; }}
-                .footer {{ background: #f8f9fc; padding: 20px; text-align: center; color: #999; font-size: 12px; }}
-                .warning {{ background: #fff9e6; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }}
-                .warning-text {{ font-size: 13px; color: #856404; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>{title}</h1>
-                    <p style="margin: 10px 0 0 0; opacity: 0.9;">This is a test preview</p>
-                </div>
-                <div class="content">
-                    <div class="section">
-                        <div class="label">Host</div>
-                        <div class="value">{host_name}</div>
-                    </div>
-                    <div class="section">
-                        <div class="label">Date & Time</div>
-                        <div class="value">{event_date} at {event_time}</div>
-                    </div>
-                    <div class="section">
-                        <div class="label">Expected Guests</div>
-                        <div class="value">{guest_count}</div>
-                    </div>
-                    <div class="section">
-                        <div class="label">Will be delivered via</div>
-                        <div class="channels">
-                            {" ".join([f'<div class="channel-badge">{ch.upper()}</div>' for ch in delivery_channels])}
-                        </div>
-                    </div>
-                    <div class="section">
-                        <div class="label">Message</div>
-                        <div class="value">{description}</div>
-                    </div>
-                    <div class="warning">
-                        <div class="warning-text">
-                            <strong>This is a TEST preview.</strong> Your real invites won't be sent until you create an account and configure your guest list.
-                        </div>
-                    </div>
-                </div>
-                <div class="footer">
-                    <p>This is a preview of your test invitation sent by Accredit.vip</p>
-                    <p>Create an account to save your setup and send real invitations to your guest list.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
+        # Generate invitation flyer image
+        flyer_prompt = f'Premium invitation flyer for "{title}" hosted by {host_name}. Date: {event_date} at {event_time}. Guests: {guest_count}. Message: {description}. Beautiful, eye-catching design optimized for mobile phones. Include all event details visible at a glance.'
+        flyer_url = await generate_flier_image(flyer_prompt)
 
-        # Send test invite via all selected channels
+        if not flyer_url:
+            raise HTTPException(status_code=500, detail="Could not generate invitation flyer. Please try again.")
+
+        # Send test invite flyer via all selected channels
         sent_channels = []
 
-        # Send via email
+        # Send via email - include flyer image
         if "email" in delivery_channels:
-            await send_email(test_email, f"TEST PREVIEW: {title} - Invitation Preview", html)
+            html = f"""
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+                    .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+                    .flyer {{ width: 100%; max-width: 500px; }}
+                    .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #999; background: #f8f9fc; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <img src="{flyer_url}" alt="{title}" class="flyer" />
+                    <div class="footer">
+                        <p><strong>This is a TEST invitation preview</strong></p>
+                        <p>This is how your guests will see your invitation when you send it for real.</p>
+                        <p>Create an account at Accredit.vip to send real invitations to your guest list.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            await send_email(test_email, f"Your Test Invitation: {title}", html)
             sent_channels.append("Email")
 
-        # Send via WhatsApp
+        # Send via WhatsApp - share flyer image
         if "whatsapp" in delivery_channels:
-            whatsapp_text = f"TEST PREVIEW: {title}\n\nHost: {host_name}\nDate & Time: {event_date} at {event_time}\n\n{description}\n\n[This is a test preview sent by Accredit.vip]"
-            await send_whatsapp(test_email, whatsapp_text)
+            whatsapp_msg = f"🎉 {title}\n\nYou're invited! 👇\n\n[See attached flyer image for all details]\n\nHost: {host_name}\n{event_date} at {event_time}\n\n—\nThis is a test preview by Accredit.vip"
+            await send_whatsapp(test_email, whatsapp_msg)
             sent_channels.append("WhatsApp")
 
-        # Send via SMS
+        # Send via SMS - include link/message about flyer
         if "sms" in delivery_channels:
-            sms_text = f"[Accredit.vip TEST] {title} by {host_name}. {event_date} at {event_time}. {description[:60]}... Reply or create account to continue."
-            await send_sms(test_email, sms_text)
+            sms_msg = f"🎉 {title} - You're invited by {host_name}! {event_date} at {event_time}. Check email/WhatsApp for full invitation flyer. Test by Accredit.vip"
+            await send_sms(test_email, sms_msg)
             sent_channels.append("SMS")
 
         response["sent_to"] = test_email
         response["sent_via"] = ", ".join(sent_channels) if sent_channels else "All channels"
+        response["flyer_url"] = flyer_url
 
     # Handle event trial - generate flier preview
     elif req.trial_type == "event":

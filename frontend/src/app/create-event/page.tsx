@@ -309,6 +309,9 @@ export default function CreateEventPage() {
   // Event preview modal for test events
   const [eventPreviewUrl, setEventPreviewUrl] = useState<string | null>(null);
 
+  // Invitation flyer preview modal
+  const [inviteFlyer, setInviteFlyer] = useState<string | null>(null);
+
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const autoResize = useCallback(() => {
     const el = descriptionRef.current;
@@ -592,7 +595,7 @@ export default function CreateEventPage() {
     setEmailModalOpen(false);
 
     try {
-      const result = await apiClient<{ flier_url?: string; sent_to?: string; sent_via?: string }>("/trials/use", {
+      const result = await apiClient<{ flier_url?: string; sent_to?: string; sent_via?: string; flyer_url?: string }>("/trials/use", {
         method: "POST",
         body: {
           trial_type: mode,
@@ -621,7 +624,12 @@ export default function CreateEventPage() {
         setMessage("Event flier preview generated! Here's what your event will look like on Discover Events:");
       } else if (mode === "invite" && result.sent_to) {
         const viaText = result.sent_via ? ` via ${result.sent_via}` : "";
-        setMessage(`✓ Test invite sent to ${result.sent_to}${viaText}. Check your messages to see exactly how it looks. Create an account to send real invites to your guest list.`);
+        if (result.flyer_url) {
+          setInviteFlyer(result.flyer_url);
+          setMessage(`✓ Test invitation flyer sent to ${result.sent_to}${viaText}. Here's the beautiful invitation your guests will see:`);
+        } else {
+          setMessage(`✓ Test invite sent to ${result.sent_to}${viaText}. Check your messages to see the invitation flyer. Create an account to send real invites to your guest list.`);
+        }
       } else {
         setMessage(mode === "event"
           ? "Event preview ready. Create an account to publish to Discover Events."
@@ -1882,6 +1890,38 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                 className="flex-1 px-4 py-3 bg-[#E91E8C] text-white rounded-xl text-sm font-bold hover:bg-[#d0147a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {submitting ? "Sending..." : "Send Preview"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invitation Flyer Preview Modal */}
+      {inviteFlyer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="rounded-2xl bg-white max-w-md w-full shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-[#e8edf2]">
+              <h2 className="text-2xl font-bold text-[#0D1B2A]">Invitation Flyer</h2>
+              <button
+                onClick={() => setInviteFlyer(null)}
+                className="text-gray-400 hover:text-[#0D1B2A] transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <p className="text-sm text-gray-600 mb-4">This beautiful flyer is exactly what your guests will see when you send them invitations. Everything they need is visible at a glance on their phone!</p>
+              <img src={inviteFlyer} alt="Invitation Flyer" className="w-full rounded-xl shadow-lg" />
+            </div>
+            <div className="p-6 border-t border-[#e8edf2] bg-[#f8f9fc]">
+              <p className="text-sm text-gray-600 mb-4">Ready to send real invitations? Create an account to set up your guest list and start sending.</p>
+              <button
+                onClick={() => setInviteFlyer(null)}
+                className="w-full px-4 py-3 bg-[#E91E8C] text-white rounded-xl font-bold hover:bg-[#d0147a] transition-colors"
+              >
+                Create Account
               </button>
             </div>
           </div>
