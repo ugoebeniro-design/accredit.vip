@@ -116,8 +116,9 @@ async def use_trial(
         description = req.payload.get("description", "Join us for an unforgettable experience!")
         delivery_channels = req.payload.get("delivery_channels", [])
         guest_count = req.payload.get("guest_count", "100+")
-        invite_template = req.payload.get("invite_template", "elegant")
+        invite_template = req.payload.get("invite_template")
         qr_delivery = req.payload.get("qr_delivery", "with_qr")
+        qr_style = req.payload.get("qr_style", "pulsing")
 
         # Define template-specific prompts
         template_prompts = {
@@ -128,10 +129,12 @@ async def use_trial(
             "corporate": f'Professional corporate invitation for "{title}". Business-ready style, clean layout, formal appearance.',
         }
 
-        prompt = template_prompts.get(
-            invite_template,
-            f'Premium invitation flyer for "{title}" hosted by {host_name}. Date: {event_date} at {event_time}. Beautiful design optimized for mobile phones.',
-        )
+        # Use template prompt if selected, otherwise use default
+        if invite_template and invite_template in template_prompts:
+            prompt = template_prompts[invite_template]
+        else:
+            prompt = f'Premium invitation flyer for "{title}" hosted by {host_name}. Date: {event_date} at {event_time}. Beautiful design optimized for mobile phones.'
+
         prompt += f" Include all event details visible at a glance. Message: {description}"
 
         # Generate invitation flyer image based on template
@@ -145,7 +148,8 @@ async def use_trial(
         if qr_delivery in ["with_qr", "qr_later"]:
             # Create a unique QR code for this test (includes test data)
             qr_data = f"accredit://invite/test/{int(datetime.now().timestamp())}"
-            animated_qr_url = qr_gif_to_base64(qr_data, size=250)
+            # Pass the QR style to the generation function
+            animated_qr_url = qr_gif_to_base64(qr_data, size=250, style=qr_style)
 
         # Send test invite flyer via all selected channels
         sent_channels = []

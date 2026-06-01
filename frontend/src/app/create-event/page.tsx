@@ -46,7 +46,9 @@ const DEFAULT_FORM = {
   generated_image_url: "",
   description: "",
   qr_message: "",
-  invite_template: "elegant" as InviteTemplate,
+  invite_template: "elegant" as InviteTemplate | null,
+  qr_style: "pulsing" as QRStyle,
+  event_template: "elegant" as EventTemplate,
 };
 
 type Mode = "invite" | "event";
@@ -54,6 +56,8 @@ type Channel = "email" | "whatsapp" | "sms";
 type QrDeliveryOption = "with_qr" | "without_qr" | "qr_later";
 type SocialPlatform = "instagram" | "x" | "facebook" | "tiktok" | "linkedin" | "website" | "other";
 type InviteTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate";
+type QRStyle = "pulsing" | "rotating" | "gradient" | "neon" | "bounce";
+type EventTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate";
 type SocialHandle = { platform: SocialPlatform; handle: string };
 type PassPackage = { name: string; price: string };
 type LineupPerson = {
@@ -105,12 +109,137 @@ const socialPlatforms: Array<{ value: SocialPlatform; label: string; placeholder
   { value: "other", label: "Other", placeholder: "Handle or link" },
 ];
 
-const inviteTemplates: Array<{ value: InviteTemplate; label: string; description: string; icon: string }> = [
-  { value: "elegant", label: "Elegant", description: "Classic, sophisticated look with refined fonts", icon: "✨" },
-  { value: "bold", label: "Bold", description: "Eye-catching with vibrant colors and modern style", icon: "⚡" },
-  { value: "minimal", label: "Minimal", description: "Clean and simple with plenty of white space", icon: "◻️" },
-  { value: "vibrant", label: "Vibrant", description: "Fun and colorful with playful design", icon: "🎨" },
-  { value: "corporate", label: "Corporate", description: "Professional business-ready style", icon: "💼" },
+const inviteTemplates: Array<{
+  value: InviteTemplate | null;
+  label: string;
+  description: string;
+  bestFor: string;
+  icon: (props: any) => React.ReactNode
+}> = [
+  {
+    value: null,
+    label: "Use My Own",
+    description: "No template - use your custom design",
+    bestFor: "Custom, branded invitations",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    value: "elegant",
+    label: "Elegant",
+    description: "Classic, sophisticated, timeless",
+    bestFor: "Weddings, formal galas, upscale events",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2.293-2.293a1 1 0 00-1.414 0L10 12.586 5.707 8.293a1 1 0 00-1.414 0L2 10.586V19a2 2 0 002 2h16a2 2 0 002-2V7z" />
+      </svg>
+    ),
+  },
+  {
+    value: "bold",
+    label: "Bold",
+    description: "Vibrant, energetic, eye-catching",
+    bestFor: "Concerts, festivals, nightlife, parties",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
+  {
+    value: "minimal",
+    label: "Minimal",
+    description: "Clean, simple, plenty of breathing room",
+    bestFor: "Corporate events, conferences, seminars",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
+      </svg>
+    ),
+  },
+  {
+    value: "vibrant",
+    label: "Vibrant",
+    description: "Fun, colorful, playful, modern",
+    bestFor: "Birthdays, celebrations, social events",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+      </svg>
+    ),
+  },
+  {
+    value: "corporate",
+    label: "Corporate",
+    description: "Professional, business-ready",
+    bestFor: "Business meetings, professional events",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5.217m0 0a9.01 9.01 0 00-5.566 0m5.566 0A8.973 8.973 0 0019 21m0 0h2" />
+      </svg>
+    ),
+  },
+];
+
+const qrStyles: Array<{ value: string; label: string; description: string; bestFor: string; icon: (props: any) => React.ReactNode }> = [
+  {
+    value: "pulsing",
+    label: "Pulsing",
+    description: "Subtle glow with pulsing animation",
+    bestFor: "Elegant, premium feel",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  {
+    value: "rotating",
+    label: "Rotating",
+    description: "Spinning QR with rotation effect",
+    bestFor: "Dynamic, attention-grabbing",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+    ),
+  },
+  {
+    value: "gradient",
+    label: "Gradient",
+    description: "Color shift animation",
+    bestFor: "Modern, vibrant events",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+      </svg>
+    ),
+  },
+  {
+    value: "neon",
+    label: "Neon",
+    description: "Bright neon glow effect",
+    bestFor: "Nightlife, parties, concerts",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
+  {
+    value: "bounce",
+    label: "Bounce",
+    description: "Bouncing/scaling animation",
+    bestFor: "Fun, playful events",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+      </svg>
+    ),
+  },
 ];
 
 const guestRanges = [
@@ -905,6 +1034,49 @@ export default function CreateEventPage() {
                 </div>
               )}
 
+              {/* Event template selection — POST EVENT only */}
+              {mode === "event" && (
+                <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
+                  <legend className="px-2 text-sm font-semibold text-[#23466f]">Event flyer style</legend>
+                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                    {inviteTemplates.filter(t => t.value !== null).map((template) => (
+                      <div
+                        key={String(template.value)}
+                        onClick={() => setForm({ ...form, event_template: template.value as EventTemplate })}
+                        className={`flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 transition-all ${
+                          form.event_template === template.value
+                            ? "border-[#E91E8C] bg-pink-50 ring-2 ring-[#E91E8C]/20"
+                            : "border-[#edf2f7] bg-white hover:border-[#E91E8C]/50"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-1">
+                            {typeof template.icon === 'function' && (
+                              <div className="h-8 w-8 text-[#E91E8C] flex-shrink-0">
+                                {template.icon({ className: "w-full h-full" })}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-[#23466f]">{template.label}</p>
+                              <p className="text-xs text-[#64748b] leading-4 mt-1">{template.description}</p>
+                            </div>
+                          </div>
+                          <input
+                            type="radio"
+                            checked={form.event_template === template.value}
+                            onChange={() => {}}
+                            className="h-4 w-4 accent-[#E91E8C] flex-shrink-0 mt-1"
+                          />
+                        </div>
+                        <p className="text-xs font-semibold text-[#E91E8C] px-2 py-1.5 bg-pink-100/50 rounded-lg">
+                          Best for: {template.bestFor}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2">
                   <span className="text-sm font-semibold text-[#23466f]">
@@ -1188,27 +1360,76 @@ export default function CreateEventPage() {
                   </fieldset>
 
                   <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
-                    <legend className="px-2 text-sm font-semibold text-[#23466f]">Invitation template</legend>
-                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-5">
+                    <legend className="px-2 text-sm font-semibold text-[#23466f]">Invitation template style</legend>
+                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                       {inviteTemplates.map((template) => (
-                        <label key={template.value} className={`flex cursor-pointer flex-col gap-2 rounded-xl border-2 p-3 text-sm transition-all ${
-                          form.invite_template === template.value
-                            ? "border-[#E91E8C] bg-pink-50"
-                            : "border-[#edf2f7] bg-white hover:border-[#E91E8C]/50"
-                        }`}>
-                          <span className="text-2xl text-center">{template.icon}</span>
-                          <span className="font-bold text-[#23466f]">{template.label}</span>
-                          <span className="text-xs leading-4 text-[#64748b]">{template.description}</span>
-                          <input
-                            type="radio"
-                            checked={form.invite_template === template.value}
-                            onChange={() => setForm({ ...form, invite_template: template.value })}
-                            className="h-4 w-4 accent-[#E91E8C] mt-2"
-                          />
-                        </label>
+                        <div
+                          key={String(template.value)}
+                          onClick={() => setForm({ ...form, invite_template: template.value as InviteTemplate | null })}
+                          className={`flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 transition-all ${
+                            form.invite_template === template.value
+                              ? "border-[#E91E8C] bg-pink-50 ring-2 ring-[#E91E8C]/20"
+                              : "border-[#edf2f7] bg-white hover:border-[#E91E8C]/50"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3 flex-1">
+                              {typeof template.icon === 'function' && (
+                                <div className="h-8 w-8 text-[#E91E8C] flex-shrink-0">
+                                  {template.icon({ className: "w-full h-full" })}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-[#23466f]">{template.label}</p>
+                                <p className="text-xs text-[#64748b] leading-4 mt-1">{template.description}</p>
+                              </div>
+                            </div>
+                            <input
+                              type="radio"
+                              checked={form.invite_template === template.value}
+                              onChange={() => {}}
+                              className="h-4 w-4 accent-[#E91E8C] flex-shrink-0 mt-1"
+                            />
+                          </div>
+                          <p className="text-xs font-semibold text-[#E91E8C] px-2 py-1.5 bg-pink-100/50 rounded-lg">
+                            Best for: {template.bestFor}
+                          </p>
+                        </div>
                       ))}
                     </div>
                   </fieldset>
+
+                  {form.qr_delivery === "with_qr" && (
+                    <fieldset className="rounded-xl border border-[#d9e2ec] p-4 bg-[#f8f9fc]">
+                      <legend className="px-2 text-sm font-semibold text-[#23466f]">Animated QR code style</legend>
+                      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-5">
+                        {qrStyles.map((style) => (
+                          <div
+                            key={style.value}
+                            onClick={() => setForm({ ...form, qr_style: style.value as QRStyle })}
+                            className={`flex cursor-pointer flex-col gap-2 rounded-xl border-2 p-3 text-sm transition-all ${
+                              form.qr_style === style.value
+                                ? "border-[#E91E8C] bg-pink-50 ring-2 ring-[#E91E8C]/20"
+                                : "border-[#edf2f7] bg-white hover:border-[#E91E8C]/50"
+                            }`}
+                          >
+                            <div className="h-8 w-8 text-[#E91E8C]">
+                              {style.icon({ className: "w-full h-full" })}
+                            </div>
+                            <p className="font-bold text-[#23466f]">{style.label}</p>
+                            <p className="text-xs text-[#64748b] leading-4">{style.description}</p>
+                            <p className="text-xs font-semibold text-[#E91E8C] mt-1">{style.bestFor}</p>
+                            <input
+                              type="radio"
+                              checked={form.qr_style === style.value}
+                              onChange={() => {}}
+                              className="h-4 w-4 accent-[#E91E8C] mt-2"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </fieldset>
+                  )}
 
                   <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
                     <legend className="px-2 text-sm font-semibold text-[#23466f]">QR code option</legend>
