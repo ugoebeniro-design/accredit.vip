@@ -1,14 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { apiClient } from "@/lib/api-client";
-import { aiChat, generateFlier } from "@/lib/api/ai";
+import { aiChat, generateFlier, parseFlier } from "@/lib/api/ai";
 
 const DRAFT_KEY = "accredit_event_draft";
+const DRAFT_KEYS: Record<string, string> = { invite: "accredit_draft_invite", event: "accredit_draft_event" };
+
+const DEFAULT_FORM = {
+  title: "",
+  host_name: "",
+  event_type: "wedding",
+  category: "concert",
+  event_date: "",
+  event_time: "",
+  details_to_be_communicated: false,
+  timezone: "Africa/Lagos|WAT",
+  venue: "",
+  after_party_enabled: false,
+  after_party_location: "",
+  after_party_time: "",
+  guest_range: "1 - 100",
+  delivery_channels: ["whatsapp"] as Channel[],
+  qr_delivery: "with_qr" as QrDeliveryOption,
+  qr_later_title: "",
+  qr_later_message: "",
+  qr_later_media_source: "upload" as "upload" | "ai",
+  qr_later_image_name: "",
+  qr_later_image_prompt: "",
+  male_dress_code: "",
+  female_dress_code: "",
+  gate_fee: "",
+  headliners: "",
+  social_platform: "instagram" as SocialPlatform,
+  social_handle: "",
+  media_source: "upload" as "upload" | "ai",
+  uploaded_image_name: "",
+  image_prompt: "",
+  custom_category: "",
+  generated_image_ready: false,
+  generated_image_url: "",
+  description: "",
+  qr_message: "",
+};
 
 type Mode = "invite" | "event";
 type Channel = "email" | "whatsapp" | "sms";
@@ -159,6 +197,66 @@ function openEditableTimeDropdown(id: string) {
   input?.showPicker?.();
 }
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function formatDisplayDate(isoDate: string): string {
+  if (!isoDate) return "";
+  const [y, m, d] = isoDate.split("-").map(Number);
+  if (!y || !m || !d) return "";
+  const date = new Date(y, m - 1, d);
+  const weekday = date.toLocaleDateString("en-US", { weekday: "long" });
+  const monthName = MONTHS[date.getMonth()];
+  const ordinal = d % 10 === 1 && d !== 11 ? "st" : d % 10 === 2 && d !== 12 ? "nd" : d % 10 === 3 && d !== 13 ? "rd" : "th";
+  return `${weekday} ${d}${ordinal} ${monthName}, ${y}`;
+}
+
+function parseDateParts(isoDate: string) {
+  if (!isoDate) return { day: "", month: "", year: "" };
+  const [y, m, d] = isoDate.split("-");
+  return { day: d || "", month: m || "", year: y || "" };
+}
+
+
+function dataUriToBlob(dataUri: string): Blob {
+  const [meta, base64] = dataUri.split(",");
+  const mime = meta?.match(/:(.*?);/)?.[1] || "image/png";
+  const bytes = atob(base64);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+function resizeImage(file: File, maxW: number, maxH: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width <= maxW && height <= maxH) {
+        resolve(file);
+        return;
+      }
+      const ratio = Math.min(maxW / width, maxH / height);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(file); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else resolve(file);
+      }, file.type);
+    };
+    img.onerror = () => resolve(file);
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 export default function CreateEventPage() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [fingerprint, setFingerprint] = useState("");
@@ -167,45 +265,13 @@ export default function CreateEventPage() {
   const [submitting, setSubmitting] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiImageGenerating, setAiImageGenerating] = useState(false);
+  const [uploadedImagePreviewUrl, setUploadedImagePreviewUrl] = useState<string | null>(null);
+  const [uploadedImageData, setUploadedImageData] = useState<string | null>(null);
   const [venueSuggestionsOpen, setVenueSuggestionsOpen] = useState(false);
   const [trialComplete, setTrialComplete] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    title: "",
-    host_name: "",
-    event_type: "wedding",
-    category: "concert",
-    event_date: "",
-    event_time: "",
-    details_to_be_communicated: false,
-    timezone: "Africa/Lagos|WAT",
-    venue: "",
-    after_party_enabled: false,
-    after_party_location: "",
-    after_party_time: "",
-    guest_range: "1 - 100",
-    delivery_channels: ["whatsapp"] as Channel[],
-    qr_delivery: "with_qr" as QrDeliveryOption,
-    qr_later_title: "",
-    qr_later_message: "",
-    qr_later_media_source: "upload" as "upload" | "ai",
-    qr_later_image_name: "",
-    qr_later_image_prompt: "",
-    male_dress_code: "",
-    female_dress_code: "",
-    gate_fee: "",
-    headliners: "",
-    social_platform: "instagram" as SocialPlatform,
-    social_handle: "",
-    media_source: "upload" as "upload" | "ai",
-    uploaded_image_name: "",
-    image_prompt: "",
-    custom_category: "",
-    generated_image_ready: false,
-    generated_image_url: "",
-    description: "",
-  });
+  const [form, setForm] = useState({ ...DEFAULT_FORM });
   const [passPackages, setPassPackages] = useState<PassPackage[]>([
     { name: "Regular", price: "" },
   ]);
@@ -214,7 +280,7 @@ export default function CreateEventPage() {
   ]);
   const [lineup, setLineup] = useState<LineupPerson[]>([
     {
-      role: "Keynote Speaker",
+      role: "",
       name: "",
       attachHeadshot: true,
       headshotSource: "upload",
@@ -222,9 +288,41 @@ export default function CreateEventPage() {
       generatedHeadshot: false,
     },
   ]);
+  // Date picker parts — tracked independently so partial selections aren't lost
+  const [dayPart, setDayPart] = useState("");
+  const [monthPart, setMonthPart] = useState("");
+  const [yearPart, setYearPart] = useState("");
+
+  // AI image generation error
+  const [aiImageError, setAiImageError] = useState("");
+
+  // Flier upload / parse state
+  const [flierParsing, setFlierParsing] = useState(false);
+  const [flierPreview, setFlierPreview] = useState<string | null>(null);
+  const [flierParsed, setFlierParsed] = useState(false);
+  const [flierParseError, setFlierParseError] = useState("");
+
+  // Email input modal for test invites
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+
+  // Event preview modal for test events
+  const [eventPreviewUrl, setEventPreviewUrl] = useState<string | null>(null);
+
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const autoResize = useCallback(() => {
+    const el = descriptionRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+  }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem(DRAFT_KEY);
+    const savedMode = localStorage.getItem("accredit_last_mode") as Mode | null;
+    if (savedMode) setMode(savedMode);
+    const key = DRAFT_KEYS[savedMode || "invite"];
+    const saved = localStorage.getItem(key);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -232,6 +330,16 @@ export default function CreateEventPage() {
         if (parsed.passPackages) setPassPackages(parsed.passPackages);
         if (parsed.socialHandles) setSocialHandles(parsed.socialHandles);
         if (parsed.lineup) setLineup(parsed.lineup);
+        if (parsed.uploadedImageData) {
+          setUploadedImageData(parsed.uploadedImageData);
+          setUploadedImagePreviewUrl(URL.createObjectURL(dataUriToBlob(parsed.uploadedImageData)));
+        }
+        if (parsed.form?.event_date) {
+          const parts = parseDateParts(parsed.form.event_date);
+          setDayPart(String(parseInt(parts.day || "0", 10)) || "");
+          setMonthPart(parts.month || "");
+          setYearPart(parts.year || "");
+        }
       } catch {}
     }
     const timer = window.setTimeout(() => {
@@ -242,12 +350,19 @@ export default function CreateEventPage() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !mode) return;
     const timer = setTimeout(() => {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, passPackages, socialHandles, lineup }));
+      localStorage.setItem(DRAFT_KEYS[mode], JSON.stringify({ form, passPackages, socialHandles, lineup, uploadedImageData }));
+      localStorage.setItem("accredit_last_mode", mode);
     }, 300);
     return () => clearTimeout(timer);
-  }, [form, passPackages, socialHandles, lineup, hydrated]);
+  }, [form, passPackages, socialHandles, lineup, uploadedImageData, mode, hydrated]);
+
+  useEffect(() => {
+    return () => {
+      if (uploadedImagePreviewUrl) URL.revokeObjectURL(uploadedImagePreviewUrl);
+    };
+  }, [uploadedImagePreviewUrl]);
 
   useEffect(() => {
     if (!fingerprint) return;
@@ -290,7 +405,7 @@ export default function CreateEventPage() {
   const detailsToBeCommunicated = mode === "invite" && form.details_to_be_communicated;
   const visibleSocialHandles = socialHandles.filter((item) => item.handle.trim());
   const visiblePassPackages = passPackages.filter((item) => item.name.trim() || item.price.trim());
-  const visibleLineup = lineup.filter((item) => item.role.trim() || item.name.trim());
+  const visibleLineup = lineup.filter((item) => item.role.trim() && item.name.trim());
 
   const updatePassPackage = (index: number, next: Partial<PassPackage>) => {
     setPassPackages((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...next } : item)));
@@ -308,11 +423,76 @@ export default function CreateEventPage() {
     updateLineup(index, { headshotSource: "ai", generatedHeadshot: true, attachHeadshot: true });
   };
 
+  const handleFlierUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFlierParseError("");
+    setFlierParsed(false);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setFlierPreview(dataUrl);
+      setFlierParsing(true);
+      try {
+        const result = await parseFlier(dataUrl, file.type) as Record<string, unknown>;
+
+        const str = (v: unknown) => (typeof v === "string" ? v : "");
+        const num = (v: unknown) => (typeof v === "number" ? v : 0);
+
+        setForm((prev) => ({
+          ...prev,
+          title: str(result.title) || prev.title,
+          host_name: str(result.host_name) || prev.host_name,
+          venue: str(result.venue) || prev.venue,
+          male_dress_code: str(result.dress_code) || prev.male_dress_code,
+          description: str(result.description) || prev.description,
+          category: str(result.category) || prev.category,
+          gate_fee: num(result.ticket_price) > 0 ? String(result.ticket_price) : prev.gate_fee,
+          event_time: str(result.event_time) || prev.event_time,
+          after_party_enabled: !!(result.after_party_location) || prev.after_party_enabled,
+          after_party_location: str(result.after_party_location) || prev.after_party_location,
+          after_party_time: str(result.after_party_time) || prev.after_party_time,
+        }));
+
+        // Sync date parts if a date was extracted
+        const rawDate = str(result.event_date);
+        if (rawDate) {
+          const parts = parseDateParts(rawDate);
+          const d = String(parseInt(parts.day || "0", 10));
+          if (d && d !== "0") { setDayPart(d); setMonthPart(parts.month); setYearPart(parts.year); }
+          setForm((prev) => ({ ...prev, event_date: rawDate }));
+        }
+
+        if (Array.isArray(result.lineup) && result.lineup.length > 0) {
+          setLineup(result.lineup.map((p: { role?: string; name?: string }) => ({
+            role: p.role || "", name: p.name || "",
+            attachHeadshot: false, headshotSource: "upload" as const, headshotFileName: "", generatedHeadshot: false,
+          })));
+        }
+        if (Array.isArray(result.pass_packages) && result.pass_packages.length > 0) {
+          setPassPackages(result.pass_packages.map((p: { name?: string; price?: string }) => ({
+            name: p.name || "", price: p.price || "",
+          })));
+        }
+
+        setFlierParsed(true);
+        if (!mode) setMode("event");
+      } catch {
+        setFlierParseError("Could not read your flier. Fill in the details below manually.");
+        if (!mode) setMode("event");
+      } finally {
+        setFlierParsing(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const generateMessage = async () => {
     if (!hydrated || !mode) return;
     setAiGenerating(true);
     try {
-      const dateLine = detailsToBeCommunicated ? "to be communicated" : form.event_date || "your selected date";
+      const dateLine = detailsToBeCommunicated ? "to be communicated" : formatDisplayDate(form.event_date) || "your selected date";
       const timeLine = detailsToBeCommunicated ? "to be communicated" : form.event_time || "your selected time";
       const venueLine = detailsToBeCommunicated ? "to be communicated" : form.venue || "the venue";
       const title = form.title || (mode === "event" ? "our upcoming event" : "our special celebration");
@@ -336,9 +516,17 @@ export default function CreateEventPage() {
             .join(", ")} for updates.`
         : "";
 
-      const context = `Write a warm invitation message for ${mode === "event" ? "a public event" : "a private invite"}: ${title} hosted by ${host}. Date: ${dateLine}, Time: ${timeLine}. Venue: ${venueLine}.${passText}${lineupText}${afterPartyText}${socialText}`;
-      const reply = await aiChat([{ role: "user", text: `Generate a concise but warm invitation message based on these details:\n${context}` }]);
-      setForm((current) => ({ ...current, description: reply }));
+      if (mode === "event") {
+        const categoryText = form.category ? ` Category: ${form.category}.` : "";
+        const dressText = form.male_dress_code ? ` Dress code: ${form.male_dress_code}.` : "";
+        const context = `Write a compelling event description for a public listing: ${title} hosted by ${host}.${categoryText}${passText}${lineupText}${afterPartyText}${socialText}${dressText}`;
+        const reply = await aiChat([{ role: "user", text: `Generate a concise, engaging event description (2–4 sentences) for a public event discovery page. Do NOT repeat the date, time, venue, ticket prices, or dress code — those are displayed separately. Focus on atmosphere, highlights, what makes this event special, and what attendees can look forward to. Context: Date: ${dateLine}, Time: ${timeLine}, Venue: ${venueLine}.\n\n${context}` }]);
+        setForm((current) => ({ ...current, description: reply }));
+      } else {
+        const context = `Write a warm invitation message for a private invite: ${title} hosted by ${host}.${passText}${lineupText}${afterPartyText}${socialText}`;
+        const reply = await aiChat([{ role: "user", text: `Generate a warm personalized invitation message. Do NOT include the date, time, venue, or dress code in the text — those details are displayed separately as styled boxes within the message. Just write the welcome wording and any extra context (lineup, passes, after-party, social). Details for reference: Date: ${dateLine}, Time: ${timeLine}. Venue: ${venueLine}.\n\n${context}` }]);
+        setForm((current) => ({ ...current, description: reply }));
+      }
     } catch {
       setForm((current) => ({ ...current, description: "Unable to generate message. Please write manually." }));
     } finally {
@@ -350,41 +538,61 @@ export default function CreateEventPage() {
     if (!hydrated || !mode) return;
     setAiImageGenerating(true);
     try {
-      const prompt = `Premium ${mode === "event" ? form.category : form.event_type} design for ${form.title || "the event"} with elegant typography and rich event atmosphere.`;
+      const autoPrompt = mode === "event"
+        ? [
+            `Premium event flyer/banner for "${form.title || "an event"}".`,
+            form.category ? `Event type: ${form.category}.` : "",
+            form.venue ? `Venue: ${form.venue}.` : "",
+            visibleLineup.length
+              ? `Featuring: ${visibleLineup.slice(0, 3).map((p) => p.name).filter(Boolean).join(", ")}.`
+              : "",
+            form.male_dress_code ? `Dress code: ${form.male_dress_code}.` : "",
+            "Bold poster typography, vibrant colors, professional event marketing design.",
+          ].filter(Boolean).join(" ")
+        : `Premium ${form.event_type} invitation design for "${form.title || "the event"}" with elegant typography and rich event atmosphere.`;
+      const prompt = form.image_prompt.trim() || autoPrompt;
+      setAiImageError("");
       const url = await generateFlier(prompt);
       setForm((current) => ({
         ...current,
         media_source: "ai",
         generated_image_ready: true,
         generated_image_url: url,
-        image_prompt: current.image_prompt || prompt,
+        image_prompt: current.image_prompt || autoPrompt,
       }));
-    } catch {
-      setForm((current) => ({
-        ...current,
-        media_source: "ai",
-        generated_image_ready: true,
-      }));
+    } catch (err) {
+      setAiImageError(err instanceof Error ? err.message : "Image generation failed. Ensure OPENAI_API_KEY is configured.");
     } finally {
       setAiImageGenerating(false);
     }
   };
 
-  const runTrial = async (e: React.FormEvent) => {
+  const showEmailModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!mode || !fingerprint) return;
-    if (mode === "invite" && form.delivery_channels.length === 0) {
-      setError("Select at least one delivery channel to test.");
-      return;
+    if (mode === "invite") {
+      if (form.delivery_channels.length === 0) {
+        setError("Select at least one delivery channel to test.");
+        return;
+      }
+      setEmailModalOpen(true);
+      setError("");
+    } else {
+      runTrial();
     }
+  };
+
+  const runTrial = async () => {
+    if (!mode || !fingerprint) return;
 
     setError("");
     setMessage("");
     setTrialComplete(false);
     setSubmitting(true);
+    setEmailModalOpen(false);
 
     try {
-      await apiClient("/trials/use", {
+      const result = await apiClient<{ flier_url?: string; sent_to?: string }>("/trials/use", {
         method: "POST",
         body: {
           trial_type: mode,
@@ -397,19 +605,28 @@ export default function CreateEventPage() {
             estimated_price: selectedPrice,
             pricing_units: pricingUnits,
             guest_count: selectedGuestRange.max,
+            test_email: mode === "invite" ? testEmail : undefined,
           },
         },
       });
+
       if (form.venue.trim()) saveVenue(form.venue.trim());
       localStorage.setItem(`accredit_trial_used_${mode}`, "true");
       setUsedTrials((current) => ({ ...current, [mode]: true }));
       localStorage.removeItem(DRAFT_KEY);
       setTrialComplete(true);
-      setMessage(
-        mode === "event"
-          ? "Test complete. We generated a flyer/banner preview for discovery. Create an account to save, download, publish to Discover Events, and continue."
-          : `Test complete. We generated the invite preview, ${selectedQrDelivery.label.toLowerCase()} setup, channel estimate, and delivery simulation. Create an account to save this setup, upload the real guest list, pay, and send.`
-      );
+
+      if (mode === "event" && result.flier_url) {
+        setEventPreviewUrl(result.flier_url);
+        setMessage("Event flier preview generated! Here's what your event will look like on Discover Events:");
+      } else if (mode === "invite" && result.sent_to) {
+        setMessage(`Test invite sent to ${result.sent_to}. Check your email to see exactly how the invitation will look. Create an account to send real invites.`);
+      } else {
+        setMessage(mode === "event"
+          ? "Event preview ready. Create an account to publish to Discover Events."
+          : `Invite preview sent. Create an account to send to your full guest list.`
+        );
+      }
     } catch (err) {
       const detail = err instanceof Error ? err.message : "You have already tested this feature.";
       setError(detail);
@@ -435,7 +652,7 @@ export default function CreateEventPage() {
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-8 text-gray-500 sm:text-lg">
                 Choose CREATE INVITE for private guest lists or POST EVENT for public discovery.
-                The test shows your message, QR preview, channel estimate, and what happens next.
+                The test previews exactly what your guests will see — no payment required.
               </p>
             </div>
 
@@ -443,11 +660,59 @@ export default function CreateEventPage() {
               <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-600">
                 Choose one to get started
               </p>
+              {/* Flier upload shortcut */}
+              {flierParsing ? (
+                <div className="mb-3 flex items-center gap-3 rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
+                  <div className="w-4 h-4 rounded-full border-2 border-[#E91E8C] border-t-transparent animate-spin flex-shrink-0" />
+                  <p className="text-sm font-semibold text-[#0D1B2A]">AI is reading your flier…</p>
+                </div>
+              ) : flierParsed ? (
+                <div className="mb-3 flex items-center gap-3 rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
+                  {flierPreview && <img src={flierPreview} alt="Flier" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-emerald-600">Flier parsed — form pre-filled</p>
+                    <p className="text-xs text-[#94a3b8] mt-0.5">Review the fields below and adjust as needed</p>
+                  </div>
+                  <label className="cursor-pointer text-xs font-bold text-[#E91E8C] hover:underline flex-shrink-0">
+                    Change
+                    <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
+                  </label>
+                </div>
+              ) : (
+                <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#d9e2ec] bg-white px-4 py-3 hover:border-[#E91E8C] transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-[#fff1f8] flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-[#0D1B2A]">Already have a flier? Upload to auto-fill</p>
+                    <p className="text-xs text-[#94a3b8] truncate">AI extracts title, date, lineup, tickets and more</p>
+                  </div>
+                  <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
+                </label>
+              )}
+              {flierParseError && (
+                <p className="mb-2 text-xs text-amber-600 font-medium px-1">{flierParseError}</p>
+              )}
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => {
-                    setMode((current) => current === "invite" ? null : "invite");
+                    const newMode = mode === "invite" ? null : "invite";
+                    if (newMode !== mode) {
+                      setForm({ ...DEFAULT_FORM });
+                      setPassPackages([{ name: "Regular", price: "" }]);
+                      setSocialHandles([{ platform: "instagram", handle: "" }]);
+                      setLineup([{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
+                      if (uploadedImagePreviewUrl) URL.revokeObjectURL(uploadedImagePreviewUrl);
+                      setUploadedImagePreviewUrl(null);
+                      setUploadedImageData(null);
+                      setDayPart(""); setMonthPart(""); setYearPart("");
+                      setFlierPreview(null); setFlierParsed(false); setFlierParseError("");
+                    }
+                    setMode(() => newMode);
                     setMessage("");
                     setError("");
                     setTrialComplete(false);
@@ -495,8 +760,19 @@ export default function CreateEventPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setMode((current) => current === "event" ? null : "event");
-                    setForm((current) => ({ ...current, details_to_be_communicated: false }));
+                    const newMode = mode === "event" ? null : "event";
+                    if (newMode !== mode) {
+                      setForm({ ...DEFAULT_FORM });
+                      setPassPackages([{ name: "Regular", price: "" }]);
+                      setSocialHandles([{ platform: "instagram", handle: "" }]);
+                      setLineup([{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
+                      if (uploadedImagePreviewUrl) URL.revokeObjectURL(uploadedImagePreviewUrl);
+                      setUploadedImagePreviewUrl(null);
+                      setUploadedImageData(null);
+                      setDayPart(""); setMonthPart(""); setYearPart("");
+                      setFlierPreview(null); setFlierParsed(false); setFlierParseError("");
+                    }
+                    setMode(() => newMode);
                     setMessage("");
                     setError("");
                     setTrialComplete(false);
@@ -525,9 +801,9 @@ export default function CreateEventPage() {
                       )}
                     </span>
                   </div>
-                  <strong className="block text-xl font-black text-[#07182f]">Public event page</strong>
+                  <strong className="block text-xl font-black text-[#07182f]">POST EVENT</strong>
                   <span className="mt-2 block text-sm text-gray-500">
-                    Listing, tickets, event page, flyer/banner direction, discovery.
+                    Public listing on Discover Events, ticket sales, flyer/banner, lineup, gate fee.
                   </span>
                   <span
                     className="mt-4 inline-flex items-center gap-1 text-xs font-bold"
@@ -546,7 +822,7 @@ export default function CreateEventPage() {
 
         <section className="px-4 py-14 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_390px]">
-            <form onSubmit={runTrial} className="rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-8">
+            <form onSubmit={showEmailModal} className="rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-8">
               <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">
@@ -566,6 +842,49 @@ export default function CreateEventPage() {
                   </span>
                 )}
               </div>
+
+              {/* Flier upload strip — POST EVENT only */}
+              {mode === "event" && (
+                <div className="mb-6">
+                  {flierParsing ? (
+                    <div className="flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] px-4 py-3">
+                      <div className="w-4 h-4 rounded-full border-2 border-[#E91E8C] border-t-transparent animate-spin flex-shrink-0" />
+                      <p className="text-sm font-semibold text-[#0D1B2A]">AI is reading your flier and filling the form…</p>
+                    </div>
+                  ) : flierParsed ? (
+                    <div className="flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] px-4 py-3">
+                      {flierPreview && <img src={flierPreview} alt="Flier" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />}
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-emerald-600">Flier parsed — form pre-filled below</p>
+                        <p className="text-xs text-[#94a3b8] mt-0.5">Review each field and make any corrections before testing</p>
+                      </div>
+                      <label className="cursor-pointer text-xs font-bold text-[#E91E8C] hover:underline flex-shrink-0">
+                        Change
+                        <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
+                      </label>
+                    </div>
+                  ) : (
+                    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#d9e2ec] bg-[#f8f9fc] px-4 py-3 hover:border-[#E91E8C] transition-colors group">
+                      <div className="w-9 h-9 rounded-xl bg-white border border-[#e8edf2] flex items-center justify-center flex-shrink-0 group-hover:border-[#E91E8C] transition-colors">
+                        <svg className="w-4 h-4 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-[#0D1B2A]">Have a flier? Upload it to auto-fill this form</p>
+                        <p className="text-xs text-[#94a3b8] mt-0.5">AI extracts title, date, venue, lineup, tickets, dress code and more</p>
+                      </div>
+                      <span className="flex-shrink-0 rounded-lg border border-[#E91E8C] px-3 py-1.5 text-xs font-bold text-[#E91E8C] group-hover:bg-[#fff1f8] transition-colors">
+                        Upload
+                      </span>
+                      <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
+                    </label>
+                  )}
+                  {flierParseError && (
+                    <p className="mt-2 text-xs font-medium text-amber-600">{flierParseError}</p>
+                  )}
+                </div>
+              )}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2">
@@ -589,7 +908,6 @@ export default function CreateEventPage() {
                     onChange={(e) => setForm({ ...form, host_name: e.target.value })}
                     className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
                     placeholder={mode === "event" ? "Accredit Live" : "The Adeyemis"}
-                    required
                   />
                 </label>
 
@@ -726,14 +1044,63 @@ export default function CreateEventPage() {
 
                 <label className="space-y-2">
                   <span className="text-sm font-semibold text-[#23466f]">Date</span>
-                  <input
-                    type="date"
-                    value={form.event_date}
-                    onChange={(e) => setForm({ ...form, event_date: e.target.value })}
-                    disabled={detailsToBeCommunicated}
-                    className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
-                    required={!detailsToBeCommunicated}
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={dayPart}
+                      onChange={(e) => {
+                        const d = e.target.value;
+                        setDayPart(d);
+                        if (d && monthPart && yearPart) {
+                          setForm((f) => ({ ...f, event_date: `${yearPart}-${monthPart}-${d.padStart(2, "0")}` }));
+                        }
+                      }}
+                      disabled={detailsToBeCommunicated}
+                      className="h-11 w-20 rounded-xl border border-[#d9e2ec] px-2 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
+                      required={!detailsToBeCommunicated}
+                    >
+                      <option value="">Day</option>
+                      {Array.from({ length: 31 }, (_, i) => (
+                        <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={monthPart}
+                      onChange={(e) => {
+                        const m = e.target.value;
+                        setMonthPart(m);
+                        if (dayPart && m && yearPart) {
+                          setForm((f) => ({ ...f, event_date: `${yearPart}-${m}-${dayPart.padStart(2, "0")}` }));
+                        }
+                      }}
+                      disabled={detailsToBeCommunicated}
+                      className="h-11 flex-1 rounded-xl border border-[#d9e2ec] px-2 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
+                      required={!detailsToBeCommunicated}
+                    >
+                      <option value="">Month</option>
+                      {MONTHS.map((name, i) => (
+                        <option key={i + 1} value={String(i + 1).padStart(2, "0")}>{name}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={yearPart}
+                      onChange={(e) => {
+                        const y = e.target.value;
+                        setYearPart(y);
+                        if (dayPart && monthPart && y) {
+                          setForm((f) => ({ ...f, event_date: `${y}-${monthPart}-${dayPart.padStart(2, "0")}` }));
+                        }
+                      }}
+                      disabled={detailsToBeCommunicated}
+                      className="h-11 w-24 rounded-xl border border-[#d9e2ec] px-2 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
+                      required={!detailsToBeCommunicated}
+                    >
+                      <option value="">Year</option>
+                      {Array.from({ length: 10 }, (_, i) => {
+                        const year = 2024 + i;
+                        return <option key={year} value={String(year)}>{year}</option>;
+                      })}
+                    </select>
+                  </div>
                 </label>
                 <label className="space-y-2">
                   <span className="text-sm font-semibold text-[#23466f]">Time</span>
@@ -819,6 +1186,16 @@ export default function CreateEventPage() {
                         </label>
                       ))}
                     </div>
+                    {form.qr_delivery === "with_qr" && (
+                      <div className="mt-4">
+                        <textarea
+                          value={form.qr_message}
+                          onChange={(e) => setForm({ ...form, qr_message: e.target.value })}
+                          className="min-h-20 w-full resize-none rounded-xl border border-[#d9e2ec] bg-white px-3 py-3 text-sm outline-none focus:border-[#E91E8C]"
+                          placeholder="Optional message to accompany the QR code (e.g. 'Attached to this invite is your QR code. Kindly present it at the event for entry.')"
+                        />
+                      </div>
+                    )}
                     {form.qr_delivery === "qr_later" && (
                       <div className="mt-4 space-y-3 rounded-xl bg-[#f8fafc] p-4">
                         <div className="grid gap-3 md:grid-cols-2">
@@ -861,9 +1238,9 @@ export default function CreateEventPage() {
                              type="file"
                              accept="image/*"
                              onChange={(e) => setForm({ ...form, qr_later_image_name: e.target.files?.[0]?.name || "" })}
-                             className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-white px-3 py-2 text-sm text-[#23466f] file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#07182f] file:px-4 file:py-2 file:font-bold file:text-white"
-                           />
-                           <p className="mt-1 text-xs text-[#94a3b8]">Recommended: 1200×675px, max 5MB</p>
+className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-white px-3 py-2 text-sm text-[#23466f] file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#E91E8C] file:px-4 file:py-2 file:font-bold file:text-white file:hover:bg-[#C4166F]"
+                            />
+                            <p className="mt-1 text-xs text-[#94a3b8]">Recommended: 1200×675px, max 5MB</p>
                            </div>
                         ) : (
                           <input
@@ -884,13 +1261,19 @@ export default function CreateEventPage() {
 
               <label className="relative mt-4 block space-y-2">
                 <span className="text-sm font-semibold text-[#23466f]">Venue</span>
-                <input
+                  <input
                   value={form.venue}
                   onChange={(e) => {
                     setForm({ ...form, venue: e.target.value });
                     setVenueSuggestionsOpen(true);
                   }}
                   onFocus={() => setVenueSuggestionsOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      setVenueSuggestionsOpen(false);
+                    }
+                  }}
                   disabled={detailsToBeCommunicated}
                   className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
                   placeholder={detailsToBeCommunicated ? "To be communicated" : "Start typing a venue or address"}
@@ -918,35 +1301,17 @@ export default function CreateEventPage() {
 
               {mode === "event" ? (
                 <>
-                <div className="mt-4 hidden gap-4 md:grid-cols-2">
-                  <label className="space-y-2">
-                    <span className="text-sm font-semibold text-[#23466f]">Gate fee</span>
-                    <input
-                      value={form.gate_fee}
-                      onChange={(e) => setForm({ ...form, gate_fee: e.target.value })}
-                      className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
-                      placeholder="Free, ₦10,000, VIP ₦50,000"
-                    />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-semibold text-[#23466f]">Headliners or speakers</span>
-                    <input
-                      value={form.headliners}
-                      onChange={(e) => setForm({ ...form, headliners: e.target.value })}
-                      className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
-                      placeholder="Artists, speakers, special guests"
-                    />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-semibold text-[#23466f]">Dress code</span>
-                    <input
-                      value={form.male_dress_code}
-                      onChange={(e) => setForm({ ...form, male_dress_code: e.target.value })}
-                      className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
-                      placeholder="Optional dress code"
-                    />
-                  </label>
-                </div>
+                <label className="mt-5 block space-y-2">
+                  <span className="text-sm font-semibold text-[#23466f]">
+                    Dress code <span className="font-normal text-[#94a3b8]">(optional)</span>
+                  </span>
+                  <input
+                    value={form.male_dress_code}
+                    onChange={(e) => setForm({ ...form, male_dress_code: e.target.value })}
+                    className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
+                    placeholder="Smart casual, all white, formal attire, beach wear..."
+                  />
+                </label>
                 <div className="mt-5 space-y-5">
                   <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -954,7 +1319,7 @@ export default function CreateEventPage() {
                       <button
                         type="button"
                         onClick={() => setPassPackages((current) => [...current, { name: "", price: "" }])}
-                        className="w-fit cursor-pointer rounded-lg bg-[#07182f] px-3 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#E91E8C]"
+                        className="w-fit cursor-pointer rounded-lg bg-[#E91E8C] px-3 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#C4166F]"
                       >
                         Add package
                       </button>
@@ -997,7 +1362,7 @@ export default function CreateEventPage() {
                             { role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false },
                           ])
                         }
-                        className="w-fit cursor-pointer rounded-lg bg-[#07182f] px-3 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#E91E8C]"
+                        className="w-fit cursor-pointer rounded-lg bg-[#E91E8C] px-3 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#C4166F]"
                       >
                         Add person
                       </button>
@@ -1061,7 +1426,7 @@ export default function CreateEventPage() {
                                   type="file"
                                   accept="image/*"
                                   onChange={(e) => updateLineup(index, { headshotFileName: e.target.files?.[0]?.name || "" })}
-                                  className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-white px-3 py-2 text-sm text-[#23466f] file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#07182f] file:px-4 file:py-2 file:font-bold file:text-white"
+                                  className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-white px-3 py-2 text-sm text-[#23466f] file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#E91E8C] file:px-4 file:py-2 file:font-bold file:text-white file:hover:bg-[#C4166F]"
                                 />
                                 <p className="mt-1 text-xs text-[#94a3b8]">Recommended: 400×400px square, max 2MB</p>
                                 </div>
@@ -1183,8 +1548,22 @@ export default function CreateEventPage() {
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => setForm({ ...form, uploaded_image_name: e.target.files?.[0]?.name || "" })}
-                      className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] px-3 py-2 text-sm text-[#23466f] file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#07182f] file:px-4 file:py-2 file:font-bold file:text-white"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        setForm({ ...form, uploaded_image_name: file?.name || "" });
+                        if (uploadedImagePreviewUrl) URL.revokeObjectURL(uploadedImagePreviewUrl);
+                        if (file) {
+                          const resized = await resizeImage(file, 1920, 1080);
+                          setUploadedImagePreviewUrl(URL.createObjectURL(resized));
+                          const reader = new FileReader();
+                          reader.onload = () => setUploadedImageData(reader.result as string);
+                          reader.readAsDataURL(resized);
+                        } else {
+                          setUploadedImagePreviewUrl(null);
+                          setUploadedImageData(null);
+                        }
+                      }}
+                      className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] px-3 py-2 text-sm text-[#23466f] file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#E91E8C] file:px-4 file:py-2 file:font-bold file:text-white file:hover:bg-[#C4166F]"
                     />
                     <p className="text-xs text-[#94a3b8]">Recommended: 1920×1080px, max 10MB</p>
                   </label>
@@ -1204,6 +1583,11 @@ export default function CreateEventPage() {
                     >
                       {aiImageGenerating ? "Generating image..." : "Generate image with AI"}
                     </button>
+                    {aiImageError && (
+                      <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-red-700">
+                        {aiImageError}
+                      </p>
+                    )}
                   </div>
                 )}
               </fieldset>
@@ -1267,13 +1651,13 @@ export default function CreateEventPage() {
               <button
                 type="submit"
                 disabled={submitting || (hydrated && mode ? usedTrials[mode] : false)}
-                className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-[#07182f] px-6 text-sm font-bold text-white transition-all hover:bg-[#E91E8C] disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-sm font-bold text-white transition-all hover:bg-[#C4166F] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? "Preparing preview..." : "Test this feature"}
               </button>
             </form>
 
-            <aside className="rounded-2xl bg-[#07182f] p-6 text-white shadow-[0_18px_48px_rgba(7,24,47,0.22)]">
+            <aside className="sticky top-8 self-start rounded-2xl bg-[#07182f] p-6 text-white shadow-[0_18px_48px_rgba(7,24,47,0.22)]">
               {mode === "event" ? (
                 <>
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff7abf]">Flyer builder</p>
@@ -1305,119 +1689,235 @@ export default function CreateEventPage() {
                 </>
               )}
 
-              <div className="mt-8 overflow-hidden rounded-xl bg-white text-[#07182f]">
-                <div
-                  className="flex min-h-48 flex-col justify-end p-5 text-white bg-cover bg-center"
-                  style={{
-                    background:
-                      form.generated_image_url
-                        ? `linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.2)), url(${form.generated_image_url})`
-                        : form.media_source === "ai" && form.generated_image_ready
-                        ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
-                        : form.uploaded_image_name
-                        ? "linear-gradient(135deg, #20304a 0%, #6d254f 55%, #0f172a 100%)"
-                        : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)",
-                    backgroundSize: form.generated_image_url ? "cover" : undefined,
-                  }}
-                >
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-white/68">
-                    {mode === "event" ? "Event flyer" : "Invite flyer"}
-                  </p>
-                  <h4 className="mt-3 text-3xl font-black leading-tight">{form.title || "Your Event Title"}</h4>
-                  <p className="mt-2 text-sm text-white/78">
-                    {detailsToBeCommunicated ? "Venue to be communicated" : form.venue || "Event venue"}
-                  </p>
-                </div>
-                <div className="p-4">
-                <div className="mb-4 flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-[#94a3b8]">
-                    {mode === "event" ? "Public event flyer" : "Invite flyer preview"}
-                  </span>
-                  <span className="rounded-full bg-[#fff1f8] px-2 py-1 text-xs font-bold text-[#E91E8C]">
-                    {mode === "invite" ? selectedQrDelivery.label : "QR"}
-                  </span>
-                </div>
-                <h4 className="text-xl font-black">{form.title || "Your Event Title"}</h4>
-                <p className="mt-1 text-sm text-[#64748b]">{form.host_name || "Host name"}</p>
-                <p className="mt-1 text-xs font-semibold text-[#E91E8C]">
-                  {mode === "event" ? "Listed for discovery and tickets" : "Private guest-list invite"}
-                </p>
-                <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
-                  <div className="rounded-lg bg-[#f8fafc] p-2">
-                    <dt className="font-bold uppercase tracking-widest text-[#94a3b8]">Date</dt>
-                    <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.event_date || "Event date"}</dd>
+              <div className="mt-8 space-y-5">
+                {(uploadedImagePreviewUrl || form.generated_image_url) && (
+                  <div className="overflow-hidden rounded-xl bg-white">
+                    <img
+                      src={uploadedImagePreviewUrl || form.generated_image_url}
+                      alt="Event image"
+                      className="w-full object-cover"
+                    />
                   </div>
-                  <div className="rounded-lg bg-[#f8fafc] p-2">
-                    <dt className="font-bold uppercase tracking-widest text-[#94a3b8]">Time</dt>
-                    <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.event_time || "Event time"}</dd>
+                )}
+                <div className="overflow-hidden rounded-xl bg-white text-[#07182f]">
+                  <div
+                    className="flex min-h-36 flex-col justify-end p-5 text-white"
+                    style={{
+                      background:
+                        mode === "invite"
+                          ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
+                          : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)",
+                    }}
+                  >
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-white/68">
+                      {mode === "event" ? "Event flyer" : "Invite flyer"}
+                    </p>
+                    <h4 className="mt-3 text-3xl font-black leading-tight">{form.title || "Your Event Title"}</h4>
+                    <p className="mt-2 text-sm text-white/78">
+                      {detailsToBeCommunicated ? "Venue to be communicated" : form.venue || "Event venue"}
+                    </p>
                   </div>
-                  {mode === "invite" ? (
+                  <div className="p-4">
+                  <h4 className="text-xl font-black">{form.title || "Your Event Title"}</h4>
+                  <p className="mt-1 text-sm text-[#64748b]">{form.host_name || "Host name"}</p>
+                  {mode === "event" ? (
                     <>
-                      <div className="rounded-lg bg-[#f8fafc] p-2">
-                        <dt className="font-bold uppercase tracking-widest text-[#94a3b8]">Male</dt>
-                        <dd className="mt-1 font-semibold">{form.male_dress_code || "Dress code"}</dd>
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-lg bg-[#f8fafc] p-2">
+                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
+                          <dd className="mt-1 font-semibold">{formatDisplayDate(form.event_date) || "Event date"}</dd>
+                        </div>
+                        <div className="rounded-lg bg-[#f8fafc] p-2">
+                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
+                          <dd className="mt-1 font-semibold">{form.event_time || "Event time"}</dd>
+                        </div>
+                        <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
+                          <dd className="mt-1 font-semibold">{form.venue || "Event venue"}</dd>
+                        </div>
+                        <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                          <dt className="font-bold uppercase tracking-widest text-[#475569]">
+                            {visiblePassPackages.length > 0 ? "Tickets / Gate fee" : "Gate fee"}
+                          </dt>
+                          {visiblePassPackages.length > 0 ? (
+                            visiblePassPackages.map((pkg, i) => (
+                              <dd key={i} className="mt-1 font-semibold">
+                                {pkg.name}{pkg.price ? ` — ${pkg.price}` : ""}
+                              </dd>
+                            ))
+                          ) : (
+                            <dd className="mt-1 font-semibold">Free entry</dd>
+                          )}
+                        </div>
+                        {form.male_dress_code && (
+                          <div className="rounded-lg bg-[#f8fafc] p-2">
+                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
+                            <dd className="mt-1 font-semibold">{form.male_dress_code}</dd>
+                          </div>
+                        )}
+                        {visibleSocialHandles.length > 0 && (
+                          <div className="rounded-lg bg-[#f8fafc] p-2">
+                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Social</dt>
+                            <dd className="mt-1 font-semibold truncate">{visibleSocialHandles[0].handle}</dd>
+                          </div>
+                        )}
                       </div>
-                      <div className="rounded-lg bg-[#f8fafc] p-2">
-                        <dt className="font-bold uppercase tracking-widest text-[#94a3b8]">Female</dt>
-                        <dd className="mt-1 font-semibold">{form.female_dress_code || "Dress code"}</dd>
+                      <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                        {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
+                          ? (form.description || "").split(/\n{2,}/).map((para, i) => (
+                              <p key={i}>{para.replace(/\n/g, " ")}</p>
+                            ))
+                          : <p>Your event description will appear here in the test preview.</p>}
                       </div>
+                      {visibleLineup.length > 0 && (
+                        <p className="mt-3 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
+                          Featuring: {visibleLineup.map((p) => p.name).filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                      {form.after_party_enabled && (
+                        <p className="mt-2 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
+                          After party at {form.after_party_location || "TBD"}{form.after_party_time ? ` by ${form.after_party_time}` : ""}
+                        </p>
+                      )}
                     </>
                   ) : (
                     <>
-                      <div className="rounded-lg bg-[#f8fafc] p-2">
-                        <dt className="font-bold uppercase tracking-widest text-[#94a3b8]">Gate fee</dt>
-                        <dd className="mt-1 font-semibold">{form.gate_fee || "Free / ticket fee"}</dd>
-                      </div>
-                      <div className="rounded-lg bg-[#f8fafc] p-2">
-                        <dt className="font-bold uppercase tracking-widest text-[#94a3b8]">Social</dt>
-                        <dd className="mt-1 font-semibold">
-                          {selectedSocialPlatform.label}: {form.social_handle || selectedSocialPlatform.placeholder}
-                        </dd>
+                      <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                        <p className="font-semibold">Dear <span className="text-[#E91E8C]">[Guest Name]</span>,</p>
+                        {(() => {
+                          const desc = form.description || "";
+                          const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
+                          if (paragraphs.length === 0) {
+                            return <p>Your AI-generated or edited message will appear here in the test preview.</p>;
+                          }
+                          const elements: React.ReactNode[] = [];
+                          paragraphs.forEach((para, i) => {
+                            elements.push(<p key={`p-${i}`}>{para.replace(/\n/g, " ")}</p>);
+                            if (i === 0) {
+                              elements.push(
+                                <div key="details" className="grid grid-cols-2 gap-2 text-xs">
+                                  <div className="rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
+                                    <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : formatDisplayDate(form.event_date) || "Event date"}</dd>
+                                  </div>
+                                  <div className="rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
+                                    <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.event_time || "Event time"}</dd>
+                                  </div>
+                                  <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
+                                    <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.venue || "Event venue"}</dd>
+                                  </div>
+                                  <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
+                                  </div>
+                                  <div className="rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
+                                    <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
+                                  </div>
+                                  <div className="rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
+                                    <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
+                                  </div>
+                                </div>
+                              );
+                            }
+                          });
+                          return elements;
+                        })()}
                       </div>
                     </>
                   )}
-                </dl>
-                <p className="mt-4 text-sm text-[#23466f]">
-                  {form.description || "Your AI-generated or edited message will appear here in the test preview."}
-                </p>
-                {mode === "event" && form.headliners && (
-                  <p className="mt-3 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
-                    Featuring: {form.headliners}
-                  </p>
-                )}
-                {mode === "invite" && (
-                  <p className="mt-3 rounded-lg bg-[#f8fafc] p-3 text-xs font-semibold text-[#64748b]">
-                    Sent via {selectedChannelNames.length ? selectedChannelNames.join(" + ") : "selected channels"} to {form.guest_range} guests. {selectedQrDelivery.description}
-                  </p>
-                )}
-                {(mode === "event" || form.qr_delivery !== "without_qr") && (
-                  <div className="mt-5 grid h-24 w-24 animate-pulse grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)]">
-                    {Array.from({ length: 25 }).map((_, index) => (
-                      <span
-                        key={index}
-                        className={`rounded-sm ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
-                      />
-                    ))}
                   </div>
-                )}
-                {mode === "invite" && form.qr_delivery === "qr_later" && (
-                  <div className="mt-4 rounded-lg bg-[#fff1f8] p-3 text-xs font-semibold text-[#C4166F]">
-                    Later QR send: {form.qr_later_title || "QR accreditation details"} - {form.qr_later_message || "Message and image can be prepared now or added when you return."}
-                  </div>
-                )}
-                {trialComplete && (
-                  <div className="mt-5 rounded-xl bg-[#ecfdf5] p-3 text-sm text-[#047857]">
-                    {mode === "event"
-                      ? "Test result: flyer preview created. Signup is required before download and publishing to Discover Events."
-                      : `Test result: invite preview created with ${selectedQrDelivery.label.toLowerCase()}. Signup is required before real sending.`}
-                  </div>
-                )}
                 </div>
+                {mode === "invite" && form.qr_delivery !== "without_qr" && (
+                  <div className="rounded-xl bg-white p-4 text-[#07182f]">
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR code</p>
+                    {(form.qr_message || form.qr_delivery === "with_qr") && (
+                      <p className="mt-2 text-sm text-[#23466f]">{form.qr_message || "Attached to this invite is your QR code. Kindly present it at the event for entry."}</p>
+                    )}
+                    <div className="mt-3 grid h-24 w-24 animate-pulse grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)]">
+                      {Array.from({ length: 25 }).map((_, index) => (
+                        <span
+                          key={index}
+                          className={`rounded-sm ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </aside>
           </div>
         </section>
       </main>
+
+      {/* Email Input Modal for Test Invites */}
+      {emailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="rounded-2xl bg-white p-6 sm:p-8 max-w-md w-full shadow-2xl">
+            <h2 className="text-2xl font-bold text-[#0D1B2A] mb-2">Send Test Invite to Yourself</h2>
+            <p className="text-sm text-gray-600 mb-6">We'll send a preview of your invitation to this email so you can see exactly how it looks.</p>
+            <input
+              type="email"
+              placeholder="your@email.com"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-[#d9e2ec] rounded-xl outline-none focus:border-[#E91E8C] mb-6"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setEmailModalOpen(false)}
+                className="flex-1 px-4 py-3 border border-[#d9e2ec] rounded-xl text-sm font-bold text-[#0D1B2A] hover:bg-[#f8f9fc] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={runTrial}
+                disabled={!testEmail.includes("@")}
+                className="flex-1 px-4 py-3 bg-[#E91E8C] text-white rounded-xl text-sm font-bold hover:bg-[#d0147a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {submitting ? "Sending..." : "Send Preview"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Event Preview Modal */}
+      {eventPreviewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="rounded-2xl bg-white max-w-2xl w-full shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-[#e8edf2]">
+              <h2 className="text-2xl font-bold text-[#0D1B2A]">Event Preview</h2>
+              <button
+                onClick={() => setEventPreviewUrl(null)}
+                className="text-gray-400 hover:text-[#0D1B2A] transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <p className="text-sm text-gray-600 mb-4">This is how your event will look on Discover Events once you create an account and publish it.</p>
+              <img src={eventPreviewUrl} alt="Event Preview" className="w-full rounded-xl" />
+            </div>
+            <div className="p-6 border-t border-[#e8edf2] bg-[#f8f9fc]">
+              <p className="text-sm text-gray-600 mb-4">Ready to publish this event? Create an account to save your settings and post to Discover Events.</p>
+              <button
+                onClick={() => setEventPreviewUrl(null)}
+                className="w-full px-4 py-3 bg-[#E91E8C] text-white rounded-xl font-bold hover:bg-[#d0147a] transition-colors"
+              >
+                Create Account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

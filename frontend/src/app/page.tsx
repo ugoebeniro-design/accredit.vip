@@ -177,30 +177,148 @@ export default function HomePage() {
           HERO
       ════════════════════════════════════════ */}
       <section
-        className="relative overflow-hidden"
+        className="hero-animated-bg relative overflow-hidden"
         style={{
-          background: "linear-gradient(135deg, #070F1C 0%, #0D1B2A 55%, #0a1525 100%)",
+          backgroundImage:
+            "linear-gradient(120deg, rgba(5,10,20,0.70) 0%, rgba(13,27,42,0.52) 42%, rgba(9,16,30,0.18) 100%), url('https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=2400&q=88')",
+          backgroundColor: "#07101d",
+          backgroundSize: "cover",
+          backgroundPosition: "center 62%",
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
       >
-        {/* Ambient orbs */}
-        <div style={{ position: "absolute", top: "10%", right: "5%", width: 640, height: 640, background: "radial-gradient(circle, rgba(233,30,140,0.13) 0%, transparent 65%)", filter: "blur(100px)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", bottom: "5%", left: "3%", width: 480, height: 480, background: "radial-gradient(circle, rgba(79,112,220,0.09) 0%, transparent 65%)", filter: "blur(90px)", pointerEvents: "none" }} />
+        <div className="event-scene-layer" aria-hidden="true" />
+
+        {/* Pink ambient orb */}
+        <div style={{ position: "absolute", top: "10%", right: "5%", width: 640, height: 640, background: "radial-gradient(circle, rgba(233,30,140,0.18) 0%, transparent 65%)", filter: "blur(100px)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: "5%", left: "3%", width: 480, height: 480, background: "radial-gradient(circle, rgba(79,112,220,0.12) 0%, transparent 65%)", filter: "blur(90px)", pointerEvents: "none" }} />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(circle at 78% 34%, rgba(233,30,140,0.28) 0%, transparent 26%), linear-gradient(180deg, transparent 58%, rgba(5,10,20,0.82) 100%)",
+            pointerEvents: "none",
+          }}
+        />
+
+        <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 2 }} aria-hidden="true">
+          <div
+            className="motion-breathe absolute hidden sm:block"
+            style={{
+              right: "1%",
+              top: "8%",
+              width: "min(46vw, 650px)",
+              height: "min(46vw, 650px)",
+              border: "34px solid rgba(233,30,140,0.56)",
+              borderLeftColor: "rgba(233,30,140,0.22)",
+              borderBottomColor: "rgba(255,255,255,0.16)",
+              borderRadius: "48% 52% 50% 50%",
+              transform: "rotate(-19deg)",
+              filter: "drop-shadow(0 0 34px rgba(233,30,140,0.42))",
+              opacity: 0.82,
+            }}
+          />
+
+          <div
+            className="motion-float-card absolute hidden sm:block"
+            style={{
+              right: "clamp(14px, 8vw, 120px)",
+              top: "clamp(92px, 16vh, 170px)",
+              width: "clamp(166px, 26vw, 280px)",
+              borderRadius: 26,
+              padding: "18px 16px",
+              background: "linear-gradient(145deg, rgba(255,255,255,0.96), rgba(246,248,252,0.86))",
+              boxShadow: "0 42px 120px rgba(0,0,0,0.48)",
+              transform: "rotate(7deg)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ color: "#0D1B2A", fontSize: 10, fontWeight: 900, letterSpacing: "0.13em", textTransform: "uppercase" }}>
+                VIP Access
+              </span>
+              <span style={{ color: "#16a34a", fontSize: 10, fontWeight: 900 }}>Verified</span>
+            </div>
+            <div className="qr-scan-surface" style={{ background: "#0D1B2A", borderRadius: 18, padding: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 3, aspectRatio: "1" }}>
+                {QR_PATTERN.map((cell, i) => (
+                  <div key={i} style={{ background: cell ? "white" : "#0D1B2A", borderRadius: 2 }} />
+                ))}
+              </div>
+            </div>
+            <div style={{ marginTop: 13 }}>
+              <p style={{ color: "#0D1B2A", fontSize: 14, fontWeight: 900, lineHeight: 1.1 }}>Lagos Gala Night</p>
+              <p style={{ color: "#61708a", fontSize: 11, marginTop: 4 }}>Gate A - Table 12</p>
+            </div>
+          </div>
+
+          <div
+            className="motion-float-card-alt absolute hidden md:block"
+            style={{
+              right: "clamp(280px, 34vw, 520px)",
+              top: "clamp(310px, 48vh, 430px)",
+              width: 250,
+              borderRadius: 22,
+              padding: "16px 18px",
+              background: "rgba(13,27,42,0.82)",
+              border: "1px solid rgba(255,255,255,0.16)",
+              backdropFilter: "blur(24px)",
+              boxShadow: "0 24px 70px rgba(0,0,0,0.36)",
+              transform: "rotate(-5deg)",
+            }}
+          >
+            <p style={{ color: "rgba(255,255,255,0.48)", fontSize: 10, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+              Live Gate Desk
+            </p>
+            {[
+              { label: "Invites sent", value: "1,240" },
+              { label: "RSVP yes", value: "892" },
+              { label: "Checked in", value: "427" },
+            ].map((item) => (
+              <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+                <span style={{ color: "rgba(255,255,255,0.66)", fontSize: 12, fontWeight: 700 }}>{item.label}</span>
+                <span style={{ color: "#ffffff", fontSize: 16, fontWeight: 900 }}>{item.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div
+            className="motion-float-card absolute hidden lg:flex"
+            style={{
+              right: "6%",
+              bottom: "12%",
+              alignItems: "center",
+              gap: 12,
+              borderRadius: 20,
+              padding: "13px 16px",
+              background: "linear-gradient(135deg, rgba(34,197,94,0.18), rgba(13,27,42,0.74))",
+              border: "1px solid rgba(74,222,128,0.34)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
+            <span style={{ width: 38, height: 38, borderRadius: 12, background: "rgba(74,222,128,0.2)", color: "#4ade80", display: "grid", placeItems: "center", fontWeight: 900 }}>
+              ok
+            </span>
+            <div>
+              <p style={{ color: "white", fontSize: 13, fontWeight: 900 }}>QR scan accepted</p>
+              <p style={{ color: "rgba(255,255,255,0.46)", fontSize: 11 }}>Duplicate check passed</p>
+            </div>
+          </div>
+        </div>
 
         {/* ── Two-column content ── */}
         <div
-          className="relative flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-24 pb-12"
+          className="relative flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 lg:pt-20 pb-12"
           style={{ zIndex: 10 }}
         >
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center" style={{ minHeight: "80vh" }}>
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-8 lg:items-center lg:min-h-[80vh]">
 
             {/* ── LEFT: Text column ── */}
             <div className="flex flex-col items-start justify-center">
               {/* Tag pill */}
               <div
-                className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-9"
+                className="motion-rise inline-flex items-center gap-2.5 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-9"
                 style={{
                   border: "1px solid rgba(255,255,255,0.14)",
                   background: "rgba(255,255,255,0.05)",
@@ -221,12 +339,12 @@ export default function HomePage() {
 
               {/* Main heading */}
               <h1
-                className="text-left text-5xl sm:text-6xl lg:text-6xl xl:text-[68px] font-extrabold leading-[1.05] tracking-tight"
+                className="motion-rise motion-delay-1 text-left text-4xl sm:text-6xl lg:text-6xl xl:text-[68px] font-extrabold leading-[1.05] tracking-tight"
                 style={{ color: "#ffffff" }}
               >
                 Create premium invites,{" "}
                 <br className="hidden sm:block" />
-                post events,{" "}
+                control entry,{" "}
                 <span
                   style={{
                     background: "linear-gradient(135deg, #E91E8C 0%, #ff6dbd 55%, #C4166F 100%)",
@@ -241,16 +359,15 @@ export default function HomePage() {
 
               {/* Subtitle */}
               <p
-                className="mt-7 text-left text-base sm:text-lg leading-relaxed max-w-xl"
+                className="motion-rise motion-delay-2 mt-7 text-left text-base sm:text-lg leading-relaxed max-w-xl"
                 style={{ color: "rgba(255,255,255,0.68)" }}
               >
-                Send personalised invitations via WhatsApp, SMS, or Email —
-                each with a unique QR code. Your team scans guests at the gate;
-                your dashboard shows who&apos;s in, live.
+                Send branded invitations by WhatsApp, SMS, or Email, give every
+                guest a unique QR pass, and run check-in from one live dashboard.
               </p>
 
               {/* CTA buttons */}
-              <div className="mt-10 flex flex-wrap items-start gap-4">
+              <div className="motion-rise motion-delay-3 mt-10 flex flex-wrap items-start gap-4">
                 <Link
                   href="/create-event"
                   className="btn-primary rounded-xl px-10 py-4 text-base font-black"
@@ -274,11 +391,11 @@ export default function HomePage() {
               </div>
 
               {/* Trust badges */}
-              <div className="mt-7 flex flex-wrap items-center gap-5">
+              <div className="motion-rise motion-delay-4 mt-7 flex flex-wrap items-center gap-5">
                 {[
-                  { icon: "✓", text: "Test once before signup" },
-                  { icon: "⚡", text: "QR preview included" },
-                  { icon: "🔒", text: "Trial abuse protected" },
+                  { icon: "ok", text: "RSVP and QR in one flow" },
+                  { icon: "01", text: "Gate scans in real time" },
+                  { icon: "id", text: "Guest list stays private" },
                 ].map((b) => (
                   <div
                     key={b.text}
@@ -292,7 +409,7 @@ export default function HomePage() {
               </div>
 
               {/* Stats row */}
-              <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 w-full">
+              <div className="motion-rise motion-delay-5 mt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 w-full">
                 {stats.map((s) => (
                   <div key={s.label}>
                     <div className="text-lg mb-1">{s.icon}</div>
@@ -304,7 +421,7 @@ export default function HomePage() {
             </div>
 
             {/* ── RIGHT: Product visual ── */}
-            <div className="relative hidden lg:block" style={{ height: 620 }}>
+            <div className="motion-pop motion-delay-4 relative hidden lg:block" style={{ height: 620 }}>
 
               {/* Glow behind main card */}
               <div style={{
@@ -347,7 +464,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Large QR code — the star of the show */}
-                <div style={{ background: "white", borderRadius: 14, padding: 13, marginBottom: 18, width: "100%" }}>
+                <div className="qr-scan-surface" style={{ background: "white", borderRadius: 14, padding: 13, marginBottom: 18, width: "100%" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 3, width: "100%", aspectRatio: "1" }}>
                     {QR_PATTERN.map((cell, i) => (
                       <div key={i} style={{ background: cell ? "#0D1B2A" : "white", borderRadius: 2 }} />
@@ -515,7 +632,7 @@ export default function HomePage() {
                 Delivered
               </span>
             </div>
-            <div style={{ background: "white", borderRadius: 12, padding: 12, marginBottom: 16 }}>
+            <div className="qr-scan-surface" style={{ background: "white", borderRadius: 12, padding: 12, marginBottom: 16 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 2.5, aspectRatio: "1" }}>
                 {QR_PATTERN.map((cell, i) => (
                   <div key={i} style={{ background: cell ? "#0D1B2A" : "white", borderRadius: 2 }} />

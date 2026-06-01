@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 interface NavbarProps {
   variant?: "transparent" | "solid" | "light";
   showAuth?: boolean;
-  authLinks?: Array<{ label: string; href: string; primary?: boolean }>;
+  authLinks?: Array<{ label: string; href: string; primary?: boolean; onClick?: () => void }>;
   extraLinks?: Array<{ label: string; href: string }>;
 }
 

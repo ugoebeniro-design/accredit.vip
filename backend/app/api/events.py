@@ -57,7 +57,7 @@ class EventCreateRequest(BaseModel):
     after_party_time: str | None = None
 
 
-@router.post("/")
+@router.post("")
 async def create_event(
     req: EventCreateRequest,
     user: User = Depends(get_current_user),
@@ -74,7 +74,7 @@ async def create_event(
     return event
 
 
-@router.get("/")
+@router.get("")
 async def list_events(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -120,7 +120,7 @@ async def list_public_events(
     if location:
         query = query.where(Event.venue.ilike(f"%{location}%"))
     if month:
-        query = query.where(db.func.extract("month", Event.event_date) == month)
+        query = query.where(func.extract("month", Event.event_date) == month)
     if price_type == "free":
         query = query.where(
             or_(Event.ticket_price == None, Event.ticket_price == 0)
@@ -129,9 +129,11 @@ async def list_public_events(
         query = query.where(Event.ticket_price > 0)
     if date_from:
         query = query.where(Event.event_date >= date.fromisoformat(date_from))
+    else:
+        query = query.where(Event.event_date >= date.today())
     if date_to:
         query = query.where(Event.event_date <= date.fromisoformat(date_to))
-    query = query.order_by(Event.event_date.desc())
+    query = query.order_by(Event.event_date.asc())
     result = await db.execute(query)
     return result.scalars().all()
 

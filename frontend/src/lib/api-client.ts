@@ -1,3 +1,5 @@
+import { clearToken } from "./auth-storage";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 type RequestOptions = {
@@ -6,9 +8,10 @@ type RequestOptions = {
   headers?: Record<string, string>;
 };
 
-function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("access_token");
+let onUnauthorized: (() => void) | null = null;
+
+export function setOnUnauthorized(cb: () => void) {
+  onUnauthorized = cb;
 }
 
 export async function apiClient<T>(path: string, opts: RequestOptions = {}): Promise<T> {
@@ -17,7 +20,7 @@ export async function apiClient<T>(path: string, opts: RequestOptions = {}): Pro
     ...opts.headers,
   };
 
-  const token = getToken();
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -27,6 +30,13 @@ export async function apiClient<T>(path: string, opts: RequestOptions = {}): Pro
     headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
+
+  if (res.status === 401) {
+    clearToken();
+    if (onUnauthorized) onUnauthorized();
+    const errBody = await res.json().catch(() => ({ detail: "Session expired" }));
+    throw new Error(typeof errBody.detail === "string" ? errBody.detail : "Session expired");
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -38,16 +48,4 @@ export async function apiClient<T>(path: string, opts: RequestOptions = {}): Pro
   }
 
   return res.json();
-}
-
-export function setToken(token: string) {
-  localStorage.setItem("access_token", token);
-}
-
-export function clearToken() {
-  localStorage.removeItem("access_token");
-}
-
-export function isAuthenticated(): boolean {
-  return !!getToken();
 }

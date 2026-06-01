@@ -1,9 +1,9 @@
 import secrets, hmac, hashlib, json
 import httpx
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -11,8 +11,11 @@ from app.core.security import get_current_user
 from app.core.config import settings
 from app.models.user import User
 from app.models.event import Event
+from app.models.guest import Guest
 from app.models.payment import Payment
 from app.services.notify import notify_subscribers
+
+RESEND_PRICE_PER_GUEST = 500  # NGN
 
 router = APIRouter()
 
@@ -20,6 +23,12 @@ router = APIRouter()
 class InitiatePaymentRequest(BaseModel):
     event_id: int
     channel: str = "email"
+    provider: str = "paystack"
+
+
+class ResendPaymentRequest(BaseModel):
+    event_id: int
+    guest_id: int
     provider: str = "paystack"
 
 
@@ -82,6 +91,94 @@ async def initiate_payment(
     }
 
 
+@router.post("/resend")
+async def initiate_resend_payment(
+    req: ResendPaymentRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Event).where(Event.id == req.event_id, Event.organizer_id == user.id)
+    )
+    event = result.scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    guest_result = await db.execute(
+        select(Guest).where(Guest.id == req.guest_id, Guest.event_id == req.event_id)
+    )
+    guest = guest_result.scalar_one_or_none()
+    if not guest:
+        raise HTTPException(status_code=404, detail="Guest not found")
+
+    amount = RESEND_PRICE_PER_GUEST
+    reference = f"REACC-{secrets.token_hex(8).upper()}"
+
+    payment = Payment(
+        event_id=event.id,
+        organizer_id=user.id,
+        amount=amount,
+        provider=req.provider,
+        reference=reference,
+        payment_type="resend",
+        guest_id=req.guest_id,
+    )
+    db.add(payment)
+    await db.commit()
+    await db.refresh(payment)
+
+    paystack_url = None
+    if req.provider == "paystack" and settings.PAYSTACK_SECRET_KEY:
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    "https://api.paystack.co/transaction/initialize",
+                    json={
+                        "email": user.email,
+                        "amount": int(amount * 100),
+                        "reference": reference,
+                        "callback_url": f"{settings.FRONTEND_URL}/dashboard/events/{event.id}",
+                    },
+                    headers={
+                        "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                data = resp.json()
+                if data.get("status"):
+                    paystack_url = data["data"]["authorization_url"]
+        except Exception:
+            pass
+
+    return {
+        "payment_id": payment.id,
+        "reference": reference,
+        "amount": amount,
+        "provider": req.provider,
+        "authorization_url": paystack_url,
+    }
+
+
+@router.get("/check-resend")
+async def check_resend_payment(
+    event_id: int = Query(...),
+    guest_id: int = Query(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Payment).where(
+            Payment.event_id == event_id,
+            Payment.guest_id == guest_id,
+            Payment.payment_type == "resend",
+            Payment.status == "completed",
+            Payment.organizer_id == user.id,
+        )
+    )
+    existing = result.scalar_one_or_none()
+    return {"has_valid_payment": existing is not None, "amount": RESEND_PRICE_PER_GUEST}
+
+
 @router.post("/webhook/{provider}")
 async def payment_webhook(
     provider: str,
@@ -115,12 +212,16 @@ async def payment_webhook(
             payment.status = "completed"
             payment.paid_at = datetime.now(timezone.utc)
 
-            event_result = await db.execute(select(Event).where(Event.id == payment.event_id))
-            event = event_result.scalar_one_or_none()
-            if event:
-                event.status = "published"
-                event.is_public = True
-                await notify_subscribers(db, event.id)
+            if payment.payment_type == "resend":
+                # Resend payments don't publish the event
+                pass
+            else:
+                event_result = await db.execute(select(Event).where(Event.id == payment.event_id))
+                event = event_result.scalar_one_or_none()
+                if event:
+                    event.status = "published"
+                    event.is_public = True
+                    await notify_subscribers(db, event.id)
 
             await db.commit()
 
@@ -139,12 +240,15 @@ async def payment_webhook(
                 payment.status = "completed"
                 payment.paid_at = datetime.now(timezone.utc)
 
-                event_result = await db.execute(select(Event).where(Event.id == payment.event_id))
-                event = event_result.scalar_one_or_none()
-                if event:
-                    event.status = "published"
-                    event.is_public = True
-                    await notify_subscribers(db, event.id)
+                if payment.payment_type == "resend":
+                    pass
+                else:
+                    event_result = await db.execute(select(Event).where(Event.id == payment.event_id))
+                    event = event_result.scalar_one_or_none()
+                    if event:
+                        event.status = "published"
+                        event.is_public = True
+                        await notify_subscribers(db, event.id)
 
                 await db.commit()
 

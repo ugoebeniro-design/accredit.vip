@@ -1,9 +1,10 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { apiClient, setToken, clearToken } from "@/lib/api-client";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import { apiClient, setOnUnauthorized } from "@/lib/api-client";
+import { setToken, clearToken, getToken, checkIdleTimeout, touchActivity } from "@/lib/auth-storage";
 
-type User = {
+export type User = {
   id: number;
   email: string;
   full_name: string;
@@ -17,15 +18,35 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, first_name: string, last_name: string, phone?: string, verification_channel?: string) => Promise<void>;
+  register: (data: {
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    phone?: string;
+    verification_channel?: string;
+  }) => Promise<void>;
+  socialLogin: (provider: string, idToken: string, email?: string, fullName?: string) => Promise<void>;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const activityRef = useRef<(() => void) | null>(null);
+
+  const logout = useCallback(() => {
+    clearToken();
+    setUser(null);
+  }, []);
+
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      logout();
+    });
+  }, [logout]);
 
   const fetchUser = useCallback(async () => {
     try {
@@ -34,18 +55,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       clearToken();
       setUser(null);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" && localStorage.getItem("access_token");
+    const token = getToken();
     if (token) {
-      fetchUser();
+      if (checkIdleTimeout()) {
+        clearToken();
+        setLoading(false);
+        return;
+      }
+      fetchUser().finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
+
+    activityRef.current = touchActivity;
+    const events = ["mousedown", "keydown", "scroll", "touchstart"];
+    const handler = () => touchActivity();
+    events.forEach((e) => window.addEventListener(e, handler));
+    return () => events.forEach((e) => window.removeEventListener(e, handler));
   }, [fetchUser]);
 
   const login = async (email: string, password: string) => {
@@ -54,25 +84,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: { email, password },
     });
     setToken(res.access_token);
+    touchActivity();
     setUser(res.user);
   };
 
-  const register = async (email: string, password: string, first_name: string, last_name: string, phone?: string, verification_channel?: string) => {
-    const res = await apiClient<{ access_token: string; user: User }>("/auth/register", {
+  const socialLogin = async (provider: string, idToken: string, email?: string, fullName?: string) => {
+    const res = await apiClient<{ access_token: string; user: User }>("/auth/social", {
       method: "POST",
-      body: { email, password, first_name, last_name, phone: phone || null, verification_channel: verification_channel || "email" },
+      body: { provider, id_token: idToken, email, full_name: fullName },
     });
     setToken(res.access_token);
+    touchActivity();
     setUser(res.user);
   };
 
-  const logout = () => {
-    clearToken();
-    setUser(null);
+  const register = async (data: {
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    phone?: string;
+    verification_channel?: string;
+  }) => {
+    const res = await apiClient<{ access_token: string; user: User }>("/auth/register", {
+      method: "POST",
+      body: data,
+    });
+    setToken(res.access_token);
+    touchActivity();
+    setUser(res.user);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, socialLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

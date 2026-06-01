@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -9,14 +9,17 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v
 
 function VerifyContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const token = searchParams.get("token") || "";
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "error" | "code">("loading");
   const [message, setMessage] = useState("");
+  const [code, setCode] = useState("");
+  const [verifyingCode, setVerifyingCode] = useState(false);
 
   useEffect(() => {
     if (!token) {
-      setStatus("error");
-      setMessage("No verification token provided.");
+      setStatus("code");
+      setMessage("Enter the verification code sent to your phone.");
       return;
     }
     fetch(`${API_BASE}/auth/verify`, {
@@ -34,6 +37,25 @@ function VerifyContent() {
         setMessage("Invalid or expired verification link.");
       });
   }, [token]);
+
+  const handleCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.length < 4) return;
+    setVerifyingCode(true);
+    try {
+      const r = await fetch(`${API_BASE}/auth/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: code }),
+      });
+      if (!r.ok) throw new Error("Invalid code");
+      setStatus("success");
+      setMessage("Your account has been verified successfully!");
+    } catch {
+      setMessage("Invalid or expired verification code.");
+    }
+    setVerifyingCode(false);
+  };
 
   return (
     <div className="min-h-screen bg-hero-gradient flex flex-col items-center justify-center px-4 relative overflow-hidden">
@@ -122,6 +144,51 @@ function VerifyContent() {
               </svg>
               Back to home
             </Link>
+          </div>
+        )}
+
+        {/* Code input */}
+        {status === "code" && (
+          <div
+            className="p-10 rounded-3xl"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
+            <div
+              className="w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-6 text-3xl"
+              style={{
+                background: "linear-gradient(135deg, #E91E8C, #C4166F)",
+                boxShadow: "0 8px 30px rgba(233,30,140,0.5)",
+              }}
+            >
+              📱
+            </div>
+            <h1 className="text-2xl font-extrabold text-white mb-3">Enter Verification Code</h1>
+            <p className="text-white/65 text-sm leading-relaxed mb-6">{message}</p>
+            <form onSubmit={handleCodeSubmit} className="space-y-4">
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="000000"
+                className="w-full text-center text-2xl tracking-[0.3em] h-14 rounded-xl border border-white/20 bg-white/10 px-4 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/50"
+                required
+              />
+              <button
+                type="submit"
+                disabled={verifyingCode || code.length < 4}
+                className="btn-primary w-full justify-center py-3 text-sm disabled:opacity-60"
+              >
+                {verifyingCode ? "Verifying..." : "Verify Account"}
+              </button>
+            </form>
+            {message && status !== "code" && <p className="text-red-400 text-sm mt-3">{message}</p>}
           </div>
         )}
 

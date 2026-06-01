@@ -36,12 +36,13 @@ async def purchase_ticket(
     event = result.scalar_one_or_none()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    if not event.ticket_price:
-        raise HTTPException(status_code=400, detail="This event has no paid tickets")
-    if event.tickets_available is not None and event.tickets_available < req.quantity:
+    is_free = not event.ticket_price or event.ticket_price == 0
+    if not is_free and event.tickets_available is not None and event.tickets_available < req.quantity:
         raise HTTPException(status_code=400, detail="Not enough tickets available")
 
-    total = event.ticket_price * req.quantity
+    base_amount = (event.ticket_price or 0) * req.quantity
+    fee = round(base_amount * settings.PLATFORM_FEE_PERCENT / 100) if not is_free else 0
+    total = base_amount + fee
     reference = f"TKT-{secrets.token_hex(8).upper()}"
 
     purchase = TicketPurchase(
@@ -51,11 +52,25 @@ async def purchase_ticket(
         buyer_phone=req.buyer_phone,
         quantity=req.quantity,
         amount=total,
+        platform_fee=fee,
         reference=reference,
+        status="completed" if is_free else "pending",
+        paid_at=datetime.now(timezone.utc) if is_free else None,
     )
     db.add(purchase)
     await db.commit()
     await db.refresh(purchase)
+
+    if is_free:
+        return {
+            "purchase_id": purchase.id,
+            "reference": reference,
+            "amount": 0,
+            "base_amount": 0,
+            "platform_fee": 0,
+            "quantity": req.quantity,
+            "authorization_url": None,
+        }
 
     paystack_url = None
     if settings.PAYSTACK_SECRET_KEY:
@@ -84,6 +99,8 @@ async def purchase_ticket(
         "purchase_id": purchase.id,
         "reference": reference,
         "amount": total,
+        "base_amount": base_amount,
+        "platform_fee": fee,
         "quantity": req.quantity,
         "authorization_url": paystack_url,
     }

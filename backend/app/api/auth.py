@@ -1,8 +1,8 @@
-import secrets
+import secrets, random
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
@@ -14,6 +14,8 @@ from app.services.email_service import send_email
 from app.services.sms_service import send_sms
 from app.services.whatsapp_service import send_whatsapp
 
+VERIFICATION_EXPIRY_MINUTES = 20
+
 router = APIRouter()
 
 
@@ -23,7 +25,7 @@ class RegisterRequest(BaseModel):
     first_name: str
     last_name: str
     phone: str | None = None
-    verification_channel: str = "email"  # email, sms, whatsapp
+    verification_channel: str = "email"
 
 
 class LoginRequest(BaseModel):
@@ -37,37 +39,55 @@ class TokenResponse(BaseModel):
     user: dict
 
 
+class SocialLoginRequest(BaseModel):
+    provider: str
+    id_token: str
+    email: str | None = None
+    full_name: str | None = None
+
+
+def generate_numeric_code(length: int = 6) -> str:
+    return "".join(str(random.randint(0, 9)) for _ in range(length))
+
+
 @router.post("/register", response_model=TokenResponse)
 async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == req.email))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    verification_token = secrets.token_urlsafe(32)
+    if req.phone:
+        result = await db.execute(select(User).where(User.phone == req.phone))
+        if result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Phone number already registered")
+
     channel = req.verification_channel or "email"
+    is_numeric = channel in ("sms", "whatsapp")
+    verification_token = generate_numeric_code() if is_numeric else secrets.token_urlsafe(32)
+
     user = User(
         email=req.email,
         full_name=f"{req.first_name} {req.last_name}",
         phone=req.phone,
         password_hash=hash_password(req.password),
         verification_token=verification_token,
-        verification_token_expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        verification_token_expires_at=datetime.now(timezone.utc) + timedelta(minutes=VERIFICATION_EXPIRY_MINUTES),
         verification_channel=channel,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
-    verify_link = f"{settings.FRONTEND_URL}/verify?token={verification_token}"
     if channel == "whatsapp" and user.phone:
-        msg = f"Welcome to Accredit.vip! Verify your account: {verify_link}"
+        msg = f"Your Accredit.vip verification code: {verification_token}. Expires in {VERIFICATION_EXPIRY_MINUTES} minutes."
         await send_whatsapp(user.phone, msg)
     elif channel == "sms" and user.phone:
-        msg = f"Welcome to Accredit.vip! Verify your account: {verify_link}"
+        msg = f"Your Accredit.vip verification code: {verification_token}. Expires in {VERIFICATION_EXPIRY_MINUTES} minutes."
         await send_sms(user.phone, msg)
     else:
-        html = f"<p>Welcome to Accredit.vip!</p><p>Click <a href='{verify_link}'>here</a> to verify your account.</p>"
-        await send_email(user.email, "Verify your Accredit.vip account", html)
+        verify_link = f"{settings.FRONTEND_URL}/verify?token={verification_token}"
+        html = f"<p>Welcome to Accredit.vip!</p><p>Click <a href='{verify_link}'>here</a> to verify your account. This link expires in {VERIFICATION_EXPIRY_MINUTES} minutes.</p>"
+        await send_email(user.email, f"Verify your Accredit.vip account (expires in {VERIFICATION_EXPIRY_MINUTES} min)", html)
 
     token = create_access_token({"sub": str(user.id)})
     return TokenResponse(
@@ -82,6 +102,54 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = result.scalar_one_or_none()
     if not user or not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    token = create_access_token({"sub": str(user.id)})
+    return TokenResponse(
+        access_token=token,
+        user={"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role, "is_verified": user.is_verified, "verification_channel": user.verification_channel},
+    )
+
+
+@router.post("/social", response_model=TokenResponse)
+async def social_login(req: SocialLoginRequest, db: AsyncSession = Depends(get_db)):
+    if req.provider not in ("google", "facebook", "apple"):
+        raise HTTPException(status_code=400, detail="Unsupported provider")
+
+    # Find existing user by oauth link or email
+    result = await db.execute(
+        select(User).where(
+            or_(
+                User.oauth_provider == req.provider,
+                User.email == req.email,
+            )
+        )
+    )
+    user = result.scalar_one_or_none()
+
+    if user:
+        if user.oauth_provider and user.oauth_provider != req.provider:
+            raise HTTPException(status_code=409, detail=f"Account linked to {user.oauth_provider}")
+        user.oauth_provider = req.provider
+        user.oauth_id = req.id_token[:100]
+        if req.full_name and not user.full_name:
+            user.full_name = req.full_name
+        if req.email and not user.email:
+            user.email = req.email
+        user.is_verified = True
+    else:
+        email = req.email or f"{req.provider}_{req.id_token[:16]}@social.accredit.vip"
+        user = User(
+            email=email,
+            full_name=req.full_name or f"{req.provider.title()} User",
+            password_hash=hash_password(secrets.token_urlsafe(16)),
+            oauth_provider=req.provider,
+            oauth_id=req.id_token[:100],
+            is_verified=True,
+        )
+        db.add(user)
+
+    await db.commit()
+    await db.refresh(user)
 
     token = create_access_token({"sub": str(user.id)})
     return TokenResponse(
@@ -136,23 +204,25 @@ async def resend_verification(
     if user.is_verified:
         raise HTTPException(status_code=400, detail="Account already verified")
 
-    verification_token = secrets.token_urlsafe(32)
+    channel = user.verification_channel
+    is_numeric = channel in ("sms", "whatsapp")
+    verification_token = generate_numeric_code() if is_numeric else secrets.token_urlsafe(32)
     user.verification_token = verification_token
-    user.verification_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    user.verification_token_expires_at = datetime.now(timezone.utc) + timedelta(minutes=VERIFICATION_EXPIRY_MINUTES)
     await db.commit()
 
-    verify_link = f"{settings.FRONTEND_URL}/verify?token={verification_token}"
-    if user.verification_channel == "whatsapp" and user.phone:
-        msg = f"Verify your Accredit.vip account: {verify_link}"
+    if channel == "whatsapp" and user.phone:
+        msg = f"Your Accredit.vip verification code: {verification_token}. Expires in {VERIFICATION_EXPIRY_MINUTES} minutes."
         await send_whatsapp(user.phone, msg)
-    elif user.verification_channel == "sms" and user.phone:
-        msg = f"Verify your Accredit.vip account: {verify_link}"
+    elif channel == "sms" and user.phone:
+        msg = f"Your Accredit.vip verification code: {verification_token}. Expires in {VERIFICATION_EXPIRY_MINUTES} minutes."
         await send_sms(user.phone, msg)
     else:
-        html = f"<p>Click <a href='{verify_link}'>here</a> to verify your account.</p>"
-        await send_email(user.email, "Verify your Accredit.vip account", html)
+        verify_link = f"{settings.FRONTEND_URL}/verify?token={verification_token}"
+        html = f"<p>Click <a href='{verify_link}'>here</a> to verify your account. Expires in {VERIFICATION_EXPIRY_MINUTES} minutes.</p>"
+        await send_email(user.email, f"Verify your Accredit.vip account (expires in {VERIFICATION_EXPIRY_MINUTES} min)", html)
 
-    return {"message": f"Verification sent via {user.verification_channel}"}
+    return {"message": f"Verification sent via {channel}", "is_numeric": is_numeric}
 
 
 class ForgotPasswordRequest(BaseModel):

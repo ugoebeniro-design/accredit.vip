@@ -10,6 +10,7 @@ import { apiClient } from "@/lib/api-client";
 import { initiatePayment, calculatePrice } from "@/lib/api/payments";
 import { EventDetailSkeleton } from "@/components/shared/loading-skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 type Guest = {
   id: number;
@@ -17,6 +18,7 @@ type Guest = {
   phone: string | null;
   email: string | null;
   rsvp_status: string;
+  invite_sent: boolean;
 };
 
 type SendResult = {
@@ -83,6 +85,7 @@ function EventDetailContent() {
   const [loadError, setLoadError] = useState(false);
   const [publishChannel, setPublishChannel] = useState("email");
   const [publishing, setPublishing] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; variant?: "danger" | "warning" | "default"; onConfirm: () => void } | null>(null);
   const [publishError, setPublishError] = useState("");
 
   const loadGuests = useCallback(async (search?: string, rsvpStatus?: string) => {
@@ -264,13 +267,88 @@ function EventDetailContent() {
     setGeneratingQR(null);
   };
 
-  const sendInvites = async () => {
+  const sendInvites = async (force: boolean = false) => {
     setSending(true); setSendResult(null); setSendError(null);
     try {
-      const res = await apiClient<SendResult>(`/events/${id}/send-invites`, { method: "POST", body: { channel } });
-      setSendResult(res); loadLogs();
+      const url = force ? `/events/${id}/send-invites?force=true` : `/events/${id}/send-invites`;
+      const res = await apiClient<any>(url, { method: "POST", body: { channel } });
+      setSendResult(res);
+      loadLogs();
+      loadGuests();
+      if (res.already_sent) {
+        setSendResult(null);
+        setSendError("All guests have already been invited.");
+      }
+    } catch (err: any) {
+      const detail = err.detail || err.message;
+      if (detail?.payment_required) {
+        setConfirmDialog({
+          title: "Payment required to re-send",
+          message: `Pay ₦${detail.total_cost?.toLocaleString() ?? "0"} to re-send invites to ${detail.unpaid_guest_ids?.length ?? 0} guest(s)?`,
+          variant: "default",
+          onConfirm: () => setSendError("Complete payment for each guest to re-send. Use the per-guest Invite button."),
+        });
+        setSendError("Payment required to re-send invites.");
+      } else {
+        setSendError(typeof detail === "string" ? detail : "Could not send invites.");
+      }
+    }
+    setSending(false);
+  };
+
+  const sendGuestInvite = async (guestId: number) => {
+    try {
+      await apiClient(`/events/${id}/guests/${guestId}/send-invite?force=true`, { method: "POST", body: { channel } });
+      loadGuests();
+    } catch (err: any) {
+      const detail = err.detail || err.message;
+      if (detail?.payment_required) {
+        setSendError(`${detail.message} ₦${detail.amount?.toLocaleString() ?? "0"}`);
+        setConfirmDialog({
+          title: "Payment required",
+          message: `Pay ₦${detail.amount?.toLocaleString() ?? "0"} to re-send this invite?`,
+          variant: "default",
+          onConfirm: async () => {
+            try {
+              const { checkResendPayment, initiateResendPayment } = await import("@/lib/api/payments");
+              const check = await checkResendPayment(Number(id), guestId);
+              if (check.has_valid_payment) {
+                setSendError(null);
+                await apiClient(`/events/${id}/guests/${guestId}/send-invite?force=true`, { method: "POST", body: { channel } });
+                loadGuests();
+              } else {
+                const res = await initiateResendPayment(Number(id), guestId);
+                if (res.authorization_url) {
+                  window.location.href = res.authorization_url;
+                } else {
+                  setSendError("Payment initiated. Refresh after completing payment.");
+                }
+              }
+            } catch {}
+          },
+        });
+      } else {
+        setSendError(typeof detail === "string" ? detail : "Could not send invite.");
+      }
+    }
+  };
+
+  const sendGuestQr = async (guestId: number) => {
+    try {
+      await apiClient(`/events/${id}/guests/${guestId}/send-qr`, { method: "POST", body: { channel } });
     } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Could not send invites.");
+      setSendError(err instanceof Error ? err.message : "Could not send QR.");
+    }
+  };
+
+  const sendAllQrs = async () => {
+    setSending(true); setSendResult(null); setSendError(null);
+    try {
+      const res = await apiClient<any>(`/events/${id}/send-qrs`, { method: "POST", body: { channel } });
+      setSendResult(res);
+      loadLogs();
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Could not send QR codes.");
     }
     setSending(false);
   };
@@ -457,7 +535,7 @@ function EventDetailContent() {
                 <option value="sms">SMS</option>
               </select>
               <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-                Review and edit the guest list on the right before sending. WhatsApp and SMS sends require valid international-style phone numbers.
+                Sends only to guests who haven't been invited yet. Use the per-guest "Invite" button to send individually. WhatsApp and SMS sends require valid international-style phone numbers.
               </div>
               {invalidPhoneGuests.length > 0 && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -469,9 +547,15 @@ function EventDetailContent() {
                   {guestsWithoutSelectedContact.length} guest{guestsWithoutSelectedContact.length === 1 ? "" : "s"} missing {channel === "email" ? "email addresses" : "phone numbers"} will be skipped.
                 </div>
               )}
-              <div className="flex gap-2">
-                <Button onClick={sendInvites} disabled={sending || !canSendInvites}>
+              <div className="flex gap-2 flex-wrap">
+                <Button onClick={() => sendInvites()} disabled={sending || !canSendInvites}>
                   {sending ? "Sending..." : "Send Invites"}
+                </Button>
+                <Button onClick={() => sendInvites(true)} disabled={sending || !canSendInvites} variant="outline">
+                  {sending ? "Sending..." : "Resend All"}
+                </Button>
+                <Button onClick={sendAllQrs} disabled={sending || !canSendInvites} variant="outline">
+                  {sending ? "Sending..." : "Send All QR"}
                 </Button>
                 <Button variant="outline" onClick={testSend}>Test Send</Button>
               </div>
@@ -582,6 +666,9 @@ function EventDetailContent() {
                           <p className="text-xs text-muted-foreground">
                             {guest.phone || guest.email || "No contact"} &middot; {guest.rsvp_status}
                           </p>
+                          {guest.invite_sent && (
+                            <span className="mt-1 inline-block text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded">Invite Sent</span>
+                          )}
                           {phoneChannelSelected && !isValidPhone(guest.phone) && (
                             <p className="mt-1 text-xs font-medium text-amber-700">Check phone number before WhatsApp/SMS send</p>
                           )}
@@ -593,6 +680,10 @@ function EventDetailContent() {
                             <Button size="sm" variant="outline" onClick={() => generateQR(guest.id)} disabled={generatingQR === guest.id}>
                               {generatingQR === guest.id ? "..." : "QR"}
                             </Button>
+                          )}
+                          <Button size="sm" variant="outline" onClick={() => sendGuestQr(guest.id)}>Send QR</Button>
+                          {!guest.invite_sent && (
+                            <Button size="sm" variant="outline" onClick={() => sendGuestInvite(guest.id)}>Invite</Button>
                           )}
                           <Button size="sm" variant="ghost" onClick={() => startEdit(guest)}>Edit</Button>
                           <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteConfirm(guest.id)}>Del</Button>
@@ -623,6 +714,16 @@ function EventDetailContent() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDialog}
+        title={confirmDialog?.title ?? ""}
+        message={confirmDialog?.message ?? ""}
+        variant={confirmDialog?.variant ?? "default"}
+        confirmLabel="Yes, proceed"
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

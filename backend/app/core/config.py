@@ -8,7 +8,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./accredit.db"
     SECRET_KEY: str = "change-me-in-production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
+    SESSION_IDLE_TIMEOUT_MINUTES: int = 30  # idle timeout on frontend
     REDIS_URL: str = "redis://localhost:6379/0"
     STORAGE_BUCKET: str = "accredit"
     STORAGE_ENDPOINT: str = ""
@@ -32,6 +33,8 @@ class Settings(BaseSettings):
     TERMII_API_KEY: str = ""
     AFRICASTALKING_API_KEY: str = ""
     AFRICASTALKING_USERNAME: str = ""
+
+    PLATFORM_FEE_PERCENT: float = 5.0
 
     FRONTEND_URL: str = "http://localhost:3000"
 

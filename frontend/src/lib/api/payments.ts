@@ -42,3 +42,19 @@ export type PaymentRecord = {
 export async function getPaymentHistory(): Promise<PaymentRecord[]> {
   return apiClient<PaymentRecord[]>("/payments/history");
 }
+
+export type CheckResendResult = {
+  has_valid_payment: boolean;
+  amount: number;
+};
+
+export async function checkResendPayment(eventId: number, guestId: number): Promise<CheckResendResult> {
+  return apiClient<CheckResendResult>(`/payments/check-resend?event_id=${eventId}&guest_id=${guestId}`);
+}
+
+export async function initiateResendPayment(eventId: number, guestId: number, provider: string = "paystack"): Promise<InitiatePaymentResult> {
+  return apiClient<InitiatePaymentResult>("/payments/resend", {
+    method: "POST",
+    body: { event_id: eventId, guest_id: guestId, provider },
+  });
+}

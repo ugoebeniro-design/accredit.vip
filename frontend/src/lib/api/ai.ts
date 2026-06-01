@@ -16,3 +16,10 @@ export async function generateFlier(prompt: string): Promise<string> {
   });
   return res.url;
 }
+
+export async function parseFlier(imageData: string, mimeType = "image/jpeg"): Promise<Record<string, unknown>> {
+  return apiClient("/ai/parse-flier", {
+    method: "POST",
+    body: { image_data: imageData, mime_type: mimeType },
+  });
+}

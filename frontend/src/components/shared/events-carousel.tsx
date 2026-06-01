@@ -37,7 +37,7 @@ export function EventsCarousel() {
   if (loading || events.length === 0) return null;
 
   return (
-    <section className="py-12 bg-white overflow-hidden">
+    <section className="motion-rise py-12 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -59,7 +59,7 @@ export function EventsCarousel() {
           <Link
             key={`${ev.id}-${i}`}
             href={`/events/${ev.id}`}
-            className="flex-shrink-0 w-64 rounded-2xl border border-[#e8edf2] p-4 hover:shadow-lg transition-all hover:-translate-y-1 no-underline"
+            className="event-card-motion flex-shrink-0 w-64 rounded-2xl border border-[#e8edf2] p-4 hover:shadow-lg transition-all hover:-translate-y-1 no-underline"
             style={{ scrollSnapAlign: "start" }}
           >
             {ev.cover_image && (

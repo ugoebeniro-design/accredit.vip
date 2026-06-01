@@ -233,3 +233,60 @@ async def generate_flier_image(prompt: str) -> str | None:
         n=1,
     )
     return resp.data[0].url
+
+
+async def parse_flier_image(image_data: str, mime_type: str = "image/jpeg") -> dict:
+    """Use GPT-4o vision to extract event details from a flier image."""
+    import json as _json
+    c = get_client()
+    if not c:
+        return {}
+
+    if not image_data.startswith("data:"):
+        image_data = f"data:{mime_type};base64,{image_data}"
+
+    try:
+        resp = await c.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                "Extract all event details from this flier/poster image. "
+                                "Return ONLY a valid JSON object with these fields (null for anything not found):\n"
+                                "{\n"
+                                '  "title": "event name",\n'
+                                '  "host_name": "organizer or host name",\n'
+                                '  "event_date": "YYYY-MM-DD (guess current year if year not shown)",\n'
+                                '  "event_time": "HH:MM in 24-hour format",\n'
+                                '  "venue": "full venue name and address",\n'
+                                '  "dress_code": "dress code instructions or null",\n'
+                                '  "ticket_price": 0,\n'
+                                '  "pass_packages": [{"name": "ticket type", "price": "amount as string"}],\n'
+                                '  "lineup": [{"role": "role/title", "name": "person name"}],\n'
+                                '  "description": "event tagline, theme or short description",\n'
+                                '  "category": "one of: concert, conference, festival, nightlife, sports, corporate, wedding, birthday, comedy, exhibition, community",\n'
+                                '  "after_party_location": "after-party venue or null",\n'
+                                '  "after_party_time": "HH:MM or null"\n'
+                                "}\n"
+                                "For ticket_price: extract the base/lowest numeric price (integer, no currency symbol). "
+                                "If the event is free, use 0. If multiple price tiers exist, put them in pass_packages."
+                            ),
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": image_data, "detail": "high"},
+                        },
+                    ],
+                }
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=1000,
+        )
+        text = resp.choices[0].message.content or "{}"
+        return _json.loads(text)
+    except Exception:
+        return {}

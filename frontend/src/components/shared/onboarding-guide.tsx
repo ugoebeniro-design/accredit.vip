@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 
 const STORAGE_KEY = "accredit_onboarding_done";
@@ -241,13 +242,16 @@ const steps = [
 export function OnboardingGuide() {
   const [show, setShow] = useState(false);
   const [step, setStep] = useState(0);
+  const pathname = usePathname();
 
   useEffect(() => {
+    // Only show the onboarding guide on dashboard pages, not on public marketing pages
+    if (!pathname.startsWith("/dashboard")) return;
     const done = localStorage.getItem(STORAGE_KEY);
     if (!done) {
       setShow(true);
     }
-  }, []);
+  }, [pathname]);
 
   const dismiss = () => {
     localStorage.setItem(STORAGE_KEY, "1");

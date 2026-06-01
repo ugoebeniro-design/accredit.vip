@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.services.ai_service import chat, generate_flier_image
+from app.services.ai_service import chat, generate_flier_image, parse_flier_image
 
 router = APIRouter()
 
@@ -12,6 +12,11 @@ class ChatRequest(BaseModel):
 
 class FlierRequest(BaseModel):
     prompt: str
+
+
+class ParseFlierRequest(BaseModel):
+    image_data: str
+    mime_type: str = "image/jpeg"
 
 
 @router.post("/chat")
@@ -26,3 +31,14 @@ async def ai_generate_flier(req: FlierRequest):
     if not url:
         raise HTTPException(status_code=503, detail="AI not configured. Set OPENAI_API_KEY.")
     return {"url": url}
+
+
+@router.post("/parse-flier")
+async def ai_parse_flier(req: ParseFlierRequest):
+    try:
+        result = await parse_flier_image(req.image_data, req.mime_type)
+    except Exception:
+        result = {}
+    if not result:
+        raise HTTPException(status_code=503, detail="AI not configured or could not read image.")
+    return result

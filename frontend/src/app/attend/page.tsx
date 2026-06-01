@@ -7,6 +7,26 @@ import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 
+const UPLOAD_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1").replace(/\/api\/v1\/?$/, "");
+
+function coverImgUrl(path: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  return `${UPLOAD_BASE}${path}`;
+}
+
+function formatCardDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function formatCardTime(timeStr: string): string {
+  if (!timeStr) return "";
+  const [h, min] = timeStr.split(":").map(Number);
+  return `${h % 12 || 12}:${String(min).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
 const CATEGORIES = [
   { value: "", label: "All Events" },
   { value: "concert", label: "Concert" },
@@ -100,36 +120,16 @@ function AttendContent() {
     <div className="flex min-h-screen flex-col bg-white">
       <Navbar variant="light" />
 
-      {/* Hero */}
-      <section className="bg-hero-gradient py-16 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase mb-5 text-white/70"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#E91E8C] animate-pulse" />
-            Live events across Africa
+      {/* Compact search bar — keeps events above the fold */}
+      <div className="bg-white border-b border-[#e8edf2] px-4 py-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center gap-3">
+          <div>
+            <h1 className="text-xl font-extrabold text-[#0D1B2A] leading-tight">Discover Events</h1>
+            <p className="text-xs text-gray-400 mt-0.5">Concerts, conferences, weddings &amp; more across Africa</p>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4 tracking-tight">
-            Discover Events
-          </h1>
-          <p className="text-white/60 text-lg max-w-xl mx-auto mb-8">
-            Concerts, conferences, weddings &amp; more — find what&apos;s happening near you.
-          </p>
-
-          {/* Search bar */}
-          <form
-            onSubmit={handleSearch}
-            className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-3"
-          >
+          <form onSubmit={handleSearch} className="flex-1 flex gap-2 sm:max-w-lg sm:ml-auto">
             <div className="flex-1 relative">
-              <svg
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -137,21 +137,15 @@ function AttendContent() {
                 placeholder="Search events, venues..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-12 pl-10 pr-4 rounded-xl text-sm font-medium outline-none input-dark-bg"
-                style={{
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1.5px solid rgba(255,255,255,0.2)",
-                  color: "white",
-                  backdropFilter: "blur(8px)",
-                }}
+                className="w-full h-10 pl-9 pr-3 rounded-xl border border-[#d9e2ec] text-sm outline-none focus:border-[#E91E8C]"
               />
             </div>
-            <button type="submit" className="btn-primary h-12 px-6 text-sm flex-shrink-0">
+            <button type="submit" className="btn-primary h-10 px-5 text-sm flex-shrink-0 rounded-xl">
               Search
             </button>
           </form>
         </div>
-      </section>
+      </div>
 
       {/* Filters bar */}
       <div className="sticky top-16 z-30 bg-white border-b border-[#e8edf2] shadow-sm">
@@ -239,42 +233,66 @@ function AttendContent() {
               Showing <strong className="text-[#0D1B2A]">{events.length}</strong> event{events.length !== 1 ? "s" : ""}
             </p>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {events.map((event) => (
-                <Link key={event.id} href={`/events/${event.id}`} className="block group">
-                  <div className="premium-card h-full flex flex-col">
-                    {/* Category header */}
-                    <div
-                      className="h-40 flex items-center justify-center"
-                      style={{ background: "#f4f6fb", color: "#cbd5e1" }}
-                    >
-                      <CategoryIcon cat={event.category || event.event_type || ""} className="w-12 h-12" />
-                    </div>
-                    <div className="p-5 flex flex-col flex-1">
-                      <span className="badge-pink text-[10px] mb-3 self-start">
-                        {(event.category || event.event_type || "Event").toUpperCase()}
-                      </span>
-                      <h3 className="font-bold text-[#0D1B2A] text-base line-clamp-2 mb-2 group-hover:text-[#E91E8C] transition-colors">
-                        {event.title}
-                      </h3>
-                      <div className="mt-auto pt-3 space-y-1.5 border-t border-[#e8edf2]">
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          {event.venue}
+              {events.map((event) => {
+                const img = coverImgUrl(event.cover_image);
+                const isFree = !event.ticket_price || event.ticket_price === 0;
+                return (
+                  <Link key={event.id} href={`/events/${event.id}`} className="block group">
+                    <div className="premium-card h-full flex flex-col overflow-hidden">
+                      {/* Cover image or category placeholder */}
+                      <div className="relative h-44 overflow-hidden bg-[#f4f6fb]">
+                        {img ? (
+                          <>
+                            <img
+                              src={img}
+                              alt={event.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                          </>
+                        ) : (
+                          <div className="h-full flex items-center justify-center" style={{ color: "#cbd5e1" }}>
+                            <CategoryIcon cat={event.category || event.event_type || ""} className="w-12 h-12" />
+                          </div>
+                        )}
+                        {/* Price badge */}
+                        <div className="absolute top-3 right-3">
+                          <span
+                            className="text-[11px] font-bold px-2.5 py-1 rounded-full shadow-sm"
+                            style={{ background: isFree ? "#10b981" : "#E91E8C", color: "white" }}
+                          >
+                            {isFree ? "FREE" : `₦${event.ticket_price!.toLocaleString()}`}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {event.event_date} · {event.event_time}
+                      </div>
+
+                      <div className="p-5 flex flex-col flex-1">
+                        <span className="badge-pink text-[10px] mb-3 self-start">
+                          {(event.category || event.event_type || "Event").toUpperCase()}
+                        </span>
+                        <h3 className="font-bold text-[#0D1B2A] text-base line-clamp-2 mb-2 group-hover:text-[#E91E8C] transition-colors">
+                          {event.title}
+                        </h3>
+                        <div className="mt-auto pt-3 space-y-1.5 border-t border-[#e8edf2]">
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="truncate">{event.venue}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {formatCardDate(event.event_date)} · {formatCardTime(event.event_time)}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           </>
         )}
