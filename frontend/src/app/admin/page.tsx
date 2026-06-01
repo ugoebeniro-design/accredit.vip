@@ -406,51 +406,6 @@ export default function AdminPage() {
             <div className="flex-1 overflow-y-auto p-5">
             {sectionLoading && <div className="text-center py-8"><div className="w-6 h-6 border-2 border-[#E91E8C] border-t-transparent rounded-full animate-spin mx-auto" /><p className="text-xs text-gray-400 mt-2">Loading...</p></div>}
 
-          {/* Sidebar (desktop, on the right now) */}
-          <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 hidden lg:flex flex-col overflow-hidden transition-all duration-200`} style={{ background: "#f8f9fc", borderLeft: sidebarOpen ? "1px solid #e8edf2" : "1px solid transparent" }}>
-            <div className={`${sidebarOpen ? '' : 'invisible'} px-3 py-3 border-b border-[#e8edf2]`}>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-300">Sections</p>
-            </div>
-            <nav className={`${sidebarOpen ? '' : 'invisible'} flex-1 overflow-y-auto py-2 px-2 space-y-1`}>
-              {panelGroups.map((group) => {
-                const isOpen = openPanels[group.key];
-                const hasActive = group.items.includes(tab);
-                return (
-                  <div key={group.key} className="rounded-lg" style={{ background: hasActive ? "rgba(233,30,140,0.04)" : "transparent" }}>
-                    <button
-                      onClick={() => setOpenPanels((prev: Record<string, boolean>) => ({ ...prev, [group.key]: !prev[group.key] }))}
-                      className="flex items-center gap-2 w-full text-left px-2.5 py-2 text-xs font-bold rounded-lg transition-colors"
-                      style={{ color: hasActive ? "#E91E8C" : "#64748b" }}
-                    >
-                      <span className="flex-shrink-0 opacity-60">{group.icon}</span>
-                      <span className="flex-1 truncate">{group.label}</span>
-                      <svg className={`w-3 h-3 transition-transform ${isOpen ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                    {isOpen && (
-                      <div className="ml-1 mt-0.5 space-y-0.5">
-                        {group.items.map((itemId) => {
-                          const t = tabs.find((x) => x.id === itemId)!;
-                          return (
-                            <button key={itemId} onClick={() => handleTabChange(itemId)}
-                              className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs font-semibold rounded-md transition-all"
-                              style={{
-                                color: tab === itemId ? "#E91E8C" : "#64748b",
-                                background: tab === itemId ? "rgba(233,30,140,0.07)" : "transparent",
-                              }}
-                            >
-                              <span className="flex-shrink-0 w-4 flex justify-center"><TabIcon id={itemId} /></span>
-                              <span className="truncate">{t.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </nav>
-          </aside>
-
             {!sectionLoading && tab === "overview" && (
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
@@ -1292,6 +1247,51 @@ export default function AdminPage() {
             )}
             </div>
           </div>
+
+          {/* Sidebar (desktop, on the right) */}
+          <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 hidden lg:flex flex-col overflow-hidden transition-all duration-200`} style={{ background: "#f8f9fc", borderLeft: sidebarOpen ? "1px solid #e8edf2" : "1px solid transparent" }}>
+            <div className={`${sidebarOpen ? '' : 'invisible'} px-3 py-3 border-b border-[#e8edf2]`}>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-300">Sections</p>
+            </div>
+            <nav className={`${sidebarOpen ? '' : 'invisible'} flex-1 overflow-y-auto py-2 px-2 space-y-1`}>
+              {panelGroups.map((group) => {
+                const isOpen = openPanels[group.key];
+                const hasActive = group.items.includes(tab);
+                return (
+                  <div key={group.key} className="rounded-lg" style={{ background: hasActive ? "rgba(233,30,140,0.04)" : "transparent" }}>
+                    <button
+                      onClick={() => setOpenPanels((prev: Record<string, boolean>) => ({ ...prev, [group.key]: !prev[group.key] }))}
+                      className="flex items-center gap-2 w-full text-left px-2.5 py-2 text-xs font-bold rounded-lg transition-colors"
+                      style={{ color: hasActive ? "#E91E8C" : "#64748b" }}
+                    >
+                      <span className="flex-shrink-0 opacity-60">{group.icon}</span>
+                      <span className="flex-1 truncate">{group.label}</span>
+                      <svg className={`w-3 h-3 transition-transform ${isOpen ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                    {isOpen && (
+                      <div className="ml-1 mt-0.5 space-y-0.5">
+                        {group.items.map((itemId) => {
+                          const t = tabs.find((x) => x.id === itemId)!;
+                          return (
+                            <button key={itemId} onClick={() => handleTabChange(itemId)}
+                              className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs font-semibold rounded-md transition-all"
+                              style={{
+                                color: tab === itemId ? "#E91E8C" : "#64748b",
+                                background: tab === itemId ? "rgba(233,30,140,0.07)" : "transparent",
+                              }}
+                            >
+                              <span className="flex-shrink-0 w-4 flex justify-center"><TabIcon id={itemId} /></span>
+                              <span className="truncate">{t.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
+          </aside>
         </div>
       </main>
 
