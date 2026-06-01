@@ -592,7 +592,7 @@ export default function CreateEventPage() {
     setEmailModalOpen(false);
 
     try {
-      const result = await apiClient<{ flier_url?: string; sent_to?: string }>("/trials/use", {
+      const result = await apiClient<{ flier_url?: string; sent_to?: string; sent_via?: string }>("/trials/use", {
         method: "POST",
         body: {
           trial_type: mode,
@@ -620,7 +620,8 @@ export default function CreateEventPage() {
         setEventPreviewUrl(result.flier_url);
         setMessage("Event flier preview generated! Here's what your event will look like on Discover Events:");
       } else if (mode === "invite" && result.sent_to) {
-        setMessage(`Test invite sent to ${result.sent_to}. Check your email to see exactly how the invitation will look. Create an account to send real invites.`);
+        const viaText = result.sent_via ? ` via ${result.sent_via}` : "";
+        setMessage(`✓ Test invite sent to ${result.sent_to}${viaText}. Check your messages to see exactly how it looks. Create an account to send real invites to your guest list.`);
       } else {
         setMessage(mode === "event"
           ? "Event preview ready. Create an account to publish to Discover Events."

@@ -12,6 +12,8 @@ from app.core.database import get_db
 from app.models.trial_usage import TrialUsage
 from app.services.email_service import send_email
 from app.services.ai_service import generate_flier_image
+from app.services.whatsapp_service import send_whatsapp
+from app.services.sms_service import send_sms
 
 router = APIRouter()
 
@@ -178,9 +180,28 @@ async def use_trial(
         </html>
         """
 
-        # Send the test email
-        await send_email(test_email, f"TEST PREVIEW: {title} - Invitation Preview", html)
+        # Send test invite via all selected channels
+        sent_channels = []
+
+        # Send via email
+        if "email" in delivery_channels:
+            await send_email(test_email, f"TEST PREVIEW: {title} - Invitation Preview", html)
+            sent_channels.append("Email")
+
+        # Send via WhatsApp
+        if "whatsapp" in delivery_channels:
+            whatsapp_text = f"TEST PREVIEW: {title}\n\nHost: {host_name}\nDate & Time: {event_date} at {event_time}\n\n{description}\n\n[This is a test preview sent by Accredit.vip]"
+            await send_whatsapp(test_email, whatsapp_text)
+            sent_channels.append("WhatsApp")
+
+        # Send via SMS
+        if "sms" in delivery_channels:
+            sms_text = f"[Accredit.vip TEST] {title} by {host_name}. {event_date} at {event_time}. {description[:60]}... Reply or create account to continue."
+            await send_sms(test_email, sms_text)
+            sent_channels.append("SMS")
+
         response["sent_to"] = test_email
+        response["sent_via"] = ", ".join(sent_channels) if sent_channels else "All channels"
 
     # Handle event trial - generate flier preview
     elif req.trial_type == "event":
