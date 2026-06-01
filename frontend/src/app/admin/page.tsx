@@ -361,50 +361,40 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#f8f9fc" }}>
-      {/* Header */}
-      <header className="h-14 flex items-center justify-between px-4 flex-shrink-0" style={{ background: "white", borderBottom: "1px solid #e8edf2" }}>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}>
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-        </button>
-        <div className="flex items-center gap-3 ml-auto">
-          <Link href="/" className="text-gray-400 hover:text-gray-600 text-[11px] font-semibold transition-colors">Main Site</Link>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#E91E8C] flex items-center justify-center text-white text-[11px] font-bold">{user.full_name?.charAt(0) || "A"}</div>
-            <span className="text-gray-600 text-sm font-semibold hidden sm:block">{user.full_name}</span>
-          </div>
-          <button onClick={logout} className="text-gray-400 hover:text-gray-700 text-xs font-medium transition-colors">Sign out</button>
-        </div>
-      </header>
-
       {/* Main with sidebar */}
-      <div className="flex" style={{ minHeight: "calc(100vh - 56px)" }}>
-        {/* Sidebar (left, sliding panel) */}
-        <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 hidden sm:flex flex-col overflow-hidden transition-all duration-200`} style={{ background: "#f8f9fc", borderRight: sidebarOpen ? "1px solid #e8edf2" : "1px solid transparent" }}>
-          <div className={`${sidebarOpen ? '' : 'invisible'} px-4 py-4 border-b border-[#e8edf2] flex-shrink-0`}>
-            <Link href="/" className="flex items-center gap-2">
-              <Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-6 w-auto object-contain" />
-              <span className="text-xs font-bold text-gray-400">Admin</span>
-            </Link>
+      <div className="flex" style={{ minHeight: "calc(100vh - 0px)" }}>
+        {/* Sidebar (left, fixed width toggle) */}
+        <aside className={`${sidebarOpen ? 'w-56' : 'w-20'} flex-shrink-0 flex flex-col overflow-hidden transition-all duration-200`} style={{ background: "#f8f9fc", borderRight: "1px solid #e8edf2" }}>
+          {/* Logo section */}
+          <div className="px-3 py-4 border-b border-[#e8edf2] flex-shrink-0">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex items-center gap-3 w-full" title={sidebarOpen ? "Collapse" : "Expand"}>
+              <Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-6 w-auto flex-shrink-0" />
+              {sidebarOpen && <span className="text-xs font-bold text-gray-600">Admin</span>}
+            </button>
           </div>
-          <div className={`${sidebarOpen ? '' : 'invisible'} px-4 py-3 border-b border-[#e8edf2]`}>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-300">Sections</p>
-          </div>
-          <nav className={`${sidebarOpen ? '' : 'invisible'} flex-1 overflow-y-auto py-2 px-2 space-y-1`}>
+
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-1">
             {panelGroups.map((group) => {
               const isOpen = openPanels[group.key];
               const hasActive = group.items.includes(tab);
               return (
-                <div key={group.key} className="rounded-lg" style={{ background: hasActive ? "rgba(233,30,140,0.04)" : "transparent" }}>
+                <div key={group.key}>
                   <button
                     onClick={() => setOpenPanels((prev: Record<string, boolean>) => ({ ...prev, [group.key]: !prev[group.key] }))}
-                    className="flex items-center gap-2 w-full text-left px-2.5 py-2 text-xs font-bold rounded-lg transition-colors"
+                    className="flex items-center gap-2 w-full text-left px-2.5 py-2 text-xs font-bold rounded-lg transition-colors relative group"
                     style={{ color: hasActive ? "#E91E8C" : "#64748b" }}
+                    title={sidebarOpen ? undefined : group.label}
                   >
                     <span className="flex-shrink-0 opacity-60">{group.icon}</span>
-                    <span className="flex-1 truncate">{group.label}</span>
-                    <svg className={`w-3 h-3 transition-transform ${isOpen ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    {sidebarOpen && (
+                      <>
+                        <span className="flex-1 truncate">{group.label}</span>
+                        <svg className={`w-3 h-3 transition-transform ${isOpen ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                      </>
+                    )}
                   </button>
-                  {isOpen && (
+                  {sidebarOpen && isOpen && (
                     <div className="ml-1 mt-0.5 space-y-0.5">
                       {group.items.map((itemId) => {
                         const t = tabs.find((x) => x.id === itemId)!;
@@ -431,6 +421,19 @@ export default function AdminPage() {
 
         {/* Main content */}
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Header */}
+          <header className="h-14 flex items-center justify-between px-5 flex-shrink-0" style={{ background: "white", borderBottom: "1px solid #e8edf2" }}>
+            <div></div>
+            <div className="flex items-center gap-3">
+              <Link href="/" className="text-gray-400 hover:text-gray-600 text-[11px] font-semibold transition-colors">Main Site</Link>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-[#E91E8C] flex items-center justify-center text-white text-[11px] font-bold">{user.full_name?.charAt(0) || "A"}</div>
+                <span className="text-gray-600 text-sm font-semibold hidden sm:block">{user.full_name}</span>
+              </div>
+              <button onClick={logout} className="text-gray-400 hover:text-gray-700 text-xs font-medium transition-colors">Sign out</button>
+            </div>
+          </header>
+
           {/* Stats row */}
           <div className="px-5 py-6 flex-shrink-0" style={{ borderBottom: "1px solid #e8edf2" }}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
