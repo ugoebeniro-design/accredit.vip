@@ -18,6 +18,7 @@ from app.models.staff import StaffAssignment
 from app.models.invite import InviteBatch, InviteMessage
 from app.models.audit_log import AuditLog
 from app.models.accreditation import AccreditationRequest
+from app.models.ticket_purchase import TicketPurchase
 
 router = APIRouter()
 
@@ -447,6 +448,59 @@ async def admin_checkins(
     }
 
 
+@router.post("/staff")
+async def create_staff_assignment(
+    user_id: int = Query(...),
+    event_id: int = Query(...),
+    role: str = Query("accreditation"),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    event_result = await db.execute(select(Event).where(Event.id == event_id))
+    event = event_result.scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    existing = await db.execute(
+        select(StaffAssignment).where(
+            StaffAssignment.user_id == user_id,
+            StaffAssignment.event_id == event_id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Staff already assigned to this event")
+
+    assignment = StaffAssignment(user_id=user_id, event_id=event_id, role=role)
+    db.add(assignment)
+    await db.commit()
+    await db.refresh(assignment)
+    await log_action(db, admin.id, "staff_assign", "staff_assignment", assignment.id,
+                     f"Assigned {user.full_name} as {role} to event '{event.title}'")
+    return {"id": assignment.id, "message": "Staff assigned"}
+
+
+@router.delete("/staff/{assignment_id}")
+async def delete_staff_assignment(
+    assignment_id: int,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(StaffAssignment).where(StaffAssignment.id == assignment_id))
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    await db.delete(assignment)
+    await db.commit()
+    await log_action(db, admin.id, "staff_unassign", "staff_assignment", assignment_id,
+                     f"Removed staff assignment {assignment_id}")
+    return {"message": "Staff unassigned"}
+
+
 @router.get("/staff")
 async def admin_staff(
     admin: User = Depends(require_admin),
@@ -652,6 +706,48 @@ async def admin_export(
             writer.writerow([r.id, float(r.amount), r.currency, r.provider, r.reference, r.status, r.title, r.full_name, str(r.created_at)])
     else:
         raise HTTPException(404, detail="Unknown export resource")
+
+
+@router.get("/ticket-purchases")
+async def admin_ticket_purchases(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    status: str | None = Query(None),
+):
+    q = select(TicketPurchase, Event.title.label("event_title")).join(
+        Event, TicketPurchase.event_id == Event.id
+    )
+    if status:
+        q = q.where(TicketPurchase.status == status)
+    total_q = select(func.count()).select_from(q.subquery())
+    total = await db.scalar(total_q)
+    q = q.order_by(TicketPurchase.created_at.desc()).offset(
+        (page - 1) * per_page
+    ).limit(per_page)
+    result = await db.execute(q)
+    rows = result.all()
+    return {
+        "total": total or 0,
+        "page": page,
+        "per_page": per_page,
+        "ticket_purchases": [
+            {
+                "id": r.TicketPurchase.id,
+                "reference": r.TicketPurchase.reference,
+                "event_title": r.event_title,
+                "buyer_name": r.TicketPurchase.buyer_name,
+                "buyer_email": r.TicketPurchase.buyer_email,
+                "quantity": r.TicketPurchase.quantity,
+                "amount": r.TicketPurchase.amount,
+                "platform_fee": r.TicketPurchase.platform_fee or 0,
+                "status": r.TicketPurchase.status,
+                "created_at": str(r.TicketPurchase.created_at),
+            }
+            for r in rows
+        ],
+    }
 
     output.seek(0)
     return Response(

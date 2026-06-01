@@ -128,6 +128,19 @@ export type PaymentRecord = {
   organizer_name: string;
 };
 
+export type TicketPurchaseRecord = {
+  id: number;
+  reference: string;
+  event_title: string;
+  buyer_name: string;
+  buyer_email: string;
+  quantity: number;
+  amount: number;
+  platform_fee: number;
+  status: string;
+  created_at: string;
+};
+
 export type AuditLogEntry = {
   id: number;
   user_id: number | null;
@@ -167,6 +180,7 @@ export type UserListResponse = PaginatedResponse<AdminUser> & { users: AdminUser
 export type EventListResponse = PaginatedResponse<AdminEvent> & { events: AdminEvent[] };
 export type CheckinListResponse = PaginatedResponse<CheckInLog> & { checkins: CheckInLog[] };
 export type PaymentListResponse = PaginatedResponse<PaymentRecord> & { payments: PaymentRecord[] };
+export type TicketPurchaseListResponse = PaginatedResponse<TicketPurchaseRecord> & { ticket_purchases: TicketPurchaseRecord[] };
 export type AuditLogResponse = PaginatedResponse<AuditLogEntry> & { logs: AuditLogEntry[] };
 
 export async function getAdminStats(): Promise<AdminStats> {
@@ -262,8 +276,24 @@ export async function getAdminStaff(): Promise<StaffAssignment[]> {
   return apiClient("/admin/staff");
 }
 
+export async function createStaffAssignment(userId: number, eventId: number, role: string = "accreditation"): Promise<void> {
+  await apiClient(`/admin/staff?user_id=${userId}&event_id=${eventId}&role=${role}`, { method: "POST" });
+}
+
+export async function deleteStaffAssignment(assignmentId: number): Promise<void> {
+  await apiClient(`/admin/staff/${assignmentId}`, { method: "DELETE" });
+}
+
 export async function getAdminPayments(page: number = 1, per_page: number = 50): Promise<PaymentListResponse> {
   return apiClient(`/admin/payments?page=${page}&per_page=${per_page}`);
+}
+
+export async function getAdminTicketPurchases(page: number = 1, per_page: number = 50, status?: string): Promise<TicketPurchaseListResponse> {
+  const q = new URLSearchParams();
+  q.set("page", String(page));
+  q.set("per_page", String(per_page));
+  if (status) q.set("status", status);
+  return apiClient(`/admin/ticket-purchases?${q.toString()}`);
 }
 
 export async function getAdminAuditLogs(params?: {

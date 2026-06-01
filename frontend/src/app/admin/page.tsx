@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
   getAdminStats,
   getAdminUsers,
@@ -18,6 +19,7 @@ import {
   getAdminCheckins,
   getAdminStaff,
   getAdminPayments,
+  getAdminTicketPurchases,
   getAdminAuditLogs,
   getAdminFraudFlags,
   getAdminAccreditationRequests,
@@ -44,6 +46,7 @@ import {
   type CheckInLog,
   type StaffAssignment,
   type PaymentRecord,
+  type TicketPurchaseRecord,
   type AuditLogEntry,
   type FraudFlags,
   type AccreditationRequest,
@@ -65,17 +68,20 @@ function TabIcon({ id }: { id: string }) {
     audit: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>,
     fraud: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>,
     community: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>,
+    revenue: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    tickets: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 012-2h6a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V5z" /></svg>,
+    export: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33A3 3 0 0116.5 19.5H6.75z" /></svg>,
   };
   return <>{icons[id] || <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" /></svg>}</>;
 }
 
 function StatCard({ label, value, icon, color, bg }: { label: string; value: string | number; icon: React.ReactNode; color: string; bg: string }) {
   return (
-    <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: "white", border: "1px solid #e8edf2", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-      <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bg, color }}>{icon}</div>
+    <div className="rounded-2xl p-5 flex flex-col gap-4" style={{ background: "white", border: "1px solid #e8edf2", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bg, color }}>{icon}</div>
       <div>
-        <p className="text-2xl font-extrabold text-[#0D1B2A]">{value}</p>
-        <p className="text-xs text-gray-400 mt-0.5">{label}</p>
+        <p className="text-3xl font-extrabold text-[#0D1B2A] leading-none" style={{ letterSpacing: "-0.02em" }}>{value}</p>
+        <p className="text-xs text-gray-400 mt-1.5 leading-tight">{label}</p>
       </div>
     </div>
   );
@@ -112,7 +118,7 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
   );
 }
 
-type TabId = "overview" | "users" | "events" | "payments" | "delivery" | "support" | "scans" | "staff" | "analytics" | "audit" | "fraud" | "accreditation" | "community";
+type TabId = "overview" | "users" | "events" | "payments" | "delivery" | "support" | "scans" | "staff" | "analytics" | "audit" | "fraud" | "accreditation" | "community" | "revenue" | "tickets" | "export";
 
 export default function AdminPage() {
   const { user, loading, logout, login } = useAuth();
@@ -146,9 +152,14 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; variant?: "danger" | "warning" | "default"; onConfirm: () => void } | null>(null);
   const [roleUpdating, setRoleUpdating] = useState<number | null>(null);
   const [userSearch, setUserSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("");
+  const [userActiveFilter, setUserActiveFilter] = useState("");
+  const [eventStatusFilter, setEventStatusFilter] = useState("");
+  const [eventVisibilityFilter, setEventVisibilityFilter] = useState("");
   const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<AdminEventDetail | null>(null);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
@@ -157,16 +168,36 @@ export default function AdminPage() {
   const [userTotal, setUserTotal] = useState(0);
   const [eventPage, setEventPage] = useState(1);
   const [eventTotal, setEventTotal] = useState(0);
+  const [ticketPurchases, setTicketPurchases] = useState<TicketPurchaseRecord[]>([]);
+  const [ticketPage, setTicketPage] = useState(1);
+  const [ticketTotal, setTicketTotal] = useState(0);
+  const [staffFormUser, setStaffFormUser] = useState("");
+  const [staffFormEvent, setStaffFormEvent] = useState("");
+  const [staffFormRole, setStaffFormRole] = useState("accreditation");
+  const [staffFormLoading, setStaffFormLoading] = useState(false);
+  const [staffFormError, setStaffFormError] = useState("");
 
-  const loadUserPage = useCallback(async (page: number, search: string) => {
-    const res = await getAdminUsers({ page, per_page: 20, search: search || undefined });
+  const loadUserPage = useCallback(async (page: number, search: string, roleFilter = "", activeFilter = "") => {
+    const res = await getAdminUsers({
+      page,
+      per_page: 20,
+      search: search || undefined,
+      role: roleFilter || undefined,
+      is_active: activeFilter === "true" ? true : activeFilter === "false" ? false : undefined,
+    });
     setUsers(res.users);
     setUserTotal(res.total);
     setUserPage(res.page);
   }, []);
 
-  const loadEventPage = useCallback(async (page: number, search: string) => {
-    const res = await getAdminEvents({ page, per_page: 20, search: search || undefined });
+  const loadEventPage = useCallback(async (page: number, search: string, statusFilter = "", visibilityFilter = "") => {
+    const res = await getAdminEvents({
+      page,
+      per_page: 20,
+      search: search || undefined,
+      status: statusFilter || undefined,
+      is_public: visibilityFilter === "true" ? true : visibilityFilter === "false" ? false : undefined,
+    });
     setEvents(res.events);
     setEventTotal(res.total);
     setEventPage(res.page);
@@ -192,6 +223,7 @@ export default function AdminPage() {
       if (section === "scans") await getAdminCheckins(1, 100).then((r) => setCheckins(r.checkins)).catch(() => {});
       if (section === "staff") await getAdminStaff().then(setStaffAssignments).catch(() => {});
       if (section === "payments") await getAdminPayments(1, 100).then((r) => setPayments(r.payments)).catch(() => {});
+      if (section === "tickets") await getAdminTicketPurchases(1, 100).then((r) => { setTicketPurchases(r.ticket_purchases); setTicketTotal(r.total); setTicketPage(r.page); }).catch(() => {});
       if (section === "audit") await getAdminAuditLogs({ page: 1, per_page: 100 }).then((r) => setAuditLogs(r.logs)).catch(() => {});
       if (section === "fraud") await getAdminFraudFlags().then(setFraudFlags).catch(() => {});
       if (section === "accreditation") await getAdminAccreditationRequests().then(setAccredRequests).catch(() => {});
@@ -286,6 +318,8 @@ export default function AdminPage() {
     { id: "analytics", label: "Analytics" },
     { id: "users", label: `Users (${userTotal})` },
     { id: "events", label: `Events (${eventTotal})` },
+    { id: "revenue", label: "Revenue" },
+    { id: "tickets", label: "Tickets" },
     { id: "payments", label: "Payments" },
     { id: "delivery", label: "Delivery" },
     { id: "support", label: "Support" },
@@ -295,15 +329,16 @@ export default function AdminPage() {
     { id: "audit", label: "Audit" },
     { id: "fraud", label: "Fraud" },
     { id: "community", label: "Community" },
+    { id: "export", label: "Export" },
   ];
 
   type PanelGroup = { key: string; icon: React.ReactNode; label: string; items: TabId[] };
   const panelGroups: PanelGroup[] = [
-    { key: "general", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>, label: "General", items: ["overview", "analytics"] },
-    { key: "content", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>, label: "Content", items: ["users", "events", "community"] },
-    { key: "financial", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, label: "Financial", items: ["payments", "delivery"] },
-    { key: "operations", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, label: "Operations", items: ["support", "scans", "staff", "accreditation"] },
-    { key: "monitoring", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>, label: "Monitoring", items: ["audit", "fraud"] },
+    { key: "general", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>, label: "General", items: ["overview", "analytics", "users", "events"] },
+    { key: "content", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>, label: "Content", items: ["community"] },
+    { key: "financial", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, label: "Financial", items: ["revenue", "tickets", "payments"] },
+    { key: "operations", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, label: "Operations", items: ["delivery", "support", "scans", "staff", "accreditation"] },
+    { key: "monitoring", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>, label: "Monitoring", items: ["audit", "fraud", "export"] },
   ];
 
   const handleRoleChange = async (userId: number, newRole: string) => {
@@ -329,14 +364,14 @@ export default function AdminPage() {
       {/* Header */}
       <header className="h-14 flex items-center justify-between px-5 flex-shrink-0" style={{ background: "white", borderBottom: "1px solid #e8edf2" }}>
         <div className="flex items-center gap-2">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:flex hidden items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-          </button>
           <Link href="/"><Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-8 w-auto object-contain" /></Link>
           <span className="ml-2 text-[11px] font-bold uppercase tracking-widest text-gray-300 hidden sm:block">Admin</span>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/" className="text-gray-400 hover:text-gray-600 text-[11px] font-semibold transition-colors">Main Site</Link>
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:flex hidden items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h18v18H3V3zM15 3v18" /></svg>
+          </button>
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-[#E91E8C] flex items-center justify-center text-white text-[11px] font-bold">{user.full_name?.charAt(0) || "A"}</div>
             <span className="text-gray-600 text-sm font-semibold hidden sm:block">{user.full_name}</span>
@@ -349,15 +384,30 @@ export default function AdminPage() {
       <main className="max-w-7xl mx-auto py-6">
         {/* Stats row */}
         <div className="px-5 mb-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {statCards.map((s) => (<StatCard key={s.label} {...s} />))}
           </div>
         </div>
 
         {/* Tab bar + Content */}
         <div className="flex" style={{ minHeight: "calc(100vh - 140px)" }}>
-          {/* Sidebar (desktop) */}
-          <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 hidden lg:flex flex-col overflow-hidden transition-all duration-200`} style={{ background: "#f8f9fc", borderRight: sidebarOpen ? "1px solid #e8edf2" : "1px solid transparent" }}>
+          {/* Content area (first) */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Mobile tabs */}
+            <div className="lg:hidden flex overflow-x-auto px-3 py-2 gap-1 border-b border-[#e8edf2]" style={{ background: "white" }}>
+              {tabs.map((t) => (
+                <button key={t.id} onClick={() => handleTabChange(t.id)}
+                  className="flex-shrink-0 px-3 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
+                  style={{ color: tab === t.id ? "#E91E8C" : "#94a3b8", background: tab === t.id ? "rgba(233,30,140,0.06)" : "transparent" }}
+                >{t.label}</button>
+              ))}
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5">
+            {sectionLoading && <div className="text-center py-8"><div className="w-6 h-6 border-2 border-[#E91E8C] border-t-transparent rounded-full animate-spin mx-auto" /><p className="text-xs text-gray-400 mt-2">Loading...</p></div>}
+
+          {/* Sidebar (desktop, on the right now) */}
+          <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 hidden lg:flex flex-col overflow-hidden transition-all duration-200`} style={{ background: "#f8f9fc", borderLeft: sidebarOpen ? "1px solid #e8edf2" : "1px solid transparent" }}>
             <div className={`${sidebarOpen ? '' : 'invisible'} px-3 py-3 border-b border-[#e8edf2]`}>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-300">Sections</p>
             </div>
@@ -400,21 +450,6 @@ export default function AdminPage() {
               })}
             </nav>
           </aside>
-
-          {/* Content area */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* Mobile tabs */}
-            <div className="lg:hidden flex overflow-x-auto px-3 py-2 gap-1 border-b border-[#e8edf2]" style={{ background: "white" }}>
-              {tabs.map((t) => (
-                <button key={t.id} onClick={() => handleTabChange(t.id)}
-                  className="flex-shrink-0 px-3 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
-                  style={{ color: tab === t.id ? "#E91E8C" : "#94a3b8", background: tab === t.id ? "rgba(233,30,140,0.06)" : "transparent" }}
-                >{t.label}</button>
-              ))}
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5">
-            {sectionLoading && <div className="text-center py-8"><div className="w-6 h-6 border-2 border-[#E91E8C] border-t-transparent rounded-full animate-spin mx-auto" /><p className="text-xs text-gray-400 mt-2">Loading...</p></div>}
 
             {!sectionLoading && tab === "overview" && (
               <div className="grid md:grid-cols-2 gap-8">
@@ -489,7 +524,18 @@ export default function AdminPage() {
               <div>
                 <div className="flex items-center gap-3 mb-4 flex-wrap">
                   <h2 className="text-base font-bold text-[#0D1B2A]">All Users</h2>
-                  <input type="text" placeholder="Search name or email..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); loadUserPage(1, e.target.value); }} className="h-9 rounded-lg border border-gray-300 px-3 text-xs w-64 focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30" />
+                  <input type="text" placeholder="Search name or email..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); loadUserPage(1, e.target.value, userRoleFilter, userActiveFilter); }} className="h-9 rounded-lg border border-gray-300 px-3 text-xs w-64 focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30" />
+                  <select value={userRoleFilter} onChange={(e) => { setUserRoleFilter(e.target.value); loadUserPage(1, userSearch, e.target.value, userActiveFilter); }} className="h-9 rounded-lg border border-gray-300 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30">
+                    <option value="">All Roles</option>
+                    <option value="organizer">Organizer</option>
+                    <option value="admin">Admin</option>
+                    <option value="super_admin">Super Admin</option>
+                  </select>
+                  <select value={userActiveFilter} onChange={(e) => { setUserActiveFilter(e.target.value); loadUserPage(1, userSearch, userRoleFilter, e.target.value); }} className="h-9 rounded-lg border border-gray-300 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30">
+                    <option value="">All Status</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
                   <button onClick={() => downloadAdminExport("users")} className="text-xs font-semibold text-[#E91E8C] hover:underline ml-auto">Export CSV</button>
                 </div>
                 <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid #e8edf2" }}>
@@ -547,7 +593,18 @@ export default function AdminPage() {
               <div>
                 <div className="flex items-center gap-3 mb-4 flex-wrap">
                   <h2 className="text-base font-bold text-[#0D1B2A]">All Events</h2>
-                  <input type="text" placeholder="Search title..." value={eventSearch} onChange={(e) => { setEventSearch(e.target.value); loadEventPage(1, e.target.value); }} className="h-9 rounded-lg border border-gray-300 px-3 text-xs w-64 focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30" />
+                  <input type="text" placeholder="Search title..." value={eventSearch} onChange={(e) => { setEventSearch(e.target.value); loadEventPage(1, e.target.value, eventStatusFilter, eventVisibilityFilter); }} className="h-9 rounded-lg border border-gray-300 px-3 text-xs w-64 focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30" />
+                  <select value={eventStatusFilter} onChange={(e) => { setEventStatusFilter(e.target.value); loadEventPage(1, eventSearch, e.target.value, eventVisibilityFilter); }} className="h-9 rounded-lg border border-gray-300 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30">
+                    <option value="">All Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="active">Active</option>
+                  </select>
+                  <select value={eventVisibilityFilter} onChange={(e) => { setEventVisibilityFilter(e.target.value); loadEventPage(1, eventSearch, eventStatusFilter, e.target.value); }} className="h-9 rounded-lg border border-gray-300 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30">
+                    <option value="">All Visibility</option>
+                    <option value="true">Public</option>
+                    <option value="false">Private</option>
+                  </select>
                   <button onClick={() => downloadAdminExport("events")} className="text-xs font-semibold text-[#E91E8C] hover:underline ml-auto">Export CSV</button>
                 </div>
                 <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid #e8edf2" }}>
@@ -628,6 +685,133 @@ export default function AdminPage() {
                     <p className="text-gray-400 text-sm">No payment records yet.</p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {!sectionLoading && tab === "revenue" && (
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-base font-bold text-[#0D1B2A]">Revenue Breakdown</h2>
+                  <button onClick={() => downloadAdminExport("payments")} className="text-xs font-semibold text-[#E91E8C] hover:underline ml-auto">Export CSV</button>
+                </div>
+                {revenue.length > 0 ? (
+                  <div>
+                    <div className="mb-6 grid grid-cols-3 gap-4">
+                      <div className="rounded-xl p-4" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}>
+                        <p className="text-xs text-gray-400 mb-1">Total Revenue</p>
+                        <p className="text-2xl font-extrabold text-[#E91E8C]">₦{revenue.reduce((s, r) => s + r.total, 0).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</p>
+                      </div>
+                      <div className="rounded-xl p-4" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}>
+                        <p className="text-xs text-gray-400 mb-1">Transactions</p>
+                        <p className="text-2xl font-extrabold text-[#0D1B2A]">{revenue.reduce((s, r) => s + r.count, 0)}</p>
+                      </div>
+                      <div className="rounded-xl p-4" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}>
+                        <p className="text-xs text-gray-400 mb-1">Avg Transaction</p>
+                        <p className="text-2xl font-extrabold text-[#0D1B2A]">₦{revenue.length > 0 ? (revenue.reduce((s, r) => s + r.total, 0) / revenue.reduce((s, r) => s + r.count, 0)).toFixed(0) : "0"}</p>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid #e8edf2" }}>
+                      <table className="w-full text-sm">
+                        <thead><tr style={{ background: "#f8f9fc", borderBottom: "1px solid #e8edf2" }}>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Provider</th>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Transactions</th>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Total</th>
+                        </tr></thead>
+                        <tbody>
+                          {revenue.map((r, i) => (
+                            <tr key={r.provider} style={{ borderBottom: i < revenue.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                              <td className="px-4 py-3 font-semibold text-[#0D1B2A] capitalize">{r.provider}</td>
+                              <td className="px-4 py-3 text-gray-500">{r.count}</td>
+                              <td className="px-4 py-3 font-bold text-[#E91E8C]">₦{r.total.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl p-12 text-center" style={{ background: "#f8f9fc", border: "2px dashed #e8edf2" }}>
+                    <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-5" style={{ background: "rgba(233,30,140,0.08)" }}>
+                      <svg className="w-8 h-8 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <p className="text-gray-400 text-sm">No revenue data yet.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!sectionLoading && tab === "tickets" && (
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-base font-bold text-[#0D1B2A]">Ticket Purchases</h2>
+                  <button onClick={() => downloadAdminExport("payments")} className="text-xs font-semibold text-[#E91E8C] hover:underline ml-auto">Export CSV</button>
+                </div>
+                {ticketPurchases.length > 0 ? (
+                  <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid #e8edf2" }}>
+                    <table className="w-full text-sm">
+                      <thead><tr style={{ background: "#f8f9fc", borderBottom: "1px solid #e8edf2" }}>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Reference</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Event</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Buyer</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Qty</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Fee (5%)</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Date</th>
+                      </tr></thead>
+                      <tbody>
+                        {ticketPurchases.map((t, i) => (
+                          <tr key={t.id} style={{ borderBottom: i < ticketPurchases.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                            <td className="px-4 py-3 font-mono text-xs text-gray-500">{t.reference}</td>
+                            <td className="px-4 py-3 font-semibold text-[#0D1B2A]">{t.event_title}</td>
+                            <td className="px-4 py-3 text-gray-500">{t.buyer_name}</td>
+                            <td className="px-4 py-3 text-gray-500">{t.quantity}</td>
+                            <td className="px-4 py-3 font-bold text-[#E91E8C]">₦{(t.amount / 1000).toFixed(1)}k</td>
+                            <td className="px-4 py-3 font-semibold text-[#E91E8C]">₦{(t.platform_fee / 1000).toFixed(1)}k</td>
+                            <td className="px-4 py-3"><span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: t.status === "paid" ? "rgba(16,185,129,0.1)" : "rgba(245,158,11,0.1)", color: t.status === "paid" ? "#10b981" : "#f59e0b" }}>{t.status}</span></td>
+                            <td className="px-4 py-3 text-gray-400 text-xs">{new Date(t.created_at).toLocaleDateString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl p-12 text-center" style={{ background: "#f8f9fc", border: "2px dashed #e8edf2" }}>
+                    <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-5" style={{ background: "rgba(233,30,140,0.08)" }}>
+                      <svg className="w-8 h-8 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 012-2h6a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V5z" /></svg>
+                    </div>
+                    <p className="text-gray-400 text-sm">No ticket purchases yet.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!sectionLoading && tab === "export" && (
+              <div className="space-y-4">
+                <h2 className="text-base font-bold text-[#0D1B2A] mb-6">Export Data</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <button onClick={() => downloadAdminExport("users")} className="rounded-2xl p-6 text-center transition-all hover:shadow-lg" style={{ background: "white", border: "1px solid #e8edf2" }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(233,30,140,0.08)" }}>
+                      <svg className="w-6 h-6 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    </div>
+                    <p className="font-bold text-[#0D1B2A] mb-1">Export Users</p>
+                    <p className="text-xs text-gray-400">All user accounts</p>
+                  </button>
+                  <button onClick={() => downloadAdminExport("events")} className="rounded-2xl p-6 text-center transition-all hover:shadow-lg" style={{ background: "white", border: "1px solid #e8edf2" }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(13,27,42,0.08)" }}>
+                      <svg className="w-6 h-6 text-[#0D1B2A]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                    <p className="font-bold text-[#0D1B2A] mb-1">Export Events</p>
+                    <p className="text-xs text-gray-400">All events</p>
+                  </button>
+                  <button onClick={() => downloadAdminExport("payments")} className="rounded-2xl p-6 text-center transition-all hover:shadow-lg" style={{ background: "white", border: "1px solid #e8edf2" }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(139,92,246,0.08)" }}>
+                      <svg className="w-6 h-6 text-[#8b5cf6]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <p className="font-bold text-[#0D1B2A] mb-1">Export Payments</p>
+                    <p className="text-xs text-gray-400">All payments</p>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -733,6 +917,77 @@ export default function AdminPage() {
             {!sectionLoading && tab === "staff" && (
               <div>
                 <h2 className="text-base font-bold text-[#0D1B2A] mb-4">Staff Assignments</h2>
+
+                <div className="rounded-xl p-4 mb-6 flex flex-wrap items-end gap-3" style={{ border: "1px solid #e8edf2", background: "#f8f9fc" }}>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">User (email or name)</label>
+                    <input
+                      list="staff-users"
+                      placeholder="Type to search..."
+                      value={staffFormUser}
+                      onChange={(e) => setStaffFormUser(e.target.value)}
+                      className="flex h-9 rounded-lg border border-input bg-white px-3 py-2 text-sm min-w-[200px]"
+                    />
+                    <datalist id="staff-users">
+                      {users.filter((u) => u.role === "staff").map((u) => (
+                        <option key={u.id} value={`${u.full_name} (${u.email})`} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Event</label>
+                    <input
+                      list="staff-events"
+                      placeholder="Type to search..."
+                      value={staffFormEvent}
+                      onChange={(e) => setStaffFormEvent(e.target.value)}
+                      className="flex h-9 rounded-lg border border-input bg-white px-3 py-2 text-sm min-w-[200px]"
+                    />
+                    <datalist id="staff-events">
+                      {events.map((e) => (
+                        <option key={e.id} value={`${e.title} (ID: ${e.id})`} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Role</label>
+                    <select value={staffFormRole} onChange={(e) => setStaffFormRole(e.target.value)} className="flex h-9 rounded-lg border border-input bg-white px-3 py-2 text-sm">
+                      <option value="accreditation">Accreditation</option>
+                      <option value="scanning">Scanning</option>
+                      <option value="check-in">Check-in</option>
+                      <option value="security">Security</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setStaffFormError("");
+                      setStaffFormLoading(true);
+                      try {
+                        const { createStaffAssignment, getAdminStaff } = await import("@/lib/api/admin");
+                        const userMatch = staffFormUser.match(/\(([^)]+)\)$/);
+                        const eventMatch = staffFormEvent.match(/ID:\s*(\d+)\)$/);
+                        if (!userMatch || !eventMatch) { setStaffFormError("Select a valid user and event from the suggestions."); return; }
+                        const email = userMatch[1];
+                        const userRes = await (await import("@/lib/api/admin")).getAdminUsers({ search: email });
+                        const foundUser = userRes.users.find((u) => u.email === email);
+                        if (!foundUser) { setStaffFormError("User not found."); return; }
+                        await createStaffAssignment(foundUser.id, parseInt(eventMatch[1]), staffFormRole);
+                        setStaffFormUser(""); setStaffFormEvent(""); setStaffFormRole("accreditation");
+                        const updated = await getAdminStaff();
+                        setStaffAssignments(updated);
+                      } catch (err: any) {
+                        setStaffFormError(err instanceof Error ? err.message : "Could not create assignment");
+                      }
+                      setStaffFormLoading(false);
+                    }}
+                    disabled={staffFormLoading}
+                    className="h-9 rounded-lg px-4 text-sm font-semibold text-white" style={{ background: "#10b981" }}
+                  >
+                    {staffFormLoading ? "Adding..." : "Add Staff"}
+                  </button>
+                  {staffFormError && <p className="w-full text-xs text-red-500 mt-1">{staffFormError}</p>}
+                </div>
+
                 {staffAssignments.length > 0 ? (
                   <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid #e8edf2" }}>
                     <table className="w-full text-sm">
@@ -742,6 +997,7 @@ export default function AdminPage() {
                         <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Event</th>
                         <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Role</th>
                         <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Assigned</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider"></th>
                       </tr></thead>
                       <tbody>
                         {staffAssignments.map((s, i) => (
@@ -751,6 +1007,26 @@ export default function AdminPage() {
                             <td className="px-4 py-3 text-gray-500">{s.event_title}</td>
                             <td className="px-4 py-3 capitalize text-gray-500">{s.role}</td>
                             <td className="px-4 py-3 text-gray-400 text-xs">{new Date(s.assigned_at).toLocaleDateString()}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => {
+                                  setConfirmDialog({
+                                    title: "Remove staff assignment",
+                                    message: "Are you sure you want to remove this staff assignment? This action cannot be undone.",
+                                    variant: "danger",
+                                    onConfirm: async () => {
+                                      const { deleteStaffAssignment, getAdminStaff } = await import("@/lib/api/admin");
+                                      await deleteStaffAssignment(s.id);
+                                      const updated = await getAdminStaff();
+                                      setStaffAssignments(updated);
+                                    },
+                                  });
+                                }}
+                                className="text-xs font-semibold text-red-500 hover:text-red-700"
+                              >
+                                Remove
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -990,12 +1266,18 @@ export default function AdminPage() {
                             Edit
                           </button>
                           <button
-                            onClick={async () => {
-                              if (!confirm("Delete this post?")) return;
-                              try {
-                                await deleteAdminCommunityPost(post.id);
-                                await getAdminCommunityPosts().then(setCommunityPosts);
-                              } catch { /* ignore */ }
+                            onClick={() => {
+                              setConfirmDialog({
+                                title: "Delete post",
+                                message: `Delete "${post.title}"? This cannot be undone.`,
+                                variant: "danger",
+                                onConfirm: async () => {
+                                  try {
+                                    await deleteAdminCommunityPost(post.id);
+                                    await getAdminCommunityPosts().then(setCommunityPosts);
+                                  } catch { /* ignore */ }
+                                },
+                              });
                             }}
                             className="text-xs font-semibold text-[#ef4444] hover:underline"
                           >
@@ -1069,6 +1351,16 @@ export default function AdminPage() {
           </div>
         ) : null}
       </Modal>
+
+      <ConfirmDialog
+        open={!!confirmDialog}
+        title={confirmDialog?.title ?? ""}
+        message={confirmDialog?.message ?? ""}
+        variant={confirmDialog?.variant ?? "danger"}
+        confirmLabel="Yes, proceed"
+        onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }
