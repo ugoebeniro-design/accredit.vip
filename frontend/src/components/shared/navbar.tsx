@@ -14,20 +14,18 @@ interface NavbarProps {
 export function Navbar({
   variant = "solid",
   showAuth = true,
-  authLinks = [
-    { label: "Sign in", href: "/login" },
-    { label: "CREATE EVENT", href: "/create-event", primary: true },
-  ],
+  authLinks,
   extraLinks = [
     { label: "Home", href: "/" },
     { label: "Attend", href: "/attend" },
-    { label: "Community", href: "/community" },
     { label: "Pricing", href: "/pricing" },
+    { label: "Community", href: "/community" },
     { label: "Contact", href: "/contact" },
   ],
 }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -35,11 +33,41 @@ export function Navbar({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      setIsLoggedIn(!!token);
+    };
+    checkAuth();
+    window.addEventListener("storage", checkAuth);
+    return () => window.removeEventListener("storage", checkAuth);
+  }, []);
+
+  const resolvedAuthLinks = authLinks ?? (
+    isLoggedIn
+      ? [
+          { label: "Dashboard", href: "/dashboard" },
+          {
+            label: "Logout",
+            href: "/login",
+            primary: false,
+            onClick: () => {
+              localStorage.removeItem("access_token");
+              window.location.href = "/login";
+            },
+          },
+        ]
+      : [
+          { label: "Sign in", href: "/login" },
+          { label: "CREATE EVENT", href: "/create-event", primary: true },
+        ]
+  ) as Array<{ label: string; href: string; primary?: boolean; onClick?: () => void }>;
+
   const isDark = variant === "solid" || variant === "transparent";
 
   return (
     <header
-      className="sticky top-0 z-50 transition-all duration-300"
+      className="motion-navbar sticky top-0 z-50 transition-all duration-300"
       style={
         variant === "light"
           ? { background: "white", borderBottom: "1px solid #e8edf2" }
@@ -107,8 +135,35 @@ export function Navbar({
           {/* ── Auth Links ── */}
           {showAuth && (
             <div className="hidden md:flex items-center gap-2">
-              {authLinks.map((link) =>
-                link.primary ? (
+              {resolvedAuthLinks.map((link) => {
+                // Use button for logout (has onClick handler)
+                if (link.onClick) {
+                  return (
+                    <button
+                      key={link.label}
+                      onClick={link.onClick}
+                      className="rounded-lg border px-4 py-2 text-sm font-bold transition-all duration-150"
+                      style={{
+                        color: isDark ? "white" : "#0D1B2A",
+                        borderColor: isDark ? "rgba(255,255,255,0.22)" : "rgba(13,27,42,0.18)",
+                        background: isDark ? "rgba(255,255,255,0.06)" : "white",
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = isDark
+                          ? "rgba(255,255,255,0.12)"
+                          : "rgba(13,27,42,0.05)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = isDark ? "rgba(255,255,255,0.06)" : "white";
+                      }}
+                    >
+                      {link.label}
+                    </button>
+                  );
+                }
+                // Use Link for regular navigation
+                return link.primary ? (
                   <Link key={link.href} href={link.href} className="btn-primary text-sm py-2 px-5 rounded-lg">
                     {link.label}
                   </Link>
@@ -133,8 +188,8 @@ export function Navbar({
                   >
                     {link.label}
                   </Link>
-                )
-              )}
+                );
+              })}
             </div>
           )}
 
@@ -196,8 +251,26 @@ export function Navbar({
             ))}
             {showAuth && (
               <div className="pt-3 pb-1 space-y-2 border-t" style={{ borderColor: isDark ? "rgba(255,255,255,0.08)" : "#e8edf2" }}>
-                {authLinks.map((link) =>
-                  link.primary ? (
+                {resolvedAuthLinks.map((link) => {
+                  // Use button for logout (has onClick handler)
+                  if (link.onClick) {
+                    return (
+                      <button
+                        key={link.label}
+                        onClick={() => { setMobileOpen(false); link.onClick?.(); }}
+                        className="block w-full rounded-xl border px-4 py-3 text-center text-sm font-bold transition-colors"
+                        style={{
+                          color: isDark ? "white" : "#0D1B2A",
+                          borderColor: isDark ? "rgba(255,255,255,0.18)" : "rgba(13,27,42,0.16)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {link.label}
+                      </button>
+                    );
+                  }
+                  // Use Link for regular navigation
+                  return link.primary ? (
                     <Link
                       key={link.href}
                       href={link.href}
@@ -215,12 +288,11 @@ export function Navbar({
                         color: isDark ? "white" : "#0D1B2A",
                         borderColor: isDark ? "rgba(255,255,255,0.18)" : "rgba(13,27,42,0.16)",
                       }}
-                      onClick={() => setMobileOpen(false)}
                     >
                       {link.label}
                     </Link>
-                  )
-                )}
+                  );
+                })}
               </div>
             )}
           </div>
