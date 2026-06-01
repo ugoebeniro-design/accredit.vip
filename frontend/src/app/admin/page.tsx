@@ -364,14 +364,14 @@ export default function AdminPage() {
       {/* Header */}
       <header className="h-14 flex items-center justify-between px-5 flex-shrink-0" style={{ background: "white", borderBottom: "1px solid #e8edf2" }}>
         <div className="flex items-center gap-2">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
           <Link href="/"><Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-8 w-auto object-contain" /></Link>
           <span className="ml-2 text-[11px] font-bold uppercase tracking-widest text-gray-300 hidden sm:block">Admin</span>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/" className="text-gray-400 hover:text-gray-600 text-[11px] font-semibold transition-colors">Main Site</Link>
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:flex hidden items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h18v18H3V3zM15 3v18" /></svg>
-          </button>
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-[#E91E8C] flex items-center justify-center text-white text-[11px] font-bold">{user.full_name?.charAt(0) || "A"}</div>
             <span className="text-gray-600 text-sm font-semibold hidden sm:block">{user.full_name}</span>
@@ -380,19 +380,66 @@ export default function AdminPage() {
         </div>
       </header>
 
-      {/* Main */}
-      <main className="max-w-7xl mx-auto py-6">
-        {/* Stats row */}
-        <div className="px-5 mb-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {statCards.map((s) => (<StatCard key={s.label} {...s} />))}
+      {/* Main with sidebar */}
+      <div className="flex" style={{ minHeight: "calc(100vh - 56px)" }}>
+        {/* Sidebar (left, sliding panel) */}
+        <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 hidden sm:flex flex-col overflow-hidden transition-all duration-200`} style={{ background: "#f8f9fc", borderRight: sidebarOpen ? "1px solid #e8edf2" : "1px solid transparent" }}>
+          <div className={`${sidebarOpen ? '' : 'invisible'} px-3 py-3 border-b border-[#e8edf2]`}>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-300">Sections</p>
           </div>
-        </div>
+          <nav className={`${sidebarOpen ? '' : 'invisible'} flex-1 overflow-y-auto py-2 px-2 space-y-1`}>
+            {panelGroups.map((group) => {
+              const isOpen = openPanels[group.key];
+              const hasActive = group.items.includes(tab);
+              return (
+                <div key={group.key} className="rounded-lg" style={{ background: hasActive ? "rgba(233,30,140,0.04)" : "transparent" }}>
+                  <button
+                    onClick={() => setOpenPanels((prev: Record<string, boolean>) => ({ ...prev, [group.key]: !prev[group.key] }))}
+                    className="flex items-center gap-2 w-full text-left px-2.5 py-2 text-xs font-bold rounded-lg transition-colors"
+                    style={{ color: hasActive ? "#E91E8C" : "#64748b" }}
+                  >
+                    <span className="flex-shrink-0 opacity-60">{group.icon}</span>
+                    <span className="flex-1 truncate">{group.label}</span>
+                    <svg className={`w-3 h-3 transition-transform ${isOpen ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                  {isOpen && (
+                    <div className="ml-1 mt-0.5 space-y-0.5">
+                      {group.items.map((itemId) => {
+                        const t = tabs.find((x) => x.id === itemId)!;
+                        return (
+                          <button key={itemId} onClick={() => handleTabChange(itemId)}
+                            className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs font-semibold rounded-md transition-all"
+                            style={{
+                              color: tab === itemId ? "#E91E8C" : "#64748b",
+                              background: tab === itemId ? "rgba(233,30,140,0.07)" : "transparent",
+                            }}
+                          >
+                            <span className="flex-shrink-0 w-4 flex justify-center"><TabIcon id={itemId} /></span>
+                            <span className="truncate">{t.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+        </aside>
 
-        {/* Tab bar + Content */}
-        <div className="flex" style={{ minHeight: "calc(100vh - 140px)" }}>
-          {/* Content area (first) */}
-          <div className="flex-1 flex flex-col min-w-0">
+        {/* Main content */}
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Stats row */}
+          <div className="px-5 py-6 flex-shrink-0" style={{ borderBottom: "1px solid #e8edf2" }}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {statCards.map((s) => (<StatCard key={s.label} {...s} />))}
+            </div>
+          </div>
+
+          {/* Tab bar + Content */}
+          <div className="flex flex-1 min-w-0">
+            {/* Content area */}
+            <div className="flex-1 flex flex-col min-w-0">
             {/* Mobile tabs */}
             <div className="lg:hidden flex overflow-x-auto px-3 py-2 gap-1 border-b border-[#e8edf2]" style={{ background: "white" }}>
               {tabs.map((t) => (
@@ -1247,53 +1294,8 @@ export default function AdminPage() {
             )}
             </div>
           </div>
-
-          {/* Sidebar (desktop, on the right) */}
-          <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 hidden lg:flex flex-col overflow-hidden transition-all duration-200`} style={{ background: "#f8f9fc", borderLeft: sidebarOpen ? "1px solid #e8edf2" : "1px solid transparent" }}>
-            <div className={`${sidebarOpen ? '' : 'invisible'} px-3 py-3 border-b border-[#e8edf2]`}>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-300">Sections</p>
-            </div>
-            <nav className={`${sidebarOpen ? '' : 'invisible'} flex-1 overflow-y-auto py-2 px-2 space-y-1`}>
-              {panelGroups.map((group) => {
-                const isOpen = openPanels[group.key];
-                const hasActive = group.items.includes(tab);
-                return (
-                  <div key={group.key} className="rounded-lg" style={{ background: hasActive ? "rgba(233,30,140,0.04)" : "transparent" }}>
-                    <button
-                      onClick={() => setOpenPanels((prev: Record<string, boolean>) => ({ ...prev, [group.key]: !prev[group.key] }))}
-                      className="flex items-center gap-2 w-full text-left px-2.5 py-2 text-xs font-bold rounded-lg transition-colors"
-                      style={{ color: hasActive ? "#E91E8C" : "#64748b" }}
-                    >
-                      <span className="flex-shrink-0 opacity-60">{group.icon}</span>
-                      <span className="flex-1 truncate">{group.label}</span>
-                      <svg className={`w-3 h-3 transition-transform ${isOpen ? "rotate-90" : ""}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                    {isOpen && (
-                      <div className="ml-1 mt-0.5 space-y-0.5">
-                        {group.items.map((itemId) => {
-                          const t = tabs.find((x) => x.id === itemId)!;
-                          return (
-                            <button key={itemId} onClick={() => handleTabChange(itemId)}
-                              className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs font-semibold rounded-md transition-all"
-                              style={{
-                                color: tab === itemId ? "#E91E8C" : "#64748b",
-                                background: tab === itemId ? "rgba(233,30,140,0.07)" : "transparent",
-                              }}
-                            >
-                              <span className="flex-shrink-0 w-4 flex justify-center"><TabIcon id={itemId} /></span>
-                              <span className="truncate">{t.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </nav>
-          </aside>
-        </div>
-      </main>
+        </main>
+      </div>
 
       {/* User Detail Modal */}
       <Modal open={!!selectedUser} onClose={() => setSelectedUser(null)} title="User Detail">
