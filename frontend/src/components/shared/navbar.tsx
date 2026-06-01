@@ -49,7 +49,6 @@ export function Navbar({
           },
         ]
       : [
-          { label: "Sign in", href: "/login" },
           { label: "CREATE EVENT", href: "/create-event", primary: true },
         ]
   ) as Array<{ label: string; href: string; primary?: boolean; onClick?: () => void }>;
