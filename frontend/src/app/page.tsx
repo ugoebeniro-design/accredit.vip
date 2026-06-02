@@ -3,6 +3,7 @@ import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { EventsCarousel } from "@/components/shared/events-carousel";
 import { GetStartedGuide } from "@/components/shared/get-started-guide";
+import { getHeroBackground, getSpecialDayName } from "@/lib/special-days";
 
 export const metadata = {
   title: "accredit.vip — Premium Event Infrastructure for Africa",
@@ -89,11 +90,18 @@ const features = [
   },
 ];
 
+const statsIconMap = {
+  events: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  guests: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 8.646 4 4 0 010-8.646M12 14H8.823a4 4 0 00-3.745 6.283M16 14h4.823a4 4 0 013.745 6.283" /></svg>,
+  channels: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  uptime: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
+};
+
 const stats = [
-  { value: "10k+",  label: "Events Created",  icon: "🎪" },
-  { value: "500k+", label: "Guests Managed",  icon: "👥" },
-  { value: "3",     label: "Delivery Channels", icon: "📡" },
-  { value: "99.9%", label: "Uptime",           icon: "⚡" },
+  { value: "10k+",  label: "Events Created",  iconKey: "events" },
+  { value: "500k+", label: "Guests Managed",  iconKey: "guests" },
+  { value: "3",     label: "Delivery Channels", iconKey: "channels" },
+  { value: "99.9%", label: "Uptime",           iconKey: "uptime" },
 ];
 
 const howItWorks = [
@@ -180,8 +188,7 @@ export default function HomePage() {
       <section
         className="hero-animated-bg relative overflow-hidden"
         style={{
-          backgroundImage:
-            "linear-gradient(120deg, rgba(5,10,20,0.70) 0%, rgba(13,27,42,0.52) 42%, rgba(9,16,30,0.18) 100%), url('https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=2400&q=88')",
+          backgroundImage: getHeroBackground(),
           backgroundColor: "#07101d",
           backgroundSize: "cover",
           backgroundPosition: "center 62%",
@@ -317,6 +324,20 @@ export default function HomePage() {
 
             {/* ── LEFT: Text column ── */}
             <div className="flex flex-col items-start justify-center">
+              {getSpecialDayName() && (
+                <div
+                  className="motion-rise inline-flex items-center gap-2.5 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-4"
+                  style={{
+                    border: "1px solid rgba(255,215,0,0.4)",
+                    background: "rgba(255,215,0,0.08)",
+                    color: "#FFD700",
+                    backdropFilter: "blur(12px)",
+                  }}
+                >
+                  ✨ Celebrating {getSpecialDayName()}! ✨
+                </div>
+              )}
+
               {/* Tag pill */}
               <div
                 className="motion-rise inline-flex items-center gap-2.5 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-9"
@@ -413,7 +434,7 @@ export default function HomePage() {
               <div className="motion-rise motion-delay-5 mt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 w-full">
                 {stats.map((s) => (
                   <div key={s.label}>
-                    <div className="text-lg mb-1">{s.icon}</div>
+                    <div className="text-lg mb-1 text-white">{statsIconMap[s.iconKey as keyof typeof statsIconMap]}</div>
                     <p className="text-2xl font-extrabold text-white" style={{ letterSpacing: "-0.03em" }}>{s.value}</p>
                     <p className="mt-0.5 text-xs font-medium" style={{ color: "rgba(255,255,255,0.38)" }}>{s.label}</p>
                   </div>
@@ -832,8 +853,18 @@ export default function HomePage() {
                     desc: "Highest open rates across Africa — up to 98% delivery",
                     color: "#22c55e",
                   },
-                  { icon: "📱", label: "SMS",       desc: "Reliable delivery even without internet access",       color: "#0891B2" },
-                  { icon: "📧", label: "Email",     desc: "Rich HTML formatting with branding &amp; attachments", color: "#E91E8C" },
+                  {
+                    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 18h.01M16 18h.01M7 12h1m5 0h1m5 0h1M7 9h1m5 0h1m5 0h1M7 6h10a2 2 0 012 2v8a2 2 0 01-2 2H7a2 2 0 01-2-2V8a2 2 0 012-2z" /></svg>,
+                    label: "SMS",
+                    desc: "Reliable delivery even without internet access",
+                    color: "#0891B2"
+                  },
+                  {
+                    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
+                    label: "Email",
+                    desc: "Rich HTML formatting with branding &amp; attachments",
+                    color: "#E91E8C"
+                  },
                 ].map((ch) => (
                   <li key={ch.label} className="flex items-center gap-4 group">
                     <div
