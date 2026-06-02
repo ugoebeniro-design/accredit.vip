@@ -137,3 +137,21 @@ def qr_gif_to_base64(data: str, size: int = 200, style: str = "pulsing") -> str:
     gif_bytes = generate_animated_qr_gif(data, size, style=style)
     img_base64 = base64.b64encode(gif_bytes).decode()
     return f"data:image/gif;base64,{img_base64}"
+
+
+def qr_gif_to_url(data: str, size: int = 200, style: str = "pulsing") -> str | None:
+    """Generate animated QR code GIF, save to uploads, return URL."""
+    import os
+    from datetime import datetime
+    from app.core.config import settings as app_settings
+    try:
+        gif_bytes = generate_animated_qr_gif(data, size, style=style)
+        upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "qrs")
+        os.makedirs(upload_dir, exist_ok=True)
+        filename = f"qr_{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}.gif"
+        filepath = os.path.join(upload_dir, filename)
+        with open(filepath, "wb") as f:
+            f.write(gif_bytes)
+        return f"{app_settings.BACKEND_URL}/uploads/qrs/{filename}"
+    except Exception:
+        return None

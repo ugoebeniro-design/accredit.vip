@@ -50,6 +50,28 @@ import {
   type AuditLogEntry,
   type FraudFlags,
   type AccreditationRequest,
+  getPendingReviewEvents,
+  reviewEvent,
+  getDataGroups,
+  createDataGroup,
+  updateDataGroup,
+  getDataProfiles,
+  importDataProfiles,
+  getDataRequests,
+  submitDataRequest,
+  resolveDataRequest,
+  downloadDataExport,
+  type EventReviewRecord,
+  type DataGroup,
+  type DataProfile,
+  type DataRequest,
+  getAdminDeliveryClients,
+  getAdminDeliveryClientDetail,
+  getAdminDeliveryEventGuests,
+  type DeliveryClient,
+  type DeliveryClientDetail,
+  type DeliveryEventGuest,
+  type DeliveryEventDetail,
 } from "@/lib/api/admin";
 
 function TabIcon({ id }: { id: string }) {
@@ -71,6 +93,8 @@ function TabIcon({ id }: { id: string }) {
     revenue: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     tickets: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 012-2h6a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V5z" /></svg>,
     export: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33A3 3 0 0116.5 19.5H6.75z" /></svg>,
+    "event-review": <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
+    "data-management": <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
   };
   return <>{icons[id] || <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" /></svg>}</>;
 }
@@ -118,7 +142,7 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
   );
 }
 
-type TabId = "overview" | "users" | "events" | "payments" | "delivery" | "support" | "scans" | "staff" | "analytics" | "audit" | "fraud" | "accreditation" | "community" | "revenue" | "tickets" | "export";
+type TabId = "overview" | "users" | "events" | "payments" | "delivery" | "support" | "scans" | "staff" | "analytics" | "audit" | "fraud" | "accreditation" | "community" | "revenue" | "tickets" | "export" | "event-review" | "data-management";
 
 export default function AdminPage() {
   const { user, loading, logout, login } = useAuth();
@@ -142,9 +166,17 @@ export default function AdminPage() {
   const [postForm, setPostForm] = useState({ title: "", excerpt: "", content: "", tag: "", author: "", image: "" });
   const [postUploading, setPostUploading] = useState(false);
   const [postSaving, setPostSaving] = useState(false);
-  const [openPanels, setOpenPanels] = useState<Record<string, boolean>>({ general: true, content: true, financial: true, operations: true, monitoring: true });
+  const [openPanels, setOpenPanels] = useState<Record<string, boolean>>({ general: true, content: true, financial: true, operations: true, monitoring: true, partners: false });
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [tab, setTab] = useState<TabId>("overview");
+  const [tab, setTab] = useState<TabId>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("admin_active_tab");
+      if (saved && ["overview","users","events","payments","delivery","support","scans","staff","analytics","audit","fraud","accreditation","community","revenue","tickets","export","event-review","data-management"].includes(saved)) {
+        return saved as TabId;
+      }
+    }
+    return "overview";
+  });
   const [statsLoading, setStatsLoading] = useState(true);
   const [sectionLoading, setSectionLoading] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
@@ -176,6 +208,24 @@ export default function AdminPage() {
   const [staffFormRole, setStaffFormRole] = useState("accreditation");
   const [staffFormLoading, setStaffFormLoading] = useState(false);
   const [staffFormError, setStaffFormError] = useState("");
+  const [pendingReviewEvents, setPendingReviewEvents] = useState<EventReviewRecord[]>([]);
+  const [reviewEventLoading, setReviewEventLoading] = useState(false);
+  const [reviewFilterStatus, setReviewFilterStatus] = useState<string>("");
+  const [dataGroups, setDataGroups] = useState<DataGroup[]>([]);
+  const [dataMgmtView, setDataMgmtView] = useState<"groups" | "profiles" | "requests">("groups");
+  const [selectedDataGroup, setSelectedDataGroup] = useState<DataGroup | null>(null);
+  const [dataProfiles, setDataProfiles] = useState<DataProfile[]>([]);
+  const [dataRequests, setDataRequests] = useState<DataRequest[]>([]);
+  const [dataMgmtLoading, setDataMgmtLoading] = useState(false);
+  const [deliveryClients, setDeliveryClients] = useState<DeliveryClient[]>([]);
+  const [deliveryClientsTotal, setDeliveryClientsTotal] = useState(0);
+  const [deliveryClientsPage, setDeliveryClientsPage] = useState(1);
+  const [deliveryClientDetail, setDeliveryClientDetail] = useState<DeliveryClientDetail | null>(null);
+  const [deliveryEventDetail, setDeliveryEventDetail] = useState<DeliveryEventDetail | null>(null);
+  const [deliveryDrillLevel, setDeliveryDrillLevel] = useState<"clients" | "events" | "guests">("clients");
+  const [deliveryGuestStatusFilter, setDeliveryGuestStatusFilter] = useState("");
+  const [deliverySearch, setDeliverySearch] = useState("");
+  const [deliveryClientsLoading, setDeliveryClientsLoading] = useState(false);
 
   const loadUserPage = useCallback(async (page: number, search: string, roleFilter = "", activeFilter = "") => {
     const res = await getAdminUsers({
@@ -212,22 +262,43 @@ export default function AdminPage() {
         getAdminEvents({ page: 1, per_page: 20 }).then((r) => { setEvents(r.events); setEventTotal(r.total); }).catch(() => {}),
         getAdminRevenue().then(setRevenue).catch(() => {}),
       ]).finally(() => setStatsLoading(false));
+      const savedTab = localStorage.getItem("admin_active_tab") as TabId | null;
+      if (savedTab && savedTab !== "overview" && ["overview","users","events","payments","delivery","support","scans","staff","analytics","audit","fraud","accreditation","community","revenue","tickets","export","event-review","data-management"].includes(savedTab)) {
+        loadSection(savedTab);
+      }
     }
   }, [user]);
 
   const loadSection = async (section: TabId) => {
     setSectionLoading(true);
     try {
-      if (section === "delivery") await getAdminDeliveryStats().then(setDeliveryStats).catch(() => {});
+      if (section === "delivery") {
+        setDeliveryDrillLevel("clients");
+        setDeliveryClientDetail(null);
+        setDeliveryEventDetail(null);
+        setDeliveryClientsLoading(true);
+        await Promise.all([
+          getAdminDeliveryStats().then(setDeliveryStats).catch(() => {}),
+          getAdminDeliveryClients(deliveryClientsPage, 50, deliverySearch || undefined).then((r) => { setDeliveryClients(r.clients); setDeliveryClientsTotal(r.total); setDeliveryClientsPage(r.page); }).catch(() => {}),
+        ]);
+        setDeliveryClientsLoading(false);
+      }
       if (section === "support") await getAdminTickets().then(setTickets).catch(() => {});
       if (section === "scans") await getAdminCheckins(1, 100).then((r) => setCheckins(r.checkins)).catch(() => {});
       if (section === "staff") await getAdminStaff().then(setStaffAssignments).catch(() => {});
       if (section === "payments") await getAdminPayments(1, 100).then((r) => setPayments(r.payments)).catch(() => {});
-      if (section === "tickets") await getAdminTicketPurchases(1, 100).then((r) => { setTicketPurchases(r.ticket_purchases); setTicketTotal(r.total); setTicketPage(r.page); }).catch(() => {});
+      if (section === "tickets") await getAdminTicketPurchases(ticketPage, 100).then((r) => { setTicketPurchases(r.ticket_purchases); setTicketTotal(r.total); setTicketPage(r.page); }).catch(() => {});
       if (section === "audit") await getAdminAuditLogs({ page: 1, per_page: 100 }).then((r) => setAuditLogs(r.logs)).catch(() => {});
       if (section === "fraud") await getAdminFraudFlags().then(setFraudFlags).catch(() => {});
       if (section === "accreditation") await getAdminAccreditationRequests().then(setAccredRequests).catch(() => {});
       if (section === "community") await getAdminCommunityPosts().then(setCommunityPosts).catch(() => {});
+      if (section === "event-review") await getPendingReviewEvents().then(setPendingReviewEvents).catch(() => {});
+      if (section === "data-management") {
+        await Promise.all([
+          getDataGroups().then(setDataGroups).catch(() => {}),
+          getDataRequests().then(setDataRequests).catch(() => {}),
+        ]);
+      }
       if (section === "analytics") {
         await Promise.all([
           getAdminRevenueTimeline(30).then(setRevenueTimeline).catch(() => {}),
@@ -242,6 +313,7 @@ export default function AdminPage() {
 
   const handleTabChange = (id: TabId) => {
     setTab(id);
+    localStorage.setItem("admin_active_tab", id);
     loadSection(id);
   };
 
@@ -328,17 +400,20 @@ export default function AdminPage() {
     { id: "accreditation", label: "Accred." },
     { id: "audit", label: "Audit" },
     { id: "fraud", label: "Fraud" },
+    { id: "event-review", label: "Review" },
+    { id: "data-management", label: "Data" },
     { id: "community", label: "Community" },
     { id: "export", label: "Export" },
   ];
 
   type PanelGroup = { key: string; icon: React.ReactNode; label: string; items: TabId[] };
   const panelGroups: PanelGroup[] = [
-    { key: "general", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>, label: "General", items: ["overview", "analytics", "users", "events"] },
+    { key: "general", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>, label: "General", items: ["overview", "analytics", "users", "events", "event-review"] },
     { key: "content", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>, label: "Content", items: ["community"] },
     { key: "financial", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, label: "Financial", items: ["revenue", "tickets", "payments"] },
     { key: "operations", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, label: "Operations", items: ["delivery", "support", "scans", "staff", "accreditation"] },
     { key: "monitoring", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>, label: "Monitoring", items: ["audit", "fraud", "export"] },
+    { key: "partners", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 19H9a6 6 0 0112 0v1H9v-1z" /><path strokeLinecap="round" strokeLinejoin="round" d="M7 6.5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>, label: "Partners", items: ["data-management"] },
   ];
 
   const handleRoleChange = async (userId: number, newRole: string) => {
@@ -362,32 +437,46 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen" style={{ background: "#f8f9fc" }}>
       {/* Main with sidebar */}
-      <div className="flex" style={{ minHeight: "calc(100vh - 0px)" }}>
-        {/* Sidebar (left, fixed width toggle) */}
-        <aside className={`${sidebarOpen ? 'w-56' : 'w-20'} flex-shrink-0 flex flex-col overflow-hidden transition-all duration-200`} style={{ background: "#f8f9fc", borderRight: "1px solid #e8edf2" }}>
-          {/* Logo section */}
-          <div className="px-3 py-4 border-b border-[#e8edf2] flex-shrink-0 flex items-center justify-between">
-            {sidebarOpen && (
-              <Link href="/" className="flex items-center gap-2 flex-1">
-                <Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-6 w-auto" />
-                <span className="text-xs font-bold text-gray-600">Admin</span>
-              </Link>
-            )}
+      <div className="flex-col flex" style={{ minHeight: "calc(100vh - 0px)" }}>
+        {/* Top Header */}
+        <header className="h-14 flex items-center justify-between px-5 flex-shrink-0" style={{ background: "white", borderBottom: "1px solid #e8edf2" }}>
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors flex-shrink-0"
               title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             >
-              {sidebarOpen ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              )}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 4H5a2 2 0 00-2 2v14a2 2 0 002 2h4m0-18v18m0-18l10-4v18L9 22" />
+              </svg>
             </button>
+            <Link href="/" className="flex items-center gap-1.5 hidden sm:flex">
+              <Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-5 w-auto" />
+              <span className="text-xs font-bold text-gray-600">Admin</span>
+            </Link>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-gray-400 hover:text-gray-600 text-[11px] font-semibold transition-colors">Main Site</Link>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-[#E91E8C] flex items-center justify-center text-white text-[11px] font-bold">{user.full_name?.charAt(0) || "A"}</div>
+              <span className="text-gray-600 text-sm font-semibold hidden sm:block">{user.full_name}</span>
+            </div>
+            <button onClick={logout} className="text-gray-400 hover:text-gray-700 text-xs font-medium transition-colors">Sign out</button>
+          </div>
+        </header>
+
+        {/* Content wrapper: main + sidebar */}
+        <div className="flex flex-1">
+        {/* Sidebar (left, collapsible) */}
+        <aside className={`${sidebarOpen ? 'w-56' : 'w-20'} flex-shrink-0 flex-col overflow-hidden transition-all duration-200 order-first`} style={{ background: "#f8f9fc", borderRight: "1px solid #e8edf2" }}>
+          {/* Logo section */}
+          <div className="px-3 py-4 border-b border-[#e8edf2] flex-shrink-0 flex items-center">
+            {sidebarOpen && (
+              <div className="flex items-center gap-2 flex-1">
+                <Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-6 w-auto" />
+                <span className="text-xs font-bold text-gray-600">Admin</span>
+              </div>
+            )}
           </div>
 
           {/* Navigation */}
@@ -442,19 +531,6 @@ export default function AdminPage() {
 
         {/* Main content */}
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Header */}
-          <header className="h-14 flex items-center justify-between px-5 flex-shrink-0" style={{ background: "white", borderBottom: "1px solid #e8edf2" }}>
-            <div></div>
-            <div className="flex items-center gap-3">
-              <Link href="/" className="text-gray-400 hover:text-gray-600 text-[11px] font-semibold transition-colors">Main Site</Link>
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-[#E91E8C] flex items-center justify-center text-white text-[11px] font-bold">{user.full_name?.charAt(0) || "A"}</div>
-                <span className="text-gray-600 text-sm font-semibold hidden sm:block">{user.full_name}</span>
-              </div>
-              <button onClick={logout} className="text-gray-400 hover:text-gray-700 text-xs font-medium transition-colors">Sign out</button>
-            </div>
-          </header>
-
           {/* Stats row */}
           <div className="px-5 py-6 flex-shrink-0" style={{ borderBottom: "1px solid #e8edf2" }}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -844,31 +920,243 @@ export default function AdminPage() {
             )}
 
             {!sectionLoading && tab === "delivery" && deliveryStats && (
-              <div className="grid md:grid-cols-2 gap-8">
-                <div>
-                  <h2 className="text-base font-bold text-[#0D1B2A] mb-4">Delivery Overview</h2>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-xl p-4 text-center" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-2xl font-extrabold text-[#0D1B2A]">{deliveryStats.total_messages}</p><p className="text-xs text-gray-400 mt-1">Total Messages</p></div>
-                    <div className="rounded-xl p-4 text-center" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-2xl font-extrabold text-[#10b981]">{deliveryStats.delivered}</p><p className="text-xs text-gray-400 mt-1">Delivered</p></div>
-                    <div className="rounded-xl p-4 text-center" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-2xl font-extrabold text-[#f59e0b]">{deliveryStats.pending}</p><p className="text-xs text-gray-400 mt-1">Pending</p></div>
-                    <div className="rounded-xl p-4 text-center" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-2xl font-extrabold text-[#ef4444]">{deliveryStats.failed}</p><p className="text-xs text-gray-400 mt-1">Failed</p></div>
-                  </div>
+              <div className="space-y-6">
+                {/* Summary cards */}
+                <div className="grid grid-cols-5 gap-4">
+                  <div className="rounded-xl p-4 text-center" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-2xl font-extrabold text-[#0D1B2A]">{deliveryStats.total_messages}</p><p className="text-xs text-gray-400 mt-1">Total</p></div>
+                  <div className="rounded-xl p-4 text-center" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-2xl font-extrabold text-[#10b981]">{deliveryStats.delivered}</p><p className="text-xs text-gray-400 mt-1">Delivered</p></div>
+                  <div className="rounded-xl p-4 text-center" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-2xl font-extrabold text-[#f59e0b]">{deliveryStats.pending}</p><p className="text-xs text-gray-400 mt-1">Pending</p></div>
+                  <div className="rounded-xl p-4 text-center" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-2xl font-extrabold text-[#ef4444]">{deliveryStats.failed}</p><p className="text-xs text-gray-400 mt-1">Failed</p></div>
+                  <div className="rounded-xl p-4 text-center" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-2xl font-extrabold text-[#E91E8C]">{deliveryStats.total_batches}</p><p className="text-xs text-gray-400 mt-1">Batches</p></div>
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-[#0D1B2A] mb-4">By Channel</h2>
-                  <div className="space-y-3">
-                    {Object.entries(deliveryStats.by_channel).length > 0 ? Object.entries(deliveryStats.by_channel).map(([channel, count]) => (
-                      <div key={channel} className="flex items-center justify-between p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}>
-                        <span className="text-sm font-semibold text-[#0D1B2A] capitalize">{channel}</span>
-                        <span className="text-sm font-bold text-[#E91E8C]">{count}</span>
+
+                {/* Channel breakdown */}
+                <div className="flex flex-wrap gap-3">
+                  {Object.entries(deliveryStats.by_channel).length > 0 && Object.entries(deliveryStats.by_channel).map(([channel, count]) => (
+                    <div key={channel} className="flex items-center gap-2 rounded-xl px-4 py-2" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}>
+                      <span className="text-sm font-semibold text-[#0D1B2A] capitalize">{channel}</span>
+                      <span className="text-xs font-bold text-[#E91E8C]">{count}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Drill-down */}
+                {deliveryDrillLevel === "clients" && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-base font-bold text-[#0D1B2A]">Clients ({deliveryClientsTotal})</h2>
+                      <input
+                        placeholder="Search client..."
+                        value={deliverySearch}
+                        onChange={(e) => setDeliverySearch(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { setDeliveryClientsPage(1); getAdminDeliveryClients(1, 50, deliverySearch || undefined).then((r) => { setDeliveryClients(r.clients); setDeliveryClientsTotal(r.total); setDeliveryClientsPage(r.page); }); } }}
+                        className="h-9 rounded-lg border border-gray-300 px-3 text-xs w-64 focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30"
+                      />
+                    </div>
+                    {deliveryClientsLoading ? (
+                      <div className="text-center py-12"><div className="w-6 h-6 border-2 border-[#E91E8C] border-t-transparent rounded-full animate-spin mx-auto" /></div>
+                    ) : deliveryClients.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {deliveryClients.map((client) => {
+                          const total = client.delivered + client.failed + client.queued + client.sending;
+                          return (
+                            <div
+                              key={client.organizer_id}
+                              onClick={async () => {
+                                setDeliveryClientsLoading(true);
+                                try {
+                                  const detail = await getAdminDeliveryClientDetail(client.organizer_id);
+                                  setDeliveryClientDetail(detail);
+                                  setDeliveryDrillLevel("events");
+                                } catch {}
+                                setDeliveryClientsLoading(false);
+                              }}
+                              className="rounded-xl p-5 cursor-pointer transition-all hover:shadow-md"
+                              style={{ background: "white", border: "1px solid #e8edf2" }}
+                            >
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}>{client.full_name.charAt(0)}</div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-[#0D1B2A] truncate">{client.full_name}</p>
+                                  <p className="text-xs text-gray-400 truncate">{client.email}</p>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="rounded-lg p-2 text-center" style={{ background: "#f8f9fc" }}>
+                                  <p className="font-bold text-[#0D1B2A]">{client.total_events}</p>
+                                  <p className="text-gray-400">Events</p>
+                                </div>
+                                <div className="rounded-lg p-2 text-center" style={{ background: "#f8f9fc" }}>
+                                  <p className="font-bold text-[#0D1B2A]">{total}</p>
+                                  <p className="text-gray-400">Messages</p>
+                                </div>
+                              </div>
+                              <div className="mt-3 flex gap-1.5 text-[10px] font-semibold">
+                                {client.delivered > 0 && <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700">{client.delivered} delivered</span>}
+                                {client.failed > 0 && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700">{client.failed} failed</span>}
+                                {client.queued > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{client.queued} queued</span>}
+                                {client.sending > 0 && <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{client.sending} sending</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    )) : <p className="text-sm text-gray-400 text-center py-6">No delivery data yet.</p>}
+                    ) : (
+                      <div className="rounded-2xl p-12 text-center" style={{ background: "#f8f9fc", border: "2px dashed #e8edf2" }}>
+                        <p className="text-gray-400 text-sm">No delivery data found. Clients appear here once they send invites.</p>
+                      </div>
+                    )}
+                    {deliveryClientsTotal > 0 && (
+                      <div className="flex items-center justify-between mt-4">
+                        <p className="text-xs text-gray-400">{deliveryClientsTotal} total clients</p>
+                        <div className="flex gap-2">
+                          <button disabled={deliveryClientsPage <= 1} onClick={() => { setDeliveryClientsPage(p => p - 1); getAdminDeliveryClients(deliveryClientsPage - 1, 50, deliverySearch || undefined).then((r) => { setDeliveryClients(r.clients); setDeliveryClientsTotal(r.total); setDeliveryClientsPage(r.page); }); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40">Previous</button>
+                          <button disabled={deliveryClientsPage * 50 >= deliveryClientsTotal} onClick={() => { setDeliveryClientsPage(p => p + 1); getAdminDeliveryClients(deliveryClientsPage + 1, 50, deliverySearch || undefined).then((r) => { setDeliveryClients(r.clients); setDeliveryClientsTotal(r.total); setDeliveryClientsPage(r.page); }); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40">Next</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="md:col-span-2">
-                  <h2 className="text-base font-bold text-[#0D1B2A] mb-2">Delivery Batches</h2>
-                  <p className="text-xs text-gray-400">{deliveryStats.total_batches} total batches sent across the platform</p>
-                </div>
+                )}
+
+                {deliveryDrillLevel === "events" && deliveryClientDetail && (
+                  <div>
+                    <button
+                      onClick={() => { setDeliveryDrillLevel("clients"); setDeliveryClientDetail(null); }}
+                      className="text-xs font-semibold text-[#E91E8C] hover:underline mb-4 flex items-center gap-1"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                      Back to all clients
+                    </button>
+                    <div className="flex items-center gap-3 mb-5 p-4 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}>
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}>{deliveryClientDetail.organizer.full_name.charAt(0)}</div>
+                      <div>
+                        <p className="text-sm font-bold text-[#0D1B2A]">{deliveryClientDetail.organizer.full_name}</p>
+                        <p className="text-xs text-gray-400">{deliveryClientDetail.organizer.email} · {deliveryClientDetail.events.length} events with invites</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {deliveryClientDetail.events.map((ev) => {
+                        const total = ev.delivered + ev.failed + ev.queued + ev.sending;
+                        return (
+                          <div
+                            key={ev.event_id}
+                            onClick={async () => {
+                              setDeliveryClientsLoading(true);
+                              try {
+                                const detail = await getAdminDeliveryEventGuests(ev.event_id);
+                                setDeliveryEventDetail(detail);
+                                setDeliveryDrillLevel("guests");
+                              } catch {}
+                              setDeliveryClientsLoading(false);
+                            }}
+                            className="rounded-xl p-4 cursor-pointer transition-all hover:shadow-md"
+                            style={{ background: "white", border: "1px solid #e8edf2" }}
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <p className="text-sm font-bold text-[#0D1B2A]">{ev.title}</p>
+                              <p className="text-xs text-gray-400">{total} guests</p>
+                            </div>
+                            <div className="flex gap-2 text-[10px] font-semibold">
+                              {ev.delivered > 0 && <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700">{ev.delivered} delivered</span>}
+                              {ev.failed > 0 && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700">{ev.failed} failed</span>}
+                              {ev.queued > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{ev.queued} queued</span>}
+                              {ev.sending > 0 && <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{ev.sending} sending</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {deliveryClientDetail.events.length === 0 && (
+                        <p className="text-sm text-gray-400 text-center py-8">No invite events found for this client.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {deliveryDrillLevel === "guests" && deliveryEventDetail && (
+                  <div>
+                    <button
+                      onClick={() => { setDeliveryDrillLevel("events"); setDeliveryEventDetail(null); }}
+                      className="text-xs font-semibold text-[#E91E8C] hover:underline mb-4 flex items-center gap-1"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                      Back to events
+                    </button>
+                    <div className="p-4 rounded-xl mb-5" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}>
+                      <p className="text-sm font-bold text-[#0D1B2A]">{deliveryEventDetail.event.title}</p>
+                      <div className="flex gap-3 mt-3 text-xs">
+                        {deliveryEventDetail.status_counts.delivered > 0 && <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">{deliveryEventDetail.status_counts.delivered} delivered</span>}
+                        {deliveryEventDetail.status_counts.failed > 0 && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">{deliveryEventDetail.status_counts.failed} failed</span>}
+                        {deliveryEventDetail.status_counts.queued > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">{deliveryEventDetail.status_counts.queued} queued</span>}
+                        {deliveryEventDetail.status_counts.sending > 0 && <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">{deliveryEventDetail.status_counts.sending} sending</span>}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mb-4 flex-wrap">
+                      {["", "delivered", "failed", "queued", "sending"].map((s) => (
+                        <button
+                          key={s}
+                          onClick={async () => {
+                            setDeliveryGuestStatusFilter(s);
+                            const detail = await getAdminDeliveryEventGuests(deliveryEventDetail.event.id, 1, 200, { status: s || undefined });
+                            setDeliveryEventDetail(detail);
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${deliveryGuestStatusFilter === s ? "bg-[#E91E8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                        >
+                          {s ? s.charAt(0).toUpperCase() + s.slice(1) : "All"}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid #e8edf2" }}>
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr style={{ background: "#f8f9fc", borderBottom: "1px solid #e8edf2" }}>
+                            <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Guest</th>
+                            <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Contact</th>
+                            <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Channel</th>
+                            <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                            <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Error</th>
+                            <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Sent</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {deliveryEventDetail.guests.map((g, i) => (
+                            <tr key={g.message_id} style={{ borderBottom: i < deliveryEventDetail.guests.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                              <td className="px-4 py-3 font-semibold text-[#0D1B2A]">{g.name}</td>
+                              <td className="px-4 py-3 text-gray-500 text-xs">
+                                {g.email && <div>{g.email}</div>}
+                                {g.phone && <div className="text-gray-400">{g.phone}</div>}
+                              </td>
+                              <td className="px-4 py-3 capitalize text-gray-500">{g.channel}</td>
+                              <td className="px-4 py-3">
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                  g.status === "delivered" ? "bg-green-100 text-green-700" :
+                                  g.status === "failed" ? "bg-red-100 text-red-700" :
+                                  g.status === "sending" ? "bg-blue-100 text-blue-700" :
+                                  "bg-amber-100 text-amber-700"
+                                }`}>{g.status}</span>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-red-500 max-w-[200px] truncate">{g.error || "—"}</td>
+                              <td className="px-4 py-3 text-gray-400 text-xs">{g.sent_at ? new Date(g.sent_at).toLocaleString() : "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {deliveryEventDetail.guests.length === 0 && (
+                      <div className="rounded-2xl p-12 text-center" style={{ background: "#f8f9fc", border: "2px dashed #e8edf2" }}>
+                        <p className="text-gray-400 text-sm">No guests match this filter.</p>
+                      </div>
+                    )}
+                    {deliveryEventDetail.total > 0 && (
+                      <div className="flex items-center justify-between mt-4">
+                        <p className="text-xs text-gray-400">{deliveryEventDetail.total} total guests</p>
+                        <div className="flex gap-2">
+                          <button disabled={deliveryEventDetail.page <= 1} onClick={async () => { const d = await getAdminDeliveryEventGuests(deliveryEventDetail.event.id, deliveryEventDetail.page - 1, 200, { status: deliveryGuestStatusFilter || undefined }); setDeliveryEventDetail(d); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40">Previous</button>
+                          <button disabled={deliveryEventDetail.page * 200 >= deliveryEventDetail.total} onClick={async () => { const d = await getAdminDeliveryEventGuests(deliveryEventDetail.event.id, deliveryEventDetail.page + 1, 200, { status: deliveryGuestStatusFilter || undefined }); setDeliveryEventDetail(d); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40">Next</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1163,8 +1451,116 @@ export default function AdminPage() {
                     <p className="text-xs text-gray-400 mt-1">Failed Deliveries</p>
                   </div>
                 </div>
-                {(fraudFlags.inactive_users + fraudFlags.unverified_users + fraudFlags.failed_payments + fraudFlags.failed_deliveries) === 0 && (
+                <div className="rounded-xl p-5 text-center" style={{ background: fraudFlags.flagged_events > 0 ? "rgba(168,85,247,0.06)" : "#f8f9fc", border: `1px solid ${fraudFlags.flagged_events > 0 ? "#8b5cf6" : "#e8edf2"}` }}>
+                  <p className="text-3xl font-extrabold" style={{ color: fraudFlags.flagged_events > 0 ? "#8b5cf6" : "#0D1B2A" }}>{fraudFlags.flagged_events}</p>
+                  <p className="text-xs text-gray-400 mt-1">Flagged Events</p>
+                  {fraudFlags.flagged_events > 0 && (
+                    <button onClick={() => handleTabChange("event-review")} className="mt-2 text-xs font-semibold text-[#8b5cf6] hover:underline">Go to Review Queue</button>
+                  )}
+                </div>
+                {(fraudFlags.inactive_users + fraudFlags.unverified_users + fraudFlags.failed_payments + fraudFlags.failed_deliveries + fraudFlags.flagged_events) === 0 && (
                   <p className="text-sm text-gray-400 text-center py-4">No flags detected — platform health looks good.</p>
+                )}
+              </div>
+            )}
+
+            {!sectionLoading && tab === "event-review" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-[#0D1B2A]">Event Review Queue</h2>
+                  <div className="flex gap-2">
+                    <button onClick={() => setReviewFilterStatus("")} className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${reviewFilterStatus === "" ? "bg-[#E91E8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>All</button>
+                    <button onClick={() => setReviewFilterStatus("pending")} className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${reviewFilterStatus === "pending" ? "bg-[#E91E8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>Pending</button>
+                    <button onClick={() => setReviewFilterStatus("flagged")} className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${reviewFilterStatus === "flagged" ? "bg-[#E91E8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>Flagged</button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {pendingReviewEvents.filter((e) => reviewFilterStatus === "" || e.review_status === reviewFilterStatus).map((event) => (
+                    <div key={event.id} className="rounded-xl p-4 border" style={{ borderColor: event.review_status === "flagged" ? "#ef4444" : "#e8edf2", background: event.review_status === "flagged" ? "rgba(239,68,68,0.03)" : "#f8f9fc" }}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm text-[#0D1B2A] truncate">{event.title}</p>
+                          <p className="text-xs text-gray-400 mt-1">{event.organizer_name} · {event.organizer_email}</p>
+                          {event.flagged_keywords && event.flagged_keywords.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {event.flagged_keywords.map((kw) => (
+                                <span key={kw} className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white" style={{ background: "#ef4444" }}>{kw}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <button onClick={() => { confirmDialog ? null : setConfirmDialog({ title: "Approve Event?", message: `Allow "${event.title}" to be published?`, onConfirm: async () => { await reviewEvent(event.id, "approved").catch(() => {}); setPendingReviewEvents((p) => p.filter((e) => e.id !== event.id)); setConfirmDialog(null); } }); }} className="px-3 py-1 rounded-lg bg-green-100 text-green-700 text-xs font-semibold hover:bg-green-200 transition-colors">Approve</button>
+                          <button onClick={() => { confirmDialog ? null : setConfirmDialog({ title: "Reject Event?", message: `Reject "${event.title}" from public listing?`, variant: "danger", onConfirm: async () => { await reviewEvent(event.id, "rejected").catch(() => {}); setPendingReviewEvents((p) => p.filter((e) => e.id !== event.id)); setConfirmDialog(null); } }); }} className="px-3 py-1 rounded-lg bg-red-100 text-red-700 text-xs font-semibold hover:bg-red-200 transition-colors">Reject</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {pendingReviewEvents.length === 0 && (
+                    <p className="text-sm text-gray-400 text-center py-8">No events pending review.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!sectionLoading && tab === "data-management" && (
+              <div className="space-y-6">
+                <div className="flex gap-2">
+                  <button onClick={() => setDataMgmtView("groups")} className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${dataMgmtView === "groups" ? "bg-[#E91E8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>Groups</button>
+                  <button onClick={() => setDataMgmtView("profiles")} className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${dataMgmtView === "profiles" ? "bg-[#E91E8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} disabled={!selectedDataGroup}>Profiles</button>
+                  <button onClick={() => setDataMgmtView("requests")} className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${dataMgmtView === "requests" ? "bg-[#E91E8C] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>Requests</button>
+                </div>
+                <p className="text-[11px] text-gray-500 px-4 py-2 rounded-lg bg-blue-50 border border-blue-100">All data access is logged. Only consented profiles are exported.</p>
+                {dataMgmtView === "groups" && (
+                  <div className="space-y-4">
+                    {dataGroups.map((group) => (
+                      <div key={group.id} onClick={() => { setSelectedDataGroup(group); setDataMgmtView("profiles"); }} className="rounded-xl p-4 cursor-pointer border border-[#e8edf2] hover:border-[#E91E8C] transition-colors bg-white">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-sm text-[#0D1B2A]">{group.name}</p>
+                            <p className="text-xs text-gray-400 mt-1">{group.category} · {group.profile_count} profiles</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${group.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>{group.is_active ? "Active" : "Inactive"}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {dataGroups.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No groups yet.</p>}
+                  </div>
+                )}
+                {dataMgmtView === "profiles" && selectedDataGroup && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <button onClick={() => setSelectedDataGroup(null)} className="text-xs font-semibold text-[#E91E8C] hover:underline">← Back to Groups</button>
+                      <p className="text-sm font-semibold text-[#0D1B2A]">{selectedDataGroup.name}</p>
+                    </div>
+                    <div className="space-y-2">
+                      {dataProfiles.map((p) => (
+                        <div key={p.id} className="rounded-xl p-3 border border-[#e8edf2] bg-white text-sm">
+                          <p className="font-semibold text-[#0D1B2A]">{p.first_name} {p.last_name}</p>
+                          {p.email && <p className="text-xs text-gray-500">{p.email}</p>}
+                          <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${p.consent_given ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>{p.consent_given ? "Consented" : "No consent"}</span>
+                        </div>
+                      ))}
+                      {dataProfiles.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No profiles in this group.</p>}
+                    </div>
+                  </div>
+                )}
+                {dataMgmtView === "requests" && (
+                  <div className="space-y-2">
+                    {dataRequests.map((req) => (
+                      <div key={req.id} className="rounded-xl p-4 border border-[#e8edf2] bg-white">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm text-[#0D1B2A]">{req.requester_name}</p>
+                            <p className="text-xs text-gray-400">{req.requester_email} · {req.group_name}</p>
+                            <p className="text-xs text-gray-500 mt-1">{req.purpose}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${req.status === "approved" ? "bg-green-100 text-green-700" : req.status === "rejected" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{req.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {dataRequests.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No requests.</p>}
+                  </div>
                 )}
               </div>
             )}
@@ -1318,10 +1714,133 @@ export default function AdminPage() {
                 )}
               </div>
             )}
+
+            {!sectionLoading && tab === "revenue" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-[#0D1B2A]">Revenue Breakdown</h2>
+                  <button onClick={() => downloadAdminExport("payments")} className="text-xs font-semibold text-[#E91E8C] hover:underline">Export CSV</button>
+                </div>
+                {revenue.length > 0 ? (
+                  <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid #e8edf2" }}>
+                    <table className="w-full text-sm">
+                      <thead><tr style={{ background: "#f8f9fc", borderBottom: "1px solid #e8edf2" }}>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Event</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Organizer</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Provider</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                      </tr></thead>
+                      <tbody>
+                        {revenue.map((r, i) => (
+                          <tr key={i} style={{ borderBottom: i < revenue.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                            <td className="px-4 py-3 text-gray-600">—</td>
+                            <td className="px-4 py-3 text-gray-600">—</td>
+                            <td className="px-4 py-3 font-semibold text-[#0D1B2A]">₦{r.total.toFixed(0)}</td>
+                            <td className="px-4 py-3 text-gray-500 capitalize">{r.provider}</td>
+                            <td className="px-4 py-3"><span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.1)", color: "#10b981" }}>Completed</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : <p className="text-sm text-gray-400 text-center py-8">No revenue data yet.</p>}
+              </div>
+            )}
+
+            {!sectionLoading && tab === "tickets" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-[#0D1B2A]">Ticket Purchases</h2>
+                  <button onClick={() => downloadAdminExport("tickets")} className="text-xs font-semibold text-[#E91E8C] hover:underline">Export CSV</button>
+                </div>
+                {ticketPurchases.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid #e8edf2" }}>
+                      <table className="w-full text-sm">
+                        <thead><tr style={{ background: "#f8f9fc", borderBottom: "1px solid #e8edf2" }}>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Reference</th>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Buyer</th>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Event</th>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Qty</th>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Fee</th>
+                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                        </tr></thead>
+                        <tbody>
+                          {ticketPurchases.map((t, i) => (
+                            <tr key={t.id} style={{ borderBottom: i < ticketPurchases.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                              <td className="px-4 py-3 text-gray-600 font-mono text-xs">{t.reference}</td>
+                              <td className="px-4 py-3"><div><p className="font-semibold text-[#0D1B2A]">{t.buyer_name}</p><p className="text-xs text-gray-400">{t.buyer_email}</p></div></td>
+                              <td className="px-4 py-3 text-gray-600">{t.event_title}</td>
+                              <td className="px-4 py-3 text-gray-600">{t.quantity}</td>
+                              <td className="px-4 py-3 font-semibold text-[#0D1B2A]">₦{t.amount.toFixed(0)}</td>
+                              <td className="px-4 py-3 text-gray-600">₦{t.platform_fee.toFixed(0)}</td>
+                              <td className="px-4 py-3"><span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: t.status === "completed" ? "rgba(16,185,129,0.1)" : "rgba(245,158,11,0.1)", color: t.status === "completed" ? "#10b981" : "#f59e0b" }}>{t.status}</span></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {ticketTotal > 0 && (
+                      <div className="flex items-center justify-between px-2">
+                        <p className="text-xs text-gray-500">Page {ticketPage} of {Math.ceil(ticketTotal / 100)} • {ticketTotal} total purchases</p>
+                        <div className="flex gap-2">
+                          <button onClick={() => { setTicketPage(p => Math.max(1, p - 1)); loadSection("tickets"); }} disabled={ticketPage === 1} className="px-3 py-1.5 rounded-lg border border-[#e8edf2] text-xs font-semibold text-[#0D1B2A] hover:bg-[#f8f9fc] disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                          <button onClick={() => { setTicketPage(p => Math.min(Math.ceil(ticketTotal / 100), p + 1)); loadSection("tickets"); }} disabled={ticketPage >= Math.ceil(ticketTotal / 100)} className="px-3 py-1.5 rounded-lg border border-[#e8edf2] text-xs font-semibold text-[#0D1B2A] hover:bg-[#f8f9fc] disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : <p className="text-sm text-gray-400 text-center py-8">No ticket purchases yet.</p>}
+              </div>
+            )}
+
+            {!sectionLoading && tab === "export" && (
+              <div className="space-y-4">
+                <h2 className="text-base font-bold text-[#0D1B2A]">Export Data</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <button
+                    onClick={() => downloadAdminExport("users")}
+                    className="rounded-xl p-5 text-left transition-shadow hover:shadow-md"
+                    style={{ background: "white", border: "1px solid #e8edf2" }}
+                  >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: "rgba(59,130,246,0.1)", color: "#3b82f6" }}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" /></svg>
+                    </div>
+                    <h3 className="font-bold text-[#0D1B2A] mb-1">Users</h3>
+                    <p className="text-xs text-gray-400">Export all user records to CSV</p>
+                  </button>
+                  <button
+                    onClick={() => downloadAdminExport("events")}
+                    className="rounded-xl p-5 text-left transition-shadow hover:shadow-md"
+                    style={{ background: "white", border: "1px solid #e8edf2" }}
+                  >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: "rgba(16,185,129,0.1)", color: "#10b981" }}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                    <h3 className="font-bold text-[#0D1B2A] mb-1">Events</h3>
+                    <p className="text-xs text-gray-400">Export all event records to CSV</p>
+                  </button>
+                  <button
+                    onClick={() => downloadAdminExport("payments")}
+                    className="rounded-xl p-5 text-left transition-shadow hover:shadow-md"
+                    style={{ background: "white", border: "1px solid #e8edf2" }}
+                  >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: "rgba(139,92,246,0.1)", color: "#8b5cf6" }}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                    </div>
+                    <h3 className="font-bold text-[#0D1B2A] mb-1">Payments</h3>
+                    <p className="text-xs text-gray-400">Export all payment records to CSV</p>
+                  </button>
+                </div>
+              </div>
+            )}
             </div>
           </div>
           </div>
         </main>
+        </div>
       </div>
 
       {/* User Detail Modal */}

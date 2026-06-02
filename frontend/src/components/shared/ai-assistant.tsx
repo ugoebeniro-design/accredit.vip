@@ -10,8 +10,8 @@ type Message = {
 
 const GREETING = "Hi! I'm the Accredit.vip assistant. Ask me about creating events, managing guests, sending invites, ticketing, QR codes, or anything else!";
 
-export function AIAssistant() {
-  const [open, setOpen] = useState(false);
+export function AIAssistant({ open: initialOpen = false }: { open?: boolean } = {}) {
+  const [open, setOpen] = useState(initialOpen);
   const [messages, setMessages] = useState<Message[]>([{ role: "assistant", text: GREETING }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

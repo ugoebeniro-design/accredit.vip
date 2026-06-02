@@ -13,6 +13,7 @@ import { formatTimeForDisplay } from "@/lib/event-form-options";
 const UPLOAD_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1").replace(/\/api\/v1\/?$/, "");
 
 const PLATFORM_FEE_PERCENT = 5;
+const VAT_PERCENT = 2.5;
 
 type PurchaseInfo = {
   purchase_id: number;
@@ -20,6 +21,7 @@ type PurchaseInfo = {
   amount: number;
   base_amount: number;
   platform_fee: number;
+  vat: number;
   quantity: number;
   authorization_url: string | null;
 };
@@ -237,7 +239,7 @@ function PublicEventContent() {
         {/* LEFT: Event Details */}
         <div className="space-y-8">
           {/* Back link */}
-          <Link href="/attend" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#64748b] hover:text-[#E91E8C] transition-colors">
+          <Link href="/attend" className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 bg-white border border-[#e8edf2] text-sm font-semibold text-[#0D1B2A] hover:bg-[#f8f9fc] hover:border-[#E91E8C] hover:text-[#E91E8C] transition-all shadow-sm hover:shadow-md">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
@@ -408,12 +410,16 @@ function PublicEventContent() {
                   </p>
                   <div className="mt-2 space-y-0.5 text-xs text-white/50">
                     <div className="flex justify-between">
-                      <span>Service fee (5%)</span>
-                      <span>₦{Math.round(event.ticket_price! * PLATFORM_FEE_PERCENT / 100).toLocaleString()}</span>
+                      <span>Accredit fee (5%)</span>
+                      <span className="line-through">-₦{Math.round(event.ticket_price! * PLATFORM_FEE_PERCENT / 100).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>VAT (2.5%)</span>
+                      <span>+₦{Math.round(event.ticket_price! * VAT_PERCENT / 100).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between font-bold text-white/80 border-t border-white/20 pt-1">
                       <span>Buyer pays</span>
-                      <span>₦{Math.round(event.ticket_price! * (1 + PLATFORM_FEE_PERCENT / 100)).toLocaleString()}</span>
+                      <span>₦{Math.round(event.ticket_price! * (1 + VAT_PERCENT / 100)).toLocaleString()}</span>
                     </div>
                   </div>
                 </>
@@ -515,12 +521,12 @@ function PublicEventContent() {
                         <span>₦{(event.ticket_price * quantity).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-[#64748b]">
-                        <span>Service fee (5%)</span>
-                        <span>₦{Math.round(event.ticket_price * quantity * PLATFORM_FEE_PERCENT / 100).toLocaleString()}</span>
+                        <span>VAT (2.5%)</span>
+                        <span>₦{Math.round(event.ticket_price * quantity * VAT_PERCENT / 100).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between font-black text-[#0D1B2A] border-t border-[#e8edf2] pt-1.5">
                         <span>Total</span>
-                        <span>₦{Math.round(event.ticket_price * quantity * (1 + PLATFORM_FEE_PERCENT / 100)).toLocaleString()}</span>
+                        <span>₦{Math.round(event.ticket_price * quantity * (1 + VAT_PERCENT / 100)).toLocaleString()}</span>
                       </div>
                     </div>
                   )}
@@ -538,7 +544,7 @@ function PublicEventContent() {
                       ? "Processing..."
                       : isFreeEvent
                       ? "Save My Spot — Free"
-                      : `Pay ₦${Math.round(event.ticket_price! * quantity * (1 + PLATFORM_FEE_PERCENT / 100)).toLocaleString()}`}
+                      : `Pay ₦${Math.round(event.ticket_price! * quantity * (1 + VAT_PERCENT / 100)).toLocaleString()}`}
                   </button>
                 </form>
               )}

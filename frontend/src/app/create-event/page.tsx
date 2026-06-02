@@ -48,7 +48,7 @@ const DEFAULT_FORM = {
   qr_message: "",
   invite_template: "elegant" as InviteTemplate | null,
   qr_style: "pulsing" as QRStyle,
-  event_template: "elegant" as EventTemplate,
+  event_template: null as EventTemplate,
 };
 
 type Mode = "invite" | "event";
@@ -56,8 +56,8 @@ type Channel = "email" | "whatsapp" | "sms";
 type QrDeliveryOption = "with_qr" | "without_qr" | "qr_later";
 type SocialPlatform = "instagram" | "x" | "facebook" | "tiktok" | "linkedin" | "website" | "other";
 type InviteTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate";
-type QRStyle = "pulsing" | "rotating" | "gradient" | "neon" | "bounce";
-type EventTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate";
+type QRStyle = "pulsing" | "rotating" | "gradient" | "neon" | "bounce" | "custom";
+type EventTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate" | null;
 type SocialHandle = { platform: SocialPlatform; handle: string };
 type PassPackage = { name: string; price: string };
 type LineupPerson = {
@@ -240,6 +240,17 @@ const qrStyles: Array<{ value: string; label: string; description: string; bestF
       </svg>
     ),
   },
+  {
+    value: "custom",
+    label: "Use My Own",
+    description: "Upload your custom QR code",
+    bestFor: "Branded, unique design",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+    ),
+  },
 ];
 
 const guestRanges = [
@@ -330,10 +341,62 @@ function toggleChannel(channels: Channel[], channel: Channel) {
     : [...channels, channel];
 }
 
-function openEditableTimeDropdown(id: string) {
-  const input = document.getElementById(id) as (HTMLInputElement & { showPicker?: () => void }) | null;
-  input?.focus();
-  input?.showPicker?.();
+function TimeDropdown({ value, onChange, disabled, id }: {
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  id: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 pr-11 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
+        placeholder={disabled ? "To be communicated" : "Select or type time"}
+        required={!disabled}
+      />
+      {!disabled && (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-[#23466f] hover:bg-[#f8fafc]"
+            aria-label="Open time options"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+          {open && (
+            <div className="absolute z-50 mt-1 max-h-44 w-full overflow-y-auto rounded-xl border border-[#d9e2ec] bg-white shadow-lg">
+              {timeSlots.map((slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); onChange(slot); setOpen(false); }}
+                  className={`block w-full px-3 py-2 text-left text-sm hover:bg-[#f8fafc] ${value === slot ? "font-bold text-[#E91E8C]" : "text-[#23466f]"}`}
+                >
+                  {slot}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 const MONTHS = [
@@ -396,6 +459,22 @@ function resizeImage(file: File, maxW: number, maxH: number): Promise<Blob> {
   });
 }
 
+const templateStyles: Record<string, { headerBg: string; bodyBg: string; fontClass: string; accent: string; textColor: string }> = {
+  elegant: { headerBg: "linear-gradient(135deg,#F5F0E8,#E8D9A0)", bodyBg: "#FDFAF3", fontClass: "font-serif", accent: "#B8860B", textColor: "#2d2416" },
+  bold: { headerBg: "#000", bodyBg: "#111", fontClass: "font-sans font-black", accent: "#ef4444", textColor: "#ffffff" },
+  minimal: { headerBg: "#f5f5f5", bodyBg: "#fff", fontClass: "font-light", accent: "#6b7280", textColor: "#333333" },
+  vibrant: { headerBg: "linear-gradient(135deg,#7C3AED,#EC4899)", bodyBg: "#fdf4ff", fontClass: "font-sans", accent: "#7C3AED", textColor: "#ffffff" },
+  corporate: { headerBg: "#0D1B2A", bodyBg: "#fff", fontClass: "font-sans", accent: "#0D1B2A", textColor: "#ffffff" },
+};
+
+const qrStyleConfig: Record<string, { wrapper: string; square: string }> = {
+  pulsing: { wrapper: "animate-pulse", square: "" },
+  rotating: { wrapper: "animate-spin [animation-duration:3s]", square: "" },
+  gradient: { wrapper: "", square: "bg-gradient-to-br from-[#E91E8C] to-[#07182f]" },
+  neon: { wrapper: "", square: "bg-[#00ff88] shadow-[0_0_6px_#00ff88]" },
+  bounce: { wrapper: "", square: "animate-bounce" },
+};
+
 export default function CreateEventPage() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [fingerprint, setFingerprint] = useState("");
@@ -432,8 +511,9 @@ export default function CreateEventPage() {
   const [monthPart, setMonthPart] = useState("");
   const [yearPart, setYearPart] = useState("");
 
-  // AI image generation error
+  // AI generation errors
   const [aiImageError, setAiImageError] = useState("");
+  const [aiGenerateError, setAiGenerateError] = useState("");
 
   // Flier upload / parse state
   const [flierParsing, setFlierParsing] = useState(false);
@@ -444,6 +524,7 @@ export default function CreateEventPage() {
   // Email input modal for test invites
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [testEmail, setTestEmail] = useState("");
+  const [testPhone, setTestPhone] = useState("");
 
   // Event preview modal for test events
   const [eventPreviewUrl, setEventPreviewUrl] = useState<string | null>(null);
@@ -632,6 +713,7 @@ export default function CreateEventPage() {
 
   const generateMessage = async () => {
     if (!hydrated || !mode) return;
+    setAiGenerateError("");
     setAiGenerating(true);
     try {
       const dateLine = detailsToBeCommunicated ? "to be communicated" : formatDisplayDate(form.event_date) || "your selected date";
@@ -662,14 +744,15 @@ export default function CreateEventPage() {
         const categoryText = form.category ? ` Category: ${form.category}.` : "";
         const dressText = form.male_dress_code ? ` Dress code: ${form.male_dress_code}.` : "";
         const context = `Write a compelling event description for a public listing: ${title} hosted by ${host}.${categoryText}${passText}${lineupText}${afterPartyText}${socialText}${dressText}`;
-        const reply = await aiChat([{ role: "user", text: `Generate a concise, engaging event description (2–4 sentences) for a public event discovery page. Do NOT repeat the date, time, venue, ticket prices, or dress code — those are displayed separately. Focus on atmosphere, highlights, what makes this event special, and what attendees can look forward to. Context: Date: ${dateLine}, Time: ${timeLine}, Venue: ${venueLine}.\n\n${context}` }]);
+        const reply = await aiChat([{ role: "user", text: `Generate a 2-4 sentence event description for a public listing. NEVER include the date, time, venue, ticket prices, or dress code — those are shown separately. Focus only on atmosphere, highlights, and what makes this event special. Context for reference only (do NOT write it): Date: ${dateLine}, Time: ${timeLine}, Venue: ${venueLine}.\n\n${context}` }]);
         setForm((current) => ({ ...current, description: reply }));
       } else {
         const context = `Write a warm invitation message for a private invite: ${title} hosted by ${host}.${passText}${lineupText}${afterPartyText}${socialText}`;
-        const reply = await aiChat([{ role: "user", text: `Generate a warm personalized invitation message. Do NOT include the date, time, venue, or dress code in the text — those details are displayed separately as styled boxes within the message. Just write the welcome wording and any extra context (lineup, passes, after-party, social). Details for reference: Date: ${dateLine}, Time: ${timeLine}. Venue: ${venueLine}.\n\n${context}` }]);
+        const reply = await aiChat([{ role: "user", text: `Write ONLY the warm welcome paragraph of an invitation from ${host}. Use their actual name — no placeholders like [Host's Name] or [Guest Name]. Address the reader as "you". NEVER include the date, time, venue, or dress code — those are shown separately. Focus purely on atmosphere, what makes this event special, and the feeling of being invited. Details for context only (do NOT write them): Date: ${dateLine}, Time: ${timeLine}. Venue: ${venueLine}.\n\n${context}` }]);
         setForm((current) => ({ ...current, description: reply }));
       }
     } catch {
+      setAiGenerateError("Auto-generation is unavailable right now. Please write your message manually.");
       setForm((current) => ({ ...current, description: "Unable to generate message. Please write manually." }));
     } finally {
       setAiGenerating(false);
@@ -680,18 +763,18 @@ export default function CreateEventPage() {
     if (!hydrated || !mode) return;
     setAiImageGenerating(true);
     try {
-      const autoPrompt = mode === "event"
-        ? [
-            `Premium event flyer/banner for "${form.title || "an event"}".`,
-            form.category ? `Event type: ${form.category}.` : "",
-            form.venue ? `Venue: ${form.venue}.` : "",
-            visibleLineup.length
-              ? `Featuring: ${visibleLineup.slice(0, 3).map((p) => p.name).filter(Boolean).join(", ")}.`
-              : "",
-            form.male_dress_code ? `Dress code: ${form.male_dress_code}.` : "",
-            "Bold poster typography, vibrant colors, professional event marketing design.",
-          ].filter(Boolean).join(" ")
-        : `Premium ${form.event_type} invitation design for "${form.title || "the event"}" with elegant typography and rich event atmosphere.`;
+      const autoPrompt = [
+        form.title ? `Premium flyer for "${form.title}".` : "Premium event flyer.",
+        form.category ? `Category: ${form.category}.` : "",
+        form.venue ? `Venue: ${form.venue}.` : "",
+        form.male_dress_code ? `Dress code: ${form.male_dress_code}.` : "",
+        form.event_date ? `Date: ${form.event_date}.` : "",
+        form.event_time ? `Time: ${form.event_time}.` : "",
+        visibleLineup.length
+          ? `Featuring: ${visibleLineup.slice(0, 3).map((p) => p.name).filter(Boolean).join(", ")}.`
+          : "",
+        "Bold poster typography, vibrant colors, professional design. NO text, words, letters, numbers, or dates on the image.",
+      ].filter(Boolean).join(" ");
       const prompt = form.image_prompt.trim() || autoPrompt;
       setAiImageError("");
       const url = await generateFlier(prompt);
@@ -703,7 +786,7 @@ export default function CreateEventPage() {
         image_prompt: current.image_prompt || autoPrompt,
       }));
     } catch (err) {
-      setAiImageError(err instanceof Error ? err.message : "Image generation failed. Ensure OPENAI_API_KEY is configured.");
+      setAiImageError("Could not generate image. Please try again later or upload your own.");
     } finally {
       setAiImageGenerating(false);
     }
@@ -748,6 +831,7 @@ export default function CreateEventPage() {
             pricing_units: pricingUnits,
             guest_count: selectedGuestRange.max,
             test_email: mode === "invite" ? testEmail : undefined,
+            test_phone: mode === "invite" ? testPhone || undefined : undefined,
           },
         },
       });
@@ -808,8 +892,15 @@ export default function CreateEventPage() {
               <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-600">
                 Choose one to get started
               </p>
-              {/* Flier upload shortcut */}
-              {flierParsing ? (
+              {/* Flier upload shortcut — gated by mode selection */}
+              {!mode ? (
+                <div className="mb-3 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <svg className="w-4 h-4 text-amber-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm font-medium text-amber-800">Please select CREATE INVITE or POST EVENT first</p>
+                </div>
+              ) : flierParsing ? (
                 <div className="mb-3 flex items-center gap-3 rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
                   <div className="w-4 h-4 rounded-full border-2 border-[#E91E8C] border-t-transparent animate-spin flex-shrink-0" />
                   <p className="text-sm font-semibold text-[#0D1B2A]">AI is reading your flier…</p>
@@ -823,11 +914,11 @@ export default function CreateEventPage() {
                   </div>
                   <label className="cursor-pointer text-xs font-bold text-[#E91E8C] hover:underline flex-shrink-0">
                     Change
-                    <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
+                    <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} disabled={!mode} />
                   </label>
                 </div>
               ) : (
-                <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#d9e2ec] bg-white px-4 py-3 hover:border-[#E91E8C] transition-colors">
+                <label className={`mb-3 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-4 py-3 transition-colors ${mode ? "border-[#d9e2ec] bg-white hover:border-[#E91E8C]" : "border-gray-300 bg-gray-50 cursor-not-allowed opacity-50"}`}>
                   <div className="w-8 h-8 rounded-lg bg-[#fff1f8] flex items-center justify-center flex-shrink-0">
                     <svg className="w-4 h-4 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -837,7 +928,7 @@ export default function CreateEventPage() {
                     <p className="text-xs font-bold text-[#0D1B2A]">Already have a flier? Upload to auto-fill</p>
                     <p className="text-xs text-[#94a3b8] truncate">AI extracts title, date, lineup, tickets and more</p>
                   </div>
-                  <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
+                  <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} disabled={!mode} />
                 </label>
               )}
               {flierParseError && (
@@ -973,9 +1064,11 @@ export default function CreateEventPage() {
             <form onSubmit={showEmailModal} className="rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-8">
               <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">
-                    {mode === "event" ? "Post Event Test" : "Create Invite Test"}
-                  </p>
+                  <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">
+                      {mode === "event" ? "Post Event Test" : "Create Invite Test"}
+                    </p>
+                  </div>
                   <h2 className="mt-2 text-2xl font-black text-[#07182f]">
                     {mode ? "Try it once, then continue securely" : "Choose a flow above"}
                   </h2>
@@ -1042,7 +1135,7 @@ export default function CreateEventPage() {
                     {inviteTemplates.filter(t => t.value !== null).map((template) => (
                       <div
                         key={String(template.value)}
-                        onClick={() => setForm({ ...form, event_template: template.value as EventTemplate })}
+                        onClick={() => setForm({ ...form, event_template: form.event_template === template.value ? null : (template.value as EventTemplate) })}
                         className={`flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 transition-all ${
                           form.event_template === template.value
                             ? "border-[#E91E8C] bg-pink-50 ring-2 ring-[#E91E8C]/20"
@@ -1295,32 +1388,12 @@ export default function CreateEventPage() {
                 </label>
                 <label className="space-y-2">
                   <span className="text-sm font-semibold text-[#23466f]">Time</span>
-                  <div className="relative">
-                    <input
-                      id="event-time-input"
-                      list="event-time-slots"
-                      value={form.event_time}
-                      onChange={(e) => setForm({ ...form, event_time: e.target.value })}
-                      disabled={detailsToBeCommunicated}
-                      className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 pr-11 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
-                      placeholder={detailsToBeCommunicated ? "To be communicated" : "Select or type time"}
-                      required={!detailsToBeCommunicated}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => openEditableTimeDropdown("event-time-input")}
-                      disabled={detailsToBeCommunicated}
-                      className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-[#23466f] hover:bg-[#f8fafc] disabled:text-[#94a3b8]"
-                      aria-label="Open time options"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <datalist id="event-time-slots">
-                    {timeSlots.map((slot) => (
-                      <option key={slot} value={slot} />
-                    ))}
-                  </datalist>
+                  <TimeDropdown
+                    id="event-time-input"
+                    value={form.event_time}
+                    onChange={(v) => setForm({ ...form, event_time: v })}
+                    disabled={detailsToBeCommunicated}
+                  />
                 </label>
                 <label className="space-y-2">
                   <span className="text-sm font-semibold text-[#23466f]">Time zone</span>
@@ -1359,13 +1432,76 @@ export default function CreateEventPage() {
                     </div>
                   </fieldset>
 
+                  {/* Venue & Dress Code - moved up */}
+                  <label className="relative block space-y-2">
+                    <span className="text-sm font-semibold text-[#23466f]">Venue</span>
+                    <input
+                      value={form.venue}
+                      onChange={(e) => {
+                        setForm({ ...form, venue: e.target.value });
+                        setVenueSuggestionsOpen(true);
+                      }}
+                      onFocus={() => setVenueSuggestionsOpen(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          setVenueSuggestionsOpen(false);
+                        }
+                      }}
+                      disabled={detailsToBeCommunicated}
+                      className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
+                      placeholder={detailsToBeCommunicated ? "To be communicated" : "Start typing a venue or address"}
+                      required={!detailsToBeCommunicated}
+                    />
+                    {venueSuggestionsOpen && filteredVenues.length > 0 && (
+                      <div className="rounded-xl border border-[#e2e8f0] bg-white p-2 shadow-sm">
+                        {filteredVenues.map((venue) => (
+                          <button
+                            key={venue}
+                            type="button"
+                            onClick={() => {
+                              setForm({ ...form, venue });
+                              saveVenue(venue);
+                              setVenueSuggestionsOpen(false);
+                            }}
+                            className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[#23466f] hover:bg-[#fff1f8]"
+                          >
+                            {venue}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </label>
+
+                  {/* Dress code - Male & Female */}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="block space-y-2">
+                      <span className="text-sm font-semibold text-[#23466f]">Dress code - Male</span>
+                      <input
+                        value={form.male_dress_code}
+                        onChange={(e) => setForm({ ...form, male_dress_code: e.target.value })}
+                        className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
+                        placeholder="Black suit, agbada, senator"
+                      />
+                    </label>
+                    <label className="block space-y-2">
+                      <span className="text-sm font-semibold text-[#23466f]">Dress code - Female</span>
+                      <input
+                        value={form.female_dress_code || ""}
+                        onChange={(e) => setForm({ ...form, female_dress_code: e.target.value })}
+                        className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
+                        placeholder="Evening gown, aso ebi, all white"
+                      />
+                    </label>
+                  </div>
+
                   <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
                     <legend className="px-2 text-sm font-semibold text-[#23466f]">Invitation template style</legend>
                     <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                       {inviteTemplates.map((template) => (
                         <div
                           key={String(template.value)}
-                          onClick={() => setForm({ ...form, invite_template: template.value as InviteTemplate | null })}
+                          onClick={() => setForm({ ...form, invite_template: form.invite_template === template.value ? null : (template.value as InviteTemplate | null) })}
                           className={`flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 transition-all ${
                             form.invite_template === template.value
                               ? "border-[#E91E8C] bg-pink-50 ring-2 ring-[#E91E8C]/20"
@@ -1399,38 +1535,7 @@ export default function CreateEventPage() {
                     </div>
                   </fieldset>
 
-                  {form.qr_delivery === "with_qr" && (
-                    <fieldset className="rounded-xl border border-[#d9e2ec] p-4 bg-[#f8f9fc]">
-                      <legend className="px-2 text-sm font-semibold text-[#23466f]">Animated QR code style</legend>
-                      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-5">
-                        {qrStyles.map((style) => (
-                          <div
-                            key={style.value}
-                            onClick={() => setForm({ ...form, qr_style: style.value as QRStyle })}
-                            className={`flex cursor-pointer flex-col gap-2 rounded-xl border-2 p-3 text-sm transition-all ${
-                              form.qr_style === style.value
-                                ? "border-[#E91E8C] bg-pink-50 ring-2 ring-[#E91E8C]/20"
-                                : "border-[#edf2f7] bg-white hover:border-[#E91E8C]/50"
-                            }`}
-                          >
-                            <div className="h-8 w-8 text-[#E91E8C]">
-                              {style.icon({ className: "w-full h-full" })}
-                            </div>
-                            <p className="font-bold text-[#23466f]">{style.label}</p>
-                            <p className="text-xs text-[#64748b] leading-4">{style.description}</p>
-                            <p className="text-xs font-semibold text-[#E91E8C] mt-1">{style.bestFor}</p>
-                            <input
-                              type="radio"
-                              checked={form.qr_style === style.value}
-                              onChange={() => {}}
-                              className="h-4 w-4 accent-[#E91E8C] mt-2"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </fieldset>
-                  )}
-
+                  {/* QR code option - AFTER template */}
                   <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
                     <legend className="px-2 text-sm font-semibold text-[#23466f]">QR code option</legend>
                     <div className="grid gap-3 md:grid-cols-3">
@@ -1449,16 +1554,45 @@ export default function CreateEventPage() {
                         </label>
                       ))}
                     </div>
+
+                    {/* Animated QR style - ONLY when "With QR" is selected */}
                     {form.qr_delivery === "with_qr" && (
-                      <div className="mt-4">
-                        <textarea
-                          value={form.qr_message}
-                          onChange={(e) => setForm({ ...form, qr_message: e.target.value })}
-                          className="min-h-20 w-full resize-none rounded-xl border border-[#d9e2ec] bg-white px-3 py-3 text-sm outline-none focus:border-[#E91E8C]"
-                          placeholder="Optional message to accompany the QR code (e.g. 'Attached to this invite is your QR code. Kindly present it at the event for entry.')"
-                        />
-                      </div>
+                      <>
+                        <div className="mt-4 rounded-xl bg-pink-50 border border-[#E91E8C]/20 p-3">
+                          <p className="text-xs font-semibold text-[#E91E8C] mb-3">Choose your animated QR style:</p>
+                          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-5">
+                            {qrStyles.map((style) => (
+                              <div
+                                key={style.value}
+                                onClick={() => setForm({ ...form, qr_style: form.qr_style === style.value ? "pulsing" : (style.value as QRStyle) })}
+                                className={`flex cursor-pointer flex-col gap-2 rounded-xl border-2 p-3 text-sm transition-all ${
+                                  form.qr_style === style.value
+                                    ? "border-[#E91E8C] bg-white ring-2 ring-[#E91E8C]/20"
+                                    : "border-[#edf2f7] bg-white hover:border-[#E91E8C]/50"
+                                }`}
+                              >
+                                <div className="h-8 w-8 text-[#E91E8C]">
+                                  {style.icon({ className: "w-full h-full" })}
+                                </div>
+                                <p className="font-bold text-[#23466f] text-xs">{style.label}</p>
+                                <p className="text-xs text-[#64748b] leading-3">{style.description}</p>
+                                <p className="text-xs font-semibold text-[#E91E8C]">{style.bestFor}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <textarea
+                            value={form.qr_message}
+                            onChange={(e) => setForm({ ...form, qr_message: e.target.value })}
+                            className="min-h-20 w-full resize-none rounded-xl border border-[#d9e2ec] bg-white px-3 py-3 text-sm outline-none focus:border-[#E91E8C]"
+                            placeholder="Optional message to accompany the QR code (e.g. 'Attached to this invite is your QR code. Kindly present it at the event for entry.')"
+                          />
+                        </div>
+                      </>
                     )}
+
                     {form.qr_delivery === "qr_later" && (
                       <div className="mt-4 space-y-3 rounded-xl bg-[#f8fafc] p-4">
                         <div className="grid gap-3 md:grid-cols-2">
@@ -1476,7 +1610,7 @@ export default function CreateEventPage() {
                                 onChange={() => setForm({ ...form, qr_later_media_source: "upload" })}
                                 className="h-4 w-4 accent-[#E91E8C]"
                               />
-                              Upload image
+                              Upload QR
                             </label>
                             <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-[#edf2f7] bg-white p-3 text-sm font-semibold text-[#23466f]">
                               <input
@@ -1485,7 +1619,7 @@ export default function CreateEventPage() {
                                 onChange={() => setForm({ ...form, qr_later_media_source: "ai" })}
                                 className="h-4 w-4 accent-[#E91E8C]"
                               />
-                              Generate image
+                              Generate QR
                             </label>
                           </div>
                         </div>
@@ -1510,7 +1644,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                             value={form.qr_later_image_prompt}
                             onChange={(e) => setForm({ ...form, qr_later_image_prompt: e.target.value })}
                             className="h-11 w-full rounded-xl border border-[#d9e2ec] bg-white px-3 text-sm outline-none focus:border-[#E91E8C]"
-                            placeholder="Describe the picture to attach to the later QR message"
+                            placeholder="Describe the QR code design you want AI to generate"
                           />
                         )}
                         <p className="text-xs font-semibold text-[#64748b]">
@@ -1522,59 +1656,9 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                 </div>
               )}
 
-              <label className="relative mt-4 block space-y-2">
-                <span className="text-sm font-semibold text-[#23466f]">Venue</span>
-                  <input
-                  value={form.venue}
-                  onChange={(e) => {
-                    setForm({ ...form, venue: e.target.value });
-                    setVenueSuggestionsOpen(true);
-                  }}
-                  onFocus={() => setVenueSuggestionsOpen(true)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      setVenueSuggestionsOpen(false);
-                    }
-                  }}
-                  disabled={detailsToBeCommunicated}
-                  className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
-                  placeholder={detailsToBeCommunicated ? "To be communicated" : "Start typing a venue or address"}
-                  required={!detailsToBeCommunicated}
-                />
-                {venueSuggestionsOpen && filteredVenues.length > 0 && (
-                  <div className="rounded-xl border border-[#e2e8f0] bg-white p-2 shadow-sm">
-                    {filteredVenues.map((venue) => (
-                      <button
-                        key={venue}
-                        type="button"
-                        onClick={() => {
-                          setForm({ ...form, venue });
-                          saveVenue(venue);
-                          setVenueSuggestionsOpen(false);
-                        }}
-                        className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[#23466f] hover:bg-[#fff1f8]"
-                      >
-                        {venue}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </label>
-
               {mode === "event" ? (
                 <>
-                <label className="mt-5 block space-y-2">
-                  <span className="text-sm font-semibold text-[#23466f]">
-                    Dress code <span className="font-normal text-[#94a3b8]">(optional)</span>
-                  </span>
-                  <input
-                    value={form.male_dress_code}
-                    onChange={(e) => setForm({ ...form, male_dress_code: e.target.value })}
-                    className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
-                    placeholder="Smart casual, all white, formal attire, beach wear..."
-                  />
-                </label>
+                {/* Note: Venue and Dress Code are now in the invite-specific section above for both CREATE INVITE and POST EVENT modes */}
                 <div className="mt-5 space-y-5">
                   <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1730,55 +1814,18 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                           className="h-11 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
                           placeholder="After party venue or address"
                         />
-                        <div className="relative">
-                          <input
-                            id="after-party-time-input"
-                            list="after-party-time-slots"
-                            value={form.after_party_time}
-                            onChange={(e) => setForm({ ...form, after_party_time: e.target.value })}
-                            className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 pr-11 text-sm outline-none focus:border-[#E91E8C]"
-                            placeholder="Select or type after party time"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => openEditableTimeDropdown("after-party-time-input")}
-                            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-[#23466f] hover:bg-[#f8fafc]"
-                            aria-label="Open after party time options"
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                          <datalist id="after-party-time-slots">
-                            {timeSlots.map((slot) => (
-                              <option key={slot} value={slot} />
-                            ))}
-                          </datalist>
-                        </div>
+                        <TimeDropdown
+                          id="after-party-time-input"
+                          value={form.after_party_time}
+                          onChange={(v) => setForm({ ...form, after_party_time: v })}
+                        />
                       </div>
                     )}
                   </fieldset>
                 </div>
                 </>
               ) : (
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <label className="space-y-2">
-                    <span className="text-sm font-semibold text-[#23466f]">Dress code - Male</span>
-                    <input
-                      value={form.male_dress_code}
-                      onChange={(e) => setForm({ ...form, male_dress_code: e.target.value })}
-                      className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
-                      placeholder="Black suit, agbada, senator"
-                    />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-semibold text-[#23466f]">Dress code - Female</span>
-                    <input
-                      value={form.female_dress_code}
-                      onChange={(e) => setForm({ ...form, female_dress_code: e.target.value })}
-                      className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
-                      placeholder="Evening gown, aso ebi, all white"
-                    />
-                  </label>
-                </div>
+                <div className="mt-4"></div>
               )}
 
               <fieldset className="mt-5 rounded-xl border border-[#d9e2ec] p-4">
@@ -1826,8 +1873,11 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                           setUploadedImageData(null);
                         }
                       }}
-                      className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] px-3 py-2 text-sm text-[#23466f] file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#E91E8C] file:px-4 file:py-2 file:font-bold file:text-white file:hover:bg-[#C4166F]"
+                      className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] px-3 py-2 text-sm file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#E91E8C] file:px-4 file:py-2 file:font-bold file:text-white file:hover:bg-[#C4166F]"
                     />
+                    {form.uploaded_image_name && (
+                      <p className="text-xs font-medium text-[#23466f]">Selected: {form.uploaded_image_name}</p>
+                    )}
                     <p className="text-xs text-[#94a3b8]">Recommended: 1920×1080px, max 10MB</p>
                   </label>
                 ) : (
@@ -1869,6 +1919,11 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     {aiGenerating ? "Generating..." : "Auto Generate"}
                   </button>
                 </div>
+                {aiGenerateError && (
+                  <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-red-700">
+                    {aiGenerateError}
+                  </p>
+                )}
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -1920,36 +1975,38 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
               </button>
             </form>
 
-            <aside className="sticky top-8 self-start rounded-2xl bg-[#07182f] p-6 text-white shadow-[0_18px_48px_rgba(7,24,47,0.22)]">
+            <aside className="sticky top-8 self-start rounded-2xl bg-white p-6 text-[#0D1B2A] shadow-[0_18px_48px_rgba(0,0,0,0.08)] border border-[#e8edf2]">
               {mode === "event" ? (
                 <>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff7abf]">Flyer builder</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Flyer builder</p>
                   <h3 className="mt-3 text-3xl font-black">Discovery preview</h3>
-                  <p className="mt-2 text-sm text-white/58">
+                  <p className="mt-2 text-sm text-gray-500">
                     POST EVENT creates a flyer/banner-style preview for Discover Events. Invite delivery pricing does not apply here.
                   </p>
                 </>
               ) : (
-                <>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff7abf]">Live estimate</p>
-                  <h3 className="mt-3 text-3xl font-black">{formatNaira(selectedPrice)}</h3>
-                  <p className="mt-2 text-sm text-white/58">
+                <div className="rounded-xl bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 border border-[#fce4f0]">
+                  <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
+                  </div>
+                  <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
+                  <p className="mt-2 text-sm text-gray-500">
                     {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
                   </p>
 
                   <div className="mt-5 space-y-2">
                     {form.delivery_channels.length === 0 ? (
-                      <p className="rounded-xl bg-white/8 p-3 text-sm text-white/70">Select at least one channel.</p>
+                      <p className="rounded-xl bg-white/80 p-3 text-sm text-gray-500 border border-[#e8edf2]">Select at least one channel.</p>
                     ) : (
                       form.delivery_channels.map((channel) => (
-                        <div key={channel} className="flex items-center justify-between rounded-xl bg-white/8 p-3 text-sm">
-                          <span>{channelLabels[channel]}</span>
-                          <strong>{formatNaira(pricing[channel] * pricingUnits)}</strong>
+                        <div key={channel} className="flex items-center justify-between rounded-xl bg-white/80 p-3 text-sm border border-[#e8edf2]">
+                          <span className="text-gray-700">{channelLabels[channel]}</span>
+                          <strong className="text-[#0D1B2A]">{formatNaira(pricing[channel] * pricingUnits)}</strong>
                         </div>
                       ))
                     )}
                   </div>
-                </>
+                </div>
               )}
 
               <div className="mt-8 space-y-5">
@@ -1963,27 +2020,35 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                   </div>
                 )}
                 <div className="overflow-hidden rounded-xl bg-white text-[#07182f]">
-                  <div
-                    className="flex min-h-36 flex-col justify-end p-5 text-white"
-                    style={{
-                      background:
-                        mode === "invite"
-                          ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
-                          : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)",
-                    }}
-                  >
-                    <p className="text-xs font-black uppercase tracking-[0.22em] text-white/68">
-                      {mode === "event" ? "Event flyer" : "Invite flyer"}
-                    </p>
-                    <h4 className="mt-3 text-3xl font-black leading-tight">{form.title || "Your Event Title"}</h4>
-                    <p className="mt-2 text-sm text-white/78">
-                      {detailsToBeCommunicated ? "Venue to be communicated" : form.venue || "Event venue"}
-                    </p>
-                  </div>
-                  <div className="p-4">
+                  {(() => {
+                    const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
+                    const styles = activeTemplate ? templateStyles[activeTemplate] : null;
+                    const headerText = styles ? styles.textColor : "white";
+                    return (
+                      <>
+                        <div
+                          className="flex min-h-36 flex-col justify-end p-5"
+                          style={{
+                            background: styles ? styles.headerBg : (
+                              mode === "invite"
+                                ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
+                                : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)"
+                            ),
+                            color: headerText,
+                          }}
+                        >
+                          <p className="text-xs font-black uppercase tracking-[0.22em] opacity-75">
+                            {mode === "event" ? "Event flyer" : "Invite flyer"}
+                          </p>
+                          <h4 className="mt-3 text-3xl font-black leading-tight">{form.title || "Your Event Title"}</h4>
+                          <p className="mt-2 text-sm opacity-85">
+                            {detailsToBeCommunicated ? "Venue to be communicated" : form.venue || "Event venue"}
+                          </p>
+                        </div>
+                        <div className="p-4">
                   <h4 className="text-xl font-black">{form.title || "Your Event Title"}</h4>
                   <p className="mt-1 text-sm text-[#64748b]">{form.host_name || "Host name"}</p>
-                  {mode === "event" ? (
+                    {mode === "event" ? (
                     <>
                       <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                         <div className="rounded-lg bg-[#f8fafc] p-2">
@@ -2012,12 +2077,17 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                             <dd className="mt-1 font-semibold">Free entry</dd>
                           )}
                         </div>
-                        {form.male_dress_code && (
-                          <div className="rounded-lg bg-[#f8fafc] p-2">
-                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
-                            <dd className="mt-1 font-semibold">{form.male_dress_code}</dd>
-                          </div>
-                        )}
+                        <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
+                        </div>
+                        <div className="rounded-lg bg-[#f8fafc] p-2">
+                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
+                          <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
+                        </div>
+                        <div className="rounded-lg bg-[#f8fafc] p-2">
+                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
+                          <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
+                        </div>
                         {visibleSocialHandles.length > 0 && (
                           <div className="rounded-lg bg-[#f8fafc] p-2">
                             <dt className="font-bold uppercase tracking-widest text-[#475569]">Social</dt>
@@ -2028,7 +2098,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                       <div className="mt-4 space-y-3 text-sm text-[#23466f]">
                         {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
                           ? (form.description || "").split(/\n{2,}/).map((para, i) => (
-                              <p key={i}>{para.replace(/\n/g, " ")}</p>
+                              <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
                             ))
                           : <p>Your event description will appear here in the test preview.</p>}
                       </div>
@@ -2047,51 +2117,48 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     <>
                       <div className="mt-4 space-y-3 text-sm text-[#23466f]">
                         <p className="font-semibold">Dear <span className="text-[#E91E8C]">[Guest Name]</span>,</p>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="rounded-lg bg-[#f8fafc] p-2">
+                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
+                            <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : formatDisplayDate(form.event_date) || "Event date"}</dd>
+                          </div>
+                          <div className="rounded-lg bg-[#f8fafc] p-2">
+                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
+                            <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.event_time || "Event time"}</dd>
+                          </div>
+                          <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
+                            <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.venue || "Event venue"}</dd>
+                          </div>
+                          <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
+                          </div>
+                          <div className="rounded-lg bg-[#f8fafc] p-2">
+                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
+                            <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
+                          </div>
+                          <div className="rounded-lg bg-[#f8fafc] p-2">
+                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
+                            <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
+                          </div>
+                        </div>
                         {(() => {
                           const desc = form.description || "";
                           const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
                           if (paragraphs.length === 0) {
-                            return <p>Your AI-generated or edited message will appear here in the test preview.</p>;
+                            return <p className="mt-3">Your AI-generated or edited message will appear here in the test preview.</p>;
                           }
-                          const elements: React.ReactNode[] = [];
-                          paragraphs.forEach((para, i) => {
-                            elements.push(<p key={`p-${i}`}>{para.replace(/\n/g, " ")}</p>);
-                            if (i === 0) {
-                              elements.push(
-                                <div key="details" className="grid grid-cols-2 gap-2 text-xs">
-                                  <div className="rounded-lg bg-[#f8fafc] p-2">
-                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
-                                    <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : formatDisplayDate(form.event_date) || "Event date"}</dd>
-                                  </div>
-                                  <div className="rounded-lg bg-[#f8fafc] p-2">
-                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
-                                    <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.event_time || "Event time"}</dd>
-                                  </div>
-                                  <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
-                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
-                                    <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.venue || "Event venue"}</dd>
-                                  </div>
-                                  <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
-                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
-                                  </div>
-                                  <div className="rounded-lg bg-[#f8fafc] p-2">
-                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
-                                    <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
-                                  </div>
-                                  <div className="rounded-lg bg-[#f8fafc] p-2">
-                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
-                                    <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
-                                  </div>
-                                </div>
-                              );
-                            }
-                          });
-                          return elements;
+                          return paragraphs.map((para, i) => (
+                            <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                          ));
                         })()}
                       </div>
                     </>
                   )}
-                  </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
                 {mode === "invite" && form.qr_delivery !== "without_qr" && (
                   <div className="rounded-xl bg-white p-4 text-[#07182f]">
@@ -2099,13 +2166,17 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     {(form.qr_message || form.qr_delivery === "with_qr") && (
                       <p className="mt-2 text-sm text-[#23466f]">{form.qr_message || "Attached to this invite is your QR code. Kindly present it at the event for entry."}</p>
                     )}
-                    <div className="mt-3 grid h-24 w-24 animate-pulse grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)]">
-                      {Array.from({ length: 25 }).map((_, index) => (
-                        <span
-                          key={index}
-                          className={`rounded-sm ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
-                        />
-                      ))}
+                    <div className={`mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)] ${qrStyleConfig[form.qr_style]?.wrapper || "animate-pulse"}`}>
+                      {form.qr_style === "custom" ? (
+                        <div className="col-span-5 flex items-center justify-center text-[10px] text-gray-400 text-center">Your custom QR design</div>
+                      ) : (
+                        Array.from({ length: 25 }).map((_, index) => (
+                          <span
+                            key={index}
+                            className={`rounded-sm ${qrStyleConfig[form.qr_style]?.square || ""} ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
+                          />
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -2120,15 +2191,24 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="rounded-2xl bg-white p-6 sm:p-8 max-w-md w-full shadow-2xl">
             <h2 className="text-2xl font-bold text-[#0D1B2A] mb-2">Send Test Invite to Yourself</h2>
-            <p className="text-sm text-gray-600 mb-6">We'll send a preview of your invitation to this email so you can see exactly how it looks.</p>
+            <p className="text-sm text-gray-600 mb-6">We'll send a preview of your invitation so you can see exactly how it looks on each channel.</p>
             <input
               type="email"
               placeholder="your@email.com"
               value={testEmail}
               onChange={(e) => setTestEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-[#d9e2ec] rounded-xl outline-none focus:border-[#E91E8C] mb-6"
+              className="w-full px-4 py-3 border border-[#d9e2ec] rounded-xl outline-none focus:border-[#E91E8C] mb-3"
               autoFocus
             />
+            {form.delivery_channels.some((c) => c === "whatsapp" || c === "sms") && (
+              <input
+                type="tel"
+                placeholder="+2348012345678 (for WhatsApp/SMS test)"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                className="w-full px-4 py-3 border border-[#d9e2ec] rounded-xl outline-none focus:border-[#E91E8C] mb-6"
+              />
+            )}
             <div className="flex gap-3">
               <button
                 type="button"

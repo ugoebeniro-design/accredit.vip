@@ -17,10 +17,12 @@ from app.models.password_reset import PasswordResetToken
 from app.models.trial_usage import TrialUsage
 from app.models.subscription import Subscription
 from app.models.community_post import CommunityPost
+from app.models.data_management import DataGroup, DataProfile, DataRequest
 
 all_models = [
     User, Event, Guest, InviteMessage, InviteBatch, QRCode, CheckIn,
     Payment, AuditLog, EventSetting, SupportTicket, Attachment,
     FlierAsset, AccreditationRequest, StaffAssignment, TicketPurchase,
     PasswordResetToken, TrialUsage, Subscription, CommunityPost,
+    DataGroup, DataProfile, DataRequest,
 ]

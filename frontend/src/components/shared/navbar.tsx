@@ -24,7 +24,6 @@ export function Navbar({
     { label: "Contact", href: "/contact" },
   ],
 }: NavbarProps) {
-  const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -34,24 +33,10 @@ export function Navbar({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const resolvedAuthLinks = authLinks ?? (
-    user
-      ? [
-          { label: "Dashboard", href: "/dashboard" },
-          {
-            label: "Logout",
-            href: "/login",
-            primary: false,
-            onClick: () => {
-              logout();
-              window.location.href = "/login";
-            },
-          },
-        ]
-      : [
-          { label: "CREATE EVENT", href: "/create-event", primary: true },
-        ]
-  ) as Array<{ label: string; href: string; primary?: boolean; onClick?: () => void }>;
+  // Always show CREATE EVENT - no auth buttons in navbar
+  const resolvedAuthLinks = authLinks ?? [
+    { label: "CREATE EVENT", href: "/create-event", primary: true },
+  ] as Array<{ label: string; href: string; primary?: boolean; onClick?: () => void }>;
 
   const isDark = variant === "solid" || variant === "transparent";
 

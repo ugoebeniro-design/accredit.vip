@@ -25,27 +25,39 @@ export async function apiClient<T>(path: string, opts: RequestOptions = {}): Pro
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: opts.method || "GET",
-    headers,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+  try {
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}${path}`, {
+        method: opts.method || "GET",
+        headers,
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+        signal: controller.signal,
+      });
+    } catch {
+      throw new Error("Unable to reach the server. Please check your connection and try again.");
+    }
 
-  if (res.status === 401) {
-    clearToken();
-    if (onUnauthorized) onUnauthorized();
-    const errBody = await res.json().catch(() => ({ detail: "Session expired" }));
-    throw new Error(typeof errBody.detail === "string" ? errBody.detail : "Session expired");
+    if (res.status === 401) {
+      clearToken();
+      if (onUnauthorized) onUnauthorized();
+      const errBody = await res.json().catch(() => ({ detail: "Session expired" }));
+      throw new Error(typeof errBody.detail === "string" ? errBody.detail : "Session expired");
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      const detail =
+        typeof err.detail === "string"
+          ? err.detail
+          : err.detail?.message || "Request failed";
+      throw new Error(detail);
+    }
+
+    return res.json();
+  } finally {
+    clearTimeout(timeout);
   }
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    const detail =
-      typeof err.detail === "string"
-        ? err.detail
-        : err.detail?.message || "Request failed";
-    throw new Error(detail);
-  }
-
-  return res.json();
 }

@@ -354,7 +354,16 @@ function EventDetailContent() {
   };
 
   const testSend = async () => {
-    try { await apiClient("/events/test-send", { method: "POST", body: { channel } }); } catch {}
+    try {
+      await apiClient("/events/test-send", {
+        method: "POST",
+        body: {
+          channel,
+          email: channel === "email" ? (user?.email || "") : undefined,
+          phone: channel !== "email" ? (user?.phone || "") : undefined,
+        },
+      });
+    } catch {}
   };
 
   const handleDeleteEvent = async () => {

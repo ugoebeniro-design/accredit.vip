@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, cast, Date
+from sqlalchemy import select, func, cast, Date, case
 from datetime import datetime, timezone, timedelta, date
 import csv
 import io
@@ -19,6 +19,8 @@ from app.models.invite import InviteBatch, InviteMessage
 from app.models.audit_log import AuditLog
 from app.models.accreditation import AccreditationRequest
 from app.models.ticket_purchase import TicketPurchase
+from app.models.data_management import DataGroup, DataProfile, DataRequest
+from sqlalchemy.orm import joinedload
 
 router = APIRouter()
 
@@ -41,6 +43,11 @@ async def admin_stats(
     checkin_count = await db.scalar(select(func.count(CheckIn.id)))
     ticket_count = await db.scalar(select(func.count(SupportTicket.id)))
     acc_count = await db.scalar(select(func.count(AccreditationRequest.id)))
+    pending_reviews = await db.scalar(
+        select(func.count(Event.id)).where(
+            Event.review_status.in_(["pending_review", "flagged"])
+        )
+    )
     revenue_result = await db.execute(
         select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.status == "paid")
     )
@@ -54,6 +61,7 @@ async def admin_stats(
         "tickets": ticket_count or 0,
         "accreditation_requests": acc_count or 0,
         "total_revenue": float(total_revenue or 0),
+        "pending_reviews": pending_reviews or 0,
     }
 
 
@@ -627,11 +635,15 @@ async def admin_fraud_flags(
     failed_deliveries = await db.scalar(
         select(func.count(InviteMessage.id)).where(InviteMessage.status == "failed")
     )
+    flagged_events = await db.scalar(
+        select(func.count(Event.id)).where(Event.review_status == "flagged")
+    )
     return {
         "inactive_users": inactive_users or 0,
         "unverified_users": unverified_users or 0,
         "failed_payments": failed_payments or 0,
         "failed_deliveries": failed_deliveries or 0,
+        "flagged_events": flagged_events or 0,
     }
 
 
@@ -749,9 +761,290 @@ async def admin_ticket_purchases(
         ],
     }
 
-    output.seek(0)
-    return Response(
-        content=output.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={resource}.csv"},
+@router.get("/delivery/clients")
+async def admin_delivery_clients(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    search: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+):
+    """List all organizers who have sent invites, with aggregate delivery stats."""
+    base = (
+        select(
+            Event.organizer_id,
+            User.full_name,
+            User.email,
+            func.count(func.distinct(InviteBatch.event_id)).label("total_events"),
+            func.count(InviteMessage.id).label("total_messages"),
+            func.sum(case((InviteMessage.status == "delivered", 1), else_=0)).label("delivered"),
+            func.sum(case((InviteMessage.status == "failed", 1), else_=0)).label("failed"),
+            func.sum(case((InviteMessage.status == "queued", 1), else_=0)).label("queued"),
+            func.sum(case((InviteMessage.status == "sending", 1), else_=0)).label("sending"),
+        )
+        .join(Event, InviteBatch.event_id == Event.id)
+        .join(User, Event.organizer_id == User.id)
+        .join(InviteMessage, InviteMessage.batch_id == InviteBatch.id)
+        .group_by(Event.organizer_id, User.full_name, User.email)
     )
+    if search:
+        base = base.where(
+            User.full_name.ilike(f"%{search}%") | User.email.ilike(f"%{search}%")
+        )
+    total_q = select(func.count()).select_from(base.subquery())
+    total = await db.scalar(total_q) or 0
+    q = base.order_by(User.full_name).offset((page - 1) * per_page).limit(per_page)
+    result = await db.execute(q)
+    rows = result.all()
+    return {
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "clients": [
+            {
+                "organizer_id": r.organizer_id,
+                "full_name": r.full_name,
+                "email": r.email,
+                "total_events": r.total_events or 0,
+                "total_messages": r.total_messages or 0,
+                "delivered": r.delivered or 0,
+                "failed": r.failed or 0,
+                "queued": r.queued or 0,
+                "sending": r.sending or 0,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.get("/delivery/clients/{organizer_id}")
+async def admin_delivery_client_detail(
+    organizer_id: int,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get detailed delivery breakdown for a specific organizer, grouped by event."""
+    org = await db.get(User, organizer_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organizer not found")
+    events_q = (
+        select(
+            InviteBatch.event_id,
+            Event.title,
+            func.count(func.distinct(InviteMessage.guest_id)).label("total_guests"),
+            func.sum(case((InviteMessage.status == "delivered", 1), else_=0)).label("delivered"),
+            func.sum(case((InviteMessage.status == "failed", 1), else_=0)).label("failed"),
+            func.sum(case((InviteMessage.status == "queued", 1), else_=0)).label("queued"),
+            func.sum(case((InviteMessage.status == "sending", 1), else_=0)).label("sending"),
+        )
+        .join(Event, InviteBatch.event_id == Event.id)
+        .join(InviteMessage, InviteMessage.batch_id == InviteBatch.id)
+        .where(Event.organizer_id == organizer_id)
+        .group_by(InviteBatch.event_id, Event.title)
+        .order_by(Event.title)
+    )
+    result = await db.execute(events_q)
+    events = result.all()
+    return {
+        "organizer": {
+            "id": org.id,
+            "full_name": org.full_name,
+            "email": org.email,
+        },
+        "events": [
+            {
+                "event_id": r.event_id,
+                "title": r.title,
+                "total_guests": r.total_guests or 0,
+                "delivered": r.delivered or 0,
+                "failed": r.failed or 0,
+                "queued": r.queued or 0,
+                "sending": r.sending or 0,
+            }
+            for r in events
+        ],
+    }
+
+
+@router.get("/delivery/events/{event_id}/guests")
+async def admin_delivery_event_guests(
+    event_id: int,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    status: str | None = Query(None),
+    channel: str | None = Query(None),
+    search: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+):
+    """List all guests with their delivery status for a specific event."""
+    event = await db.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    base = (
+        select(
+            InviteMessage.id,
+            InviteMessage.status,
+            InviteMessage.channel,
+            InviteMessage.error,
+            InviteMessage.sent_at,
+            InviteMessage.delivered_at,
+            InviteMessage.created_at,
+            Guest.id.label("guest_id"),
+            Guest.name,
+            Guest.email,
+            Guest.phone,
+            InviteBatch.id.label("batch_id"),
+        )
+        .join(InviteBatch, InviteMessage.batch_id == InviteBatch.id)
+        .join(Guest, InviteMessage.guest_id == Guest.id)
+        .where(InviteBatch.event_id == event_id)
+    )
+    if status:
+        base = base.where(InviteMessage.status == status)
+    if channel:
+        base = base.where(InviteMessage.channel == channel)
+    if search:
+        base = base.where(
+            Guest.name.ilike(f"%{search}%") | Guest.email.ilike(f"%{search}%")
+        )
+    total_q = select(func.count()).select_from(base.subquery())
+    total = await db.scalar(total_q) or 0
+    q = base.order_by(InviteMessage.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
+    result = await db.execute(q)
+    rows = result.all()
+
+    # Count status totals for this event
+    status_counts_q = (
+        select(
+            InviteMessage.status,
+            func.count(InviteMessage.id),
+        )
+        .join(InviteBatch, InviteMessage.batch_id == InviteBatch.id)
+        .where(InviteBatch.event_id == event_id)
+        .group_by(InviteMessage.status)
+    )
+    status_counts_result = await db.execute(status_counts_q)
+    status_counts = dict(status_counts_result.all())
+
+    return {
+        "event": {
+            "id": event.id,
+            "title": event.title,
+            "organizer_id": event.organizer_id,
+        },
+        "status_counts": {
+            "delivered": status_counts.get("delivered", 0) or 0,
+            "failed": status_counts.get("failed", 0) or 0,
+            "queued": status_counts.get("queued", 0) or 0,
+            "sending": status_counts.get("sending", 0) or 0,
+            "total": total,
+        },
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "guests": [
+            {
+                "message_id": r.id,
+                "guest_id": r.guest_id,
+                "name": r.name,
+                "email": r.email,
+                "phone": r.phone,
+                "channel": r.channel,
+                "status": r.status,
+                "error": r.error,
+                "sent_at": str(r.sent_at) if r.sent_at else None,
+                "delivered_at": str(r.delivered_at) if r.delivered_at else None,
+                "created_at": str(r.created_at),
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.get("/deliveries")
+async def admin_deliveries(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    organizer_id: int | None = Query(None),
+    event_id: int | None = Query(None),
+    status: str | None = Query(None),
+    channel: str | None = Query(None),
+    search: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+):
+    """Get delivery tracking data for all invites with filtering and error details"""
+    q = (
+        select(
+            InviteMessage.id,
+            InviteMessage.status,
+            InviteMessage.channel,
+            InviteMessage.error,
+            InviteMessage.sent_at,
+            InviteMessage.delivered_at,
+            InviteMessage.created_at,
+            InviteBatch.event_id,
+            Guest.email,
+            Guest.phone,
+            Guest.name,
+            Event.title.label("event_title"),
+            User.full_name.label("organizer_name"),
+            User.email.label("organizer_email"),
+        )
+        .join(InviteBatch, InviteMessage.batch_id == InviteBatch.id)
+        .join(Guest, InviteMessage.guest_id == Guest.id)
+        .join(Event, InviteBatch.event_id == Event.id)
+        .join(User, Event.organizer_id == User.id)
+    )
+
+    if organizer_id:
+        q = q.where(Event.organizer_id == organizer_id)
+    if event_id:
+        q = q.where(InviteBatch.event_id == event_id)
+    if status:
+        q = q.where(InviteMessage.status == status)
+    if channel:
+        q = q.where(InviteMessage.channel == channel)
+    if search:
+        q = q.where(
+            (Guest.email.ilike(f"%{search}%"))
+            | (Guest.name.ilike(f"%{search}%"))
+            | (Event.title.ilike(f"%{search}%"))
+            | (User.full_name.ilike(f"%{search}%"))
+        )
+
+    total_q = select(func.count()).select_from(q.subquery())
+    total = await db.scalar(total_q)
+
+    q = q.order_by(InviteMessage.created_at.desc()).offset(
+        (page - 1) * per_page
+    ).limit(per_page)
+
+    result = await db.execute(q)
+    rows = result.all()
+
+    return {
+        "total": total or 0,
+        "page": page,
+        "per_page": per_page,
+        "deliveries": [
+            {
+                "id": r.id,
+                "organizer_name": r.organizer_name,
+                "organizer_email": r.organizer_email,
+                "event_title": r.event_title,
+                "event_id": r.event_id,
+                "guest_name": r.name,
+                "guest_email": r.email,
+                "guest_phone": r.phone,
+                "channel": r.channel,
+                "status": r.status,
+                "error": r.error,
+                "sent_at": str(r.sent_at) if r.sent_at else None,
+                "delivered_at": str(r.delivered_at) if r.delivered_at else None,
+                "created_at": str(r.created_at),
+            }
+            for r in rows
+        ],
+    }

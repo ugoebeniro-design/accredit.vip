@@ -1,6 +1,8 @@
 import asyncio
+import os
 import smtplib
 import ssl
+from email.mime.image import MIMEImage
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import httpx
@@ -19,6 +21,33 @@ async def send_email(to: str, subject: str, html: str, from_addr: str | None = N
     return True
 
 
+async def send_email_with_images(to: str, subject: str, html: str, images: list[tuple[str, str]], from_addr: str | None = None) -> bool:
+    """Send HTML email with inline images embedded as MIME attachments (cid: references).
+    images: list of (cid_name, filepath) tuples. HTML should reference them as <img src='cid:cid_name'>.
+    """
+    sender = from_addr or settings.EMAIL_FROM
+    if settings.SMTP_HOST and settings.SMTP_USERNAME:
+        return await _send_smtp_with_images(to, subject, html, images, sender)
+    print(f"[Email Mock] From: {sender} -> To: {to}, Subject: {subject}")
+    return True
+
+
+def _build_multipart_with_images(html: str, images: list[tuple[str, str]]) -> str:
+    msg = MIMEMultipart("related")
+    msg.attach(MIMEText(html, "html"))
+    for cid, filepath in images:
+        try:
+            with open(filepath, "rb") as f:
+                img_data = f.read()
+            img = MIMEImage(img_data)
+            img.add_header("Content-ID", f"<{cid}>")
+            img.add_header("Content-Disposition", "inline")
+            msg.attach(img)
+        except Exception as e:
+            print(f"[Email] Failed to attach image {filepath}: {e}")
+    return msg.as_string()
+
+
 async def _send_smtp(to: str, subject: str, html: str, from_addr: str) -> bool:
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -32,6 +61,29 @@ async def _send_smtp(to: str, subject: str, html: str, from_addr: str) -> bool:
             with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, context=ctx, timeout=10) as server:
                 server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
                 server.sendmail(from_addr, [to], msg.as_string())
+            return True
+        except Exception as e:
+            print(f"[SMTP Error] {e}")
+            return False
+
+    try:
+        return await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(None, _sync_send),
+            timeout=15
+        )
+    except asyncio.TimeoutError:
+        print("[SMTP Error] Timed out after 15s")
+        return False
+
+
+async def _send_smtp_with_images(to: str, subject: str, html: str, images: list[tuple[str, str]], from_addr: str) -> bool:
+    def _sync_send():
+        try:
+            msg_str = _build_multipart_with_images(html, images)
+            ctx = ssl.create_default_context()
+            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, context=ctx, timeout=10) as server:
+                server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+                server.sendmail(from_addr, [to], msg_str)
             return True
         except Exception as e:
             print(f"[SMTP Error] {e}")

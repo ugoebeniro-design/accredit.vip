@@ -30,5 +30,8 @@ class Event(Base):
     after_party_enabled = Column(Boolean, default=False)
     after_party_location = Column(String, nullable=True)
     after_party_time = Column(String, nullable=True)
+    review_status = Column(String, default="auto_approved")
+    review_note = Column(Text, nullable=True)
+    flagged_keywords = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

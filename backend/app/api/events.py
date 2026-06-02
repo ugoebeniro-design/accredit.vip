@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
+from app.services.event_review import scan_for_keywords, compute_review_status
 
 router = APIRouter()
 
@@ -68,6 +69,13 @@ async def create_event(
         slug=await generate_unique_slug(req.title, db),
         **req.model_dump(),
     )
+    # Scan for suspicious keywords
+    scan_text = f"{req.title} {req.description or ''}"
+    flagged_keywords = scan_for_keywords(scan_text)
+    event.review_status = compute_review_status(req.is_public or False, flagged_keywords)
+    if flagged_keywords:
+        event.flagged_keywords = flagged_keywords
+
     db.add(event)
     await db.commit()
     await db.refresh(event)
@@ -180,6 +188,16 @@ async def update_event(
         setattr(event, key, value)
     if req.title:
         event.slug = await generate_unique_slug(req.title, db)
+
+    # Scan for suspicious keywords
+    scan_text = f"{req.title} {req.description or ''}"
+    flagged_keywords = scan_for_keywords(scan_text)
+    event.review_status = compute_review_status(req.is_public or False, flagged_keywords)
+    if flagged_keywords:
+        event.flagged_keywords = flagged_keywords
+    else:
+        event.flagged_keywords = None
+
     await db.commit()
     await db.refresh(event)
     return event

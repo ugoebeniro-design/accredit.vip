@@ -277,7 +277,7 @@ function PublicEventContent() {
                     disabled={purchasing || !event.ticket_price}
                     className="w-full rounded-lg bg-primary text-primary-foreground font-semibold py-3 px-6 hover:opacity-90 transition-all disabled:opacity-50"
                   >
-                    {purchasing ? "Processing..." : event.ticket_price ? `Pay ₦${(event.ticket_price * quantity).toLocaleString()}` : "Package checkout coming soon"}
+                    {purchasing ? "Processing..." : event.ticket_price ? `Pay ₦${Math.round(event.ticket_price * quantity * 1.025).toLocaleString()}` : "Package checkout coming soon"}
                   </button>
                 </form>
               </div>

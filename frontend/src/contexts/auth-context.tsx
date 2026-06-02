@@ -40,6 +40,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     clearToken();
     setUser(null);
+    // Extra safety: clear all auth-related localStorage items
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("last_activity");
+      localStorage.removeItem("user_data");
+      sessionStorage.clear();
+    }
   }, []);
 
   useEffect(() => {
@@ -59,24 +66,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      if (checkIdleTimeout()) {
-        clearToken();
+    const initAuth = async () => {
+      try {
+        const token = getToken();
+        if (token) {
+          if (checkIdleTimeout()) {
+            clearToken();
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+          // Verify token is valid by fetching user
+          try {
+            const u = await apiClient<User>("/auth/me");
+            setUser(u);
+          } catch (err) {
+            // Token is invalid, clear it
+            clearToken();
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      } finally {
         setLoading(false);
-        return;
       }
-      fetchUser().finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    };
+
+    initAuth();
 
     activityRef.current = touchActivity;
     const events = ["mousedown", "keydown", "scroll", "touchstart"];
     const handler = () => touchActivity();
     events.forEach((e) => window.addEventListener(e, handler));
     return () => events.forEach((e) => window.removeEventListener(e, handler));
-  }, [fetchUser]);
+  }, []);
 
   const login = async (email: string, password: string) => {
     const res = await apiClient<{ access_token: string; user: User }>("/auth/login", {

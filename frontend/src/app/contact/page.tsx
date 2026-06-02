@@ -47,6 +47,7 @@ function ContactContent() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [showChat, setShowChat] = useState(false);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,8 +123,8 @@ function ContactContent() {
               {contactMethods.map((m, idx) => (
                 <div
                   key={m.label}
-                  onClick={idx === 1 ? () => {} : undefined}
-                  className={`flex items-center gap-4 p-4 rounded-xl ${idx === 1 ? "cursor-pointer transition-colors hover:bg-[#fff1f8]" : ""}`}
+                  onClick={idx === 1 ? () => setShowChat(true) : undefined}
+                  className={`flex items-center gap-4 p-4 rounded-xl ${idx === 1 ? "cursor-pointer transition-all hover:bg-[#fff1f8] hover:border-[#E91E8C]" : ""}`}
                   style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}
                 >
                   <div
@@ -256,7 +257,7 @@ function ContactContent() {
         </div>
       </div>
 
-      <AIAssistant />
+      <AIAssistant open={showChat} />
       <Footer />
     </div>
   );

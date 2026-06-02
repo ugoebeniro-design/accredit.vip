@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -10,11 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.trial_usage import TrialUsage
-from app.services.email_service import send_email
+from app.services.email_service import send_email, send_email_with_images
 from app.services.ai_service import generate_flier_image
 from app.services.whatsapp_service import send_whatsapp
 from app.services.sms_service import send_sms
-from app.services.qr_service import qr_gif_to_base64
+from app.services.qr_service import qr_gif_to_base64, qr_gif_to_url
 
 router = APIRouter()
 
@@ -106,6 +107,7 @@ async def use_trial(
     # Handle invite trial - generate and send flyer via all channels
     if req.trial_type == "invite":
         test_email = req.payload.get("test_email")
+        test_phone = req.payload.get("test_phone")
         if not test_email:
             raise HTTPException(status_code=400, detail="Email address required for invite test")
 
@@ -137,71 +139,129 @@ async def use_trial(
 
         prompt += f" Include all event details visible at a glance. Message: {description}"
 
-        # Generate invitation flyer image based on template
+        # Generate invitation flyer image based on template (non-blocking)
         flyer_url = await generate_flier_image(prompt)
-
-        if not flyer_url:
-            raise HTTPException(status_code=500, detail="Could not generate invitation flyer. Please try again.")
 
         # Generate animated QR code if QR delivery is enabled
         animated_qr_url = None
         if qr_delivery in ["with_qr", "qr_later"]:
-            # Create a unique QR code for this test (includes test data)
             qr_data = f"accredit://invite/test/{int(datetime.now().timestamp())}"
-            # Pass the QR style to the generation function
-            animated_qr_url = qr_gif_to_base64(qr_data, size=250, style=qr_style)
+            base_url = qr_gif_to_url(qr_data, size=250, style=qr_style)
+            if base_url:
+                animated_qr_url = base_url
+            else:
+                animated_qr_url = qr_gif_to_base64(qr_data, size=250, style=qr_style)
 
         # Send test invite flyer via all selected channels
         sent_channels = []
 
-        # Send via email - include flyer image + QR code (if enabled)
+        # Send via email - embed flyer + QR as inline images (works in all email clients)
         if "email" in delivery_channels:
+            upload_base = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
+            email_images = []
+            qr_cid = ""
             qr_section = ""
             if animated_qr_url:
+                qr_cid = "qr_code"
+                qr_path = os.path.join(upload_base, "qrs", os.path.basename(animated_qr_url.rstrip("/").split("/")[-1]))
                 qr_section = f"""
                 <div style="text-align: center; padding: 20px; background: #f0f0f0; border-top: 2px solid #E91E8C;">
                     <p style="color: #666; font-size: 14px; margin: 0 0 15px 0; font-weight: bold;">YOUR UNIQUE ENTRY CODE</p>
-                    <img src="{animated_qr_url}" alt="Entry QR Code" style="width: 250px; height: 250px;" />
+                    <img src="cid:{qr_cid}" alt="Entry QR Code" style="width: 250px; height: 250px;" />
                     <p style="color: #999; font-size: 12px; margin: 15px 0 0 0;">Show this code at the gate to enter</p>
                 </div>
                 """
+                email_images.append((qr_cid, qr_path))
 
-            html = f"""
-            <html>
-            <head>
-                <style>
-                    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
-                    .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-                    .flyer {{ width: 100%; max-width: 500px; display: block; }}
-                    .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #999; background: #f8f9fc; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <img src="{flyer_url}" alt="{title}" class="flyer" />
-                    {qr_section}
-                    <div class="footer">
-                        <p><strong>This is a TEST invitation preview</strong></p>
-                        <p>This is exactly how your guests will see your invitation when you send it for real.</p>
-                        <p>Create an account at Accredit.vip to send real invitations to your guest list.</p>
+            if flyer_url:
+                flyer_cid = "flyer"
+                flyer_path = os.path.join(upload_base, "fliers", os.path.basename(flyer_url.rstrip("/").split("/")[-1]))
+                email_images.insert(0, (flyer_cid, flyer_path))
+                html = f"""
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+                        .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+                        .flyer {{ width: 100%; max-width: 500px; display: block; }}
+                        .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #999; background: #f8f9fc; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <img src="cid:{flyer_cid}" alt="{title}" class="flyer" />
+                        {qr_section}
+                        <div class="footer">
+                            <p><strong>This is a TEST invitation preview</strong></p>
+                            <p>This is exactly how your guests will see your invitation when you send it for real.</p>
+                            <p>Create an account at Accredit.vip to send real invitations to your guest list.</p>
+                        </div>
                     </div>
-                </div>
-            </body>
-            </html>
-            """
-            await send_email(test_email, f"Your Test Invitation: {title}", html)
+                </body>
+                </html>
+                """
+            else:
+                html = f"""
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+                        .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+                        .content {{ padding: 30px; }}
+                        .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #999; background: #f8f9fc; }}
+                        h2 {{ color: #E91E8C; margin: 0 0 10px; }}
+                        .details {{ color: #23466f; line-height: 1.8; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="content">
+                            <h2>{title}</h2>
+                            <p class="details">
+                                <strong>Host:</strong> {host_name}<br />
+                                <strong>Date:</strong> {event_date}<br />
+                                <strong>Time:</strong> {event_time}<br />
+                                <strong>Description:</strong> {description}
+                            </p>
+                            {qr_section}
+                        </div>
+                        <div class="footer">
+                            <p><strong>This is a TEST invitation preview</strong></p>
+                            <p>Create an account at Accredit.vip to send real invitations to your guest list.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+            if email_images:
+                await send_email_with_images(test_email, f"Your Test Invitation: {title}", html, email_images)
+            else:
+                await send_email(test_email, f"Your Test Invitation: {title}", html)
             sent_channels.append("Email")
 
-        # Send via WhatsApp - share flyer image
+        # Send via WhatsApp - try with media image, fallback to text-only
         if "whatsapp" in delivery_channels:
-            whatsapp_msg = f"🎉 {title}\n\nYou're invited! 👇\n\n[See attached invitation flyer for all details]\n\n{'Scan the QR code in the invitation to confirm attendance!' if animated_qr_url else ''}\n\nHost: {host_name}\n{event_date} at {event_time}\n\n—\nThis is a test preview by Accredit.vip"
-            await send_whatsapp(test_email, whatsapp_msg)
+            send_to = test_phone or test_email
+            whatsapp_msg = f"🎉 {title}\n\nYou're invited by {host_name}!\n{event_date} at {event_time}\n\n— Test preview by Accredit.vip"
+            if flyer_url:
+                ok = await send_whatsapp(send_to, whatsapp_msg, media_url=flyer_url)
+                if not ok:
+                    await send_whatsapp(send_to, whatsapp_msg)
+            else:
+                await send_whatsapp(send_to, whatsapp_msg)
+            if animated_qr_url:
+                ok = await send_whatsapp(send_to, "Your entry QR code:", media_url=animated_qr_url)
+                if not ok:
+                    await send_whatsapp(send_to, "Your entry QR code is ready!")
             sent_channels.append("WhatsApp")
 
-        # Send via SMS - include link/message about flyer
+        # Send via SMS - include flyer link
         if "sms" in delivery_channels:
-            sms_msg = f"🎉 {title} - You're invited by {host_name}! {event_date} at {event_time}. Check email/WhatsApp for full invitation flyer and QR code. Test by Accredit.vip"
-            await send_sms(test_email, sms_msg)
+            send_to = test_phone or test_email
+            flyer_text = f"View flyer: {flyer_url}" if flyer_url else description
+            qr_text = f" QR: {animated_qr_url}" if animated_qr_url else ""
+            sms_msg = f"{title} - You're invited by {host_name}! {event_date} at {event_time}. {flyer_text}{qr_text} -Accredit.vip"
+            await send_sms(send_to, sms_msg)
             sent_channels.append("SMS")
 
         response["sent_to"] = test_email

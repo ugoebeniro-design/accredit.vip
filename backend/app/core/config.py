@@ -35,8 +35,10 @@ class Settings(BaseSettings):
     AFRICASTALKING_USERNAME: str = ""
 
     PLATFORM_FEE_PERCENT: float = 5.0
+    VAT_PERCENT: float = 2.5
 
     FRONTEND_URL: str = "http://localhost:3000"
+    BACKEND_URL: str = "http://localhost:8000"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

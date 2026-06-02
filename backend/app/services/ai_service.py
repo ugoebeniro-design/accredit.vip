@@ -221,18 +221,44 @@ async def chat(messages: list[dict]) -> str:
 
 
 async def generate_flier_image(prompt: str) -> str | None:
+    import base64
+    import logging
+    import os
+    from datetime import datetime
+    from app.core.config import settings as app_settings
+    logger = logging.getLogger(__name__)
     c = get_client()
     if not c:
         return None
 
-    resp = await c.images.generate(
-        model="dall-e-3",
-        prompt=f"Professional event flier design: {prompt}. Clean layout, vibrant colors, modern typography.",
-        size="1024x1024",
-        quality="standard",
-        n=1,
-    )
-    return resp.data[0].url
+    for model, kwargs in [
+        ("gpt-image-1", {}),
+        ("dall-e-3", {"quality": "standard"}),
+        ("dall-e-2", {}),
+    ]:
+        try:
+            resp = await c.images.generate(
+                model=model,
+                prompt=f"Professional event flier design: {prompt}. Clean layout, vibrant colors, modern typography. Do NOT include any text, words, letters, numbers, dates, or typography on the image — imagery and visual design only.",
+                size="1024x1024",
+                n=1,
+                **kwargs,
+            )
+            data = resp.data[0]
+            if getattr(data, "url", None):
+                return data.url
+            if getattr(data, "b64_json", None):
+                upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "fliers")
+                os.makedirs(upload_dir, exist_ok=True)
+                filename = f"flier_{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}.png"
+                filepath = os.path.join(upload_dir, filename)
+                img_bytes = base64.b64decode(data.b64_json)
+                with open(filepath, "wb") as f:
+                    f.write(img_bytes)
+                return f"{app_settings.BACKEND_URL}/uploads/fliers/{filename}"
+        except Exception as e:
+            logger.error("generate_flier_image(%s) failed: %s", model, e)
+    return None
 
 
 async def parse_flier_image(image_data: str, mime_type: str = "image/jpeg") -> dict:

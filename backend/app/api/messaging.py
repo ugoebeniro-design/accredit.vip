@@ -482,9 +482,27 @@ async def delivery_logs(
     return result.scalars().all()
 
 
+class TestSendRequest(BaseModel):
+    channel: str
+    email: str | None = None
+    phone: str | None = None
+
+
 @router.post("/test-send")
 async def test_send(
-    req: SendInvitesRequest,
+    req: TestSendRequest,
     user: User = Depends(get_current_user),
 ):
-    return {"message": f"Test {req.channel} sent successfully (simulated)"}
+    sent = []
+    if req.channel == "email" and req.email:
+        ok = await send_email(req.email, "Accredit.vip Test Message", "<h2>Test Send</h2><p>This is a test message from Accredit.vip.</p>")
+        sent.append(f"email to {req.email}: {'OK' if ok else 'FAILED'}")
+    elif req.channel == "whatsapp" and req.phone:
+        ok = await send_whatsapp(req.phone, "Hello! This is a test WhatsApp message from Accredit.vip.")
+        sent.append(f"whatsapp to {req.phone}: {'OK' if ok else 'FAILED'}")
+    elif req.channel == "sms" and req.phone:
+        ok = await send_sms(req.phone, "Hello! This is a test SMS from Accredit.vip.")
+        sent.append(f"sms to {req.phone}: {'OK' if ok else 'FAILED'}")
+    else:
+        return {"message": f"Missing recipient for channel {req.channel}. Provide email for email, phone for whatsapp/sms.", "sent": False}
+    return {"message": "Test send completed.", "details": sent, "sent": True}

@@ -41,8 +41,9 @@ async def purchase_ticket(
         raise HTTPException(status_code=400, detail="Not enough tickets available")
 
     base_amount = (event.ticket_price or 0) * req.quantity
-    fee = round(base_amount * settings.PLATFORM_FEE_PERCENT / 100) if not is_free else 0
-    total = base_amount + fee
+    platform_fee = round(base_amount * settings.PLATFORM_FEE_PERCENT / 100) if not is_free else 0
+    vat = round(base_amount * settings.VAT_PERCENT / 100) if not is_free else 0
+    total = base_amount + vat
     reference = f"TKT-{secrets.token_hex(8).upper()}"
 
     purchase = TicketPurchase(
@@ -52,7 +53,8 @@ async def purchase_ticket(
         buyer_phone=req.buyer_phone,
         quantity=req.quantity,
         amount=total,
-        platform_fee=fee,
+        platform_fee=platform_fee,
+        vat=vat,
         reference=reference,
         status="completed" if is_free else "pending",
         paid_at=datetime.now(timezone.utc) if is_free else None,
@@ -68,6 +70,7 @@ async def purchase_ticket(
             "amount": 0,
             "base_amount": 0,
             "platform_fee": 0,
+            "vat": 0,
             "quantity": req.quantity,
             "authorization_url": None,
         }
@@ -100,7 +103,8 @@ async def purchase_ticket(
         "reference": reference,
         "amount": total,
         "base_amount": base_amount,
-        "platform_fee": fee,
+        "platform_fee": platform_fee,
+        "vat": vat,
         "quantity": req.quantity,
         "authorization_url": paystack_url,
     }

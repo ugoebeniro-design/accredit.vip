@@ -29,7 +29,7 @@ async def ai_chat(req: ChatRequest):
 async def ai_generate_flier(req: FlierRequest):
     url = await generate_flier_image(req.prompt)
     if not url:
-        raise HTTPException(status_code=503, detail="AI not configured. Set OPENAI_API_KEY.")
+        raise HTTPException(status_code=503, detail="Image generation is temporarily unavailable. Please try again later.")
     return {"url": url}
 
 

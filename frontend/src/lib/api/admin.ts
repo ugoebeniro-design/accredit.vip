@@ -9,6 +9,7 @@ export type AdminStats = {
   tickets: number;
   accreditation_requests: number;
   total_revenue: number;
+  pending_reviews: number;
 };
 
 export type AdminUser = {
@@ -85,6 +86,88 @@ export type DeliveryStats = {
   by_channel: Record<string, number>;
 };
 
+export type DeliveryClient = {
+  organizer_id: number;
+  full_name: string;
+  email: string;
+  total_events: number;
+  total_messages: number;
+  delivered: number;
+  failed: number;
+  queued: number;
+  sending: number;
+};
+
+export type DeliveryClientsResponse = {
+  total: number;
+  page: number;
+  per_page: number;
+  clients: DeliveryClient[];
+};
+
+export type DeliveryClientDetail = {
+  organizer: { id: number; full_name: string; email: string };
+  events: {
+    event_id: number;
+    title: string;
+    total_guests: number;
+    delivered: number;
+    failed: number;
+    queued: number;
+    sending: number;
+  }[];
+};
+
+export type DeliveryEventGuest = {
+  message_id: number;
+  guest_id: number;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  channel: string;
+  status: string;
+  error: string | null;
+  sent_at: string | null;
+  delivered_at: string | null;
+  created_at: string;
+};
+
+export type DeliveryEventDetail = {
+  event: { id: number; title: string; organizer_id: number };
+  status_counts: { delivered: number; failed: number; queued: number; sending: number; total: number };
+  total: number;
+  page: number;
+  per_page: number;
+  guests: DeliveryEventGuest[];
+};
+
+export async function getAdminDeliveryClients(
+  page: number = 1,
+  per_page: number = 50,
+  search?: string
+): Promise<DeliveryClientsResponse> {
+  const params = new URLSearchParams({ page: String(page), per_page: String(per_page) });
+  if (search) params.set("search", search);
+  return apiClient(`/admin/delivery/clients?${params}`);
+}
+
+export async function getAdminDeliveryClientDetail(organizerId: number): Promise<DeliveryClientDetail> {
+  return apiClient(`/admin/delivery/clients/${organizerId}`);
+}
+
+export async function getAdminDeliveryEventGuests(
+  eventId: number,
+  page: number = 1,
+  per_page: number = 50,
+  filters?: { status?: string; channel?: string; search?: string }
+): Promise<DeliveryEventDetail> {
+  const params = new URLSearchParams({ page: String(page), per_page: String(per_page) });
+  if (filters?.status) params.set("status", filters.status);
+  if (filters?.channel) params.set("channel", filters.channel);
+  if (filters?.search) params.set("search", filters.search);
+  return apiClient(`/admin/delivery/events/${eventId}/guests?${params}`);
+}
+
 export type SupportTicket = {
   id: number;
   subject: string;
@@ -157,6 +240,7 @@ export type FraudFlags = {
   unverified_users: number;
   failed_payments: number;
   failed_deliveries: number;
+  flagged_events: number;
 };
 
 export type AccreditationRequest = {
@@ -394,6 +478,205 @@ export async function downloadAdminExport(resource: string): Promise<void> {
   const a = document.createElement("a");
   a.href = url;
   a.download = `${resource}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export type DeliveryRecord = {
+  id: number;
+  organizer_name: string;
+  organizer_email: string;
+  event_title: string;
+  event_id: number;
+  guest_name: string;
+  guest_email: string;
+  guest_phone: string | null;
+  channel: string;
+  status: string;
+  error: string | null;
+  sent_at: string | null;
+  delivered_at: string | null;
+  created_at: string;
+};
+
+export type DeliveriesResponse = {
+  total: number;
+  page: number;
+  per_page: number;
+  deliveries: DeliveryRecord[];
+};
+
+export async function getAdminDeliveries(
+  page: number = 1,
+  per_page: number = 50,
+  filters?: {
+    organizer_id?: number;
+    event_id?: number;
+    status?: string;
+    channel?: string;
+    search?: string;
+  }
+): Promise<DeliveriesResponse> {
+  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  const params = new URLSearchParams({
+    page: page.toString(),
+    per_page: per_page.toString(),
+  });
+
+  if (filters?.organizer_id) params.append("organizer_id", filters.organizer_id.toString());
+  if (filters?.event_id) params.append("event_id", filters.event_id.toString());
+  if (filters?.status) params.append("status", filters.status);
+  if (filters?.channel) params.append("channel", filters.channel);
+  if (filters?.search) params.append("search", filters.search);
+
+  const res = await fetch(`${base}/admin/deliveries?${params}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch deliveries");
+  return res.json();
+}
+
+export type EventReviewRecord = {
+  id: number;
+  title: string;
+  status: string;
+  review_status: string;
+  flagged_keywords: string[] | null;
+  organizer_name: string;
+  organizer_email: string;
+  created_at: string;
+  review_note: string | null;
+};
+
+export type DataGroup = {
+  id: number;
+  name: string;
+  description: string | null;
+  category: string;
+  profile_count: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type DataProfile = {
+  id: number;
+  group_id: number;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  age_range: string | null;
+  gender: string | null;
+  income_level: string | null;
+  location: string | null;
+  consent_given: boolean;
+  created_at: string;
+};
+
+export type DataRequest = {
+  id: number;
+  requester_name: string;
+  requester_email: string;
+  requester_org: string | null;
+  group_id: number;
+  group_name: string;
+  purpose: string;
+  status: string;
+  notes: string | null;
+  requested_at: string;
+  resolved_at: string | null;
+};
+
+export async function getPendingReviewEvents(review_status?: string): Promise<EventReviewRecord[]> {
+  const params = new URLSearchParams();
+  if (review_status) params.set("review_status", review_status);
+  return apiClient(`/admin/events/pending-review?${params}`);
+}
+
+export async function reviewEvent(eventId: number, status: string, note?: string): Promise<{ message: string; event_id: number }> {
+  const params = new URLSearchParams({ status });
+  if (note) params.set("note", note);
+  return apiClient(`/admin/events/${eventId}/review?${params}`, { method: "PATCH" });
+}
+
+export async function getDataGroups(is_active?: boolean): Promise<DataGroup[]> {
+  const params = new URLSearchParams();
+  if (is_active !== undefined) params.set("is_active", String(is_active));
+  return apiClient(`/admin/data/groups?${params}`);
+}
+
+export async function createDataGroup(name: string, description?: string, category?: string, is_active: boolean = true): Promise<{ id: number; name: string; category: string }> {
+  const params = new URLSearchParams({ name });
+  if (description) params.set("description", description);
+  if (category) params.set("category", category);
+  params.set("is_active", String(is_active));
+  return apiClient(`/admin/data/groups?${params}`, { method: "POST" });
+}
+
+export async function updateDataGroup(groupId: number, name?: string, description?: string, is_active?: boolean): Promise<{ message: string }> {
+  const params = new URLSearchParams();
+  if (name) params.set("name", name);
+  if (description !== undefined) params.set("description", description);
+  if (is_active !== undefined) params.set("is_active", String(is_active));
+  return apiClient(`/admin/data/groups/${groupId}?${params}`, { method: "PATCH" });
+}
+
+export async function getDataProfiles(groupId: number, page: number = 1, per_page: number = 50, consent_given?: boolean): Promise<{ total: number; page: number; per_page: number; profiles: DataProfile[] }> {
+  const params = new URLSearchParams({ page: String(page), per_page: String(per_page) });
+  if (consent_given !== undefined) params.set("consent_given", String(consent_given));
+  return apiClient(`/admin/data/groups/${groupId}/profiles?${params}`);
+}
+
+export async function importDataProfiles(groupId: number, profiles: Partial<DataProfile>[]): Promise<{ message: string; count: number }> {
+  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const res = await fetch(`${base}/admin/data/groups/${groupId}/profiles`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(profiles),
+  });
+  if (!res.ok) throw new Error("Failed to import profiles");
+  return res.json();
+}
+
+export async function getDataRequests(status?: string): Promise<DataRequest[]> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  return apiClient(`/admin/data/requests?${params}`);
+}
+
+export async function submitDataRequest(requester_name: string, requester_email: string, group_id: number, purpose: string, requester_org?: string): Promise<{ id: number; status: string }> {
+  const params = new URLSearchParams({ requester_name, requester_email, group_id: String(group_id), purpose });
+  if (requester_org) params.set("requester_org", requester_org);
+  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const res = await fetch(`${base}/admin/data/requests?${params}`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to submit request");
+  return res.json();
+}
+
+export async function resolveDataRequest(requestId: number, status: string, notes?: string): Promise<{ message: string }> {
+  const params = new URLSearchParams({ status });
+  if (notes) params.set("notes", notes);
+  return apiClient(`/admin/data/requests/${requestId}?${params}`, { method: "PATCH" });
+}
+
+export async function downloadDataExport(groupId: number): Promise<void> {
+  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const res = await fetch(`${base}/admin/data/export/${groupId}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Export failed");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `data_group_export_${groupId}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
