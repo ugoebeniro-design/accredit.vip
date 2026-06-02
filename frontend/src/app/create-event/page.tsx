@@ -873,16 +873,16 @@ export default function CreateEventPage() {
       <Navbar variant="light" />
 
       <main className="flex-1">
-        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-white border-b border-[#e8edf2]">
-          <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+        <section className="px-4 py-6 sm:py-16 sm:px-6 lg:px-8 bg-white border-b border-[#e8edf2]">
+          <div className="mx-auto grid max-w-6xl gap-6 lg:gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             <div>
-              <p className="mb-4 text-xs font-bold uppercase tracking-[0.24em] text-[#E91E8C]">
+              <p className="mb-2 sm:mb-4 text-xs font-bold uppercase tracking-[0.24em] text-[#E91E8C]">
                 Create Event
               </p>
-              <h1 className="max-w-3xl text-4xl font-black leading-tight text-[#0D1B2A] sm:text-5xl lg:text-6xl">
+              <h1 className="max-w-3xl text-2xl sm:text-5xl lg:text-6xl font-black leading-tight text-[#0D1B2A]">
                 Test your invite
               </h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-gray-500 sm:text-lg">
+              <p className="mt-2 sm:mt-6 max-w-2xl text-sm sm:text-lg leading-6 sm:leading-8 text-gray-500">
                 Choose CREATE INVITE for private guest lists or POST EVENT for public discovery.
                 The test previews exactly what your guests will see — no payment required.
               </p>

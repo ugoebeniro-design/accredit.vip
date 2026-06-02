@@ -640,12 +640,59 @@ export default function HomePage() {
         </div>
 
         {/* Mobile product preview — shown only on small screens */}
-        <div className="lg:hidden relative mx-4 mb-10 mt-2" style={{ zIndex: 10 }}>
+        <div className="lg:hidden relative mx-4 mb-10 mt-2" style={{ zIndex: 10, minHeight: 460 }}>
+          {/* Glow behind */}
+          <div style={{
+            position: "absolute", top: "42%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 260, height: 260,
+            background: "radial-gradient(circle, rgba(233,30,140,0.22) 0%, transparent 65%)",
+            filter: "blur(60px)",
+            pointerEvents: "none",
+          }} />
+          {/* Floating: Invites sent — top left */}
+          <div style={{
+            position: "absolute", top: "0%", left: "2%",
+            background: "rgba(34,197,94,0.08)",
+            border: "1px solid rgba(34,197,94,0.28)",
+            borderRadius: 12, padding: "7px 12px",
+            display: "flex", alignItems: "center", gap: 7,
+            zIndex: 5,
+            animation: "float 3.8s ease-in-out infinite 0.9s",
+          }}>
+            <span style={{ fontSize: 16 }}>📱</span>
+            <div>
+              <p style={{ color: "white", fontSize: 10, fontWeight: 700 }}>800 Invites Sent</p>
+              <p style={{ color: "rgba(255,255,255,0.42)", fontSize: 9 }}>98% delivered</p>
+            </div>
+          </div>
+          {/* Floating: Scan confirmed — top right */}
+          <div style={{
+            position: "absolute", top: "6%", right: "2%",
+            background: "linear-gradient(135deg, #0f1e32, #162033)",
+            border: "1px solid rgba(74,222,128,0.32)",
+            borderRadius: 14, padding: "9px 13px",
+            display: "flex", alignItems: "center", gap: 8,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+            zIndex: 5,
+            animation: "float 4s ease-in-out infinite 0.6s",
+          }}>
+            <div style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(74,222,128,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ color: "#4ade80", fontSize: 14, fontWeight: 900 }}>✓</span>
+            </div>
+            <div>
+              <p style={{ color: "white", fontSize: 10.5, fontWeight: 800 }}>Scan Confirmed</p>
+              <p style={{ color: "rgba(255,255,255,0.42)", fontSize: 9 }}>QR verified</p>
+            </div>
+          </div>
+          {/* Main invitation card */}
           <div style={{
             background: "linear-gradient(145deg, #E91E8C 0%, #C4166F 100%)",
             borderRadius: 22, padding: "22px 20px",
             boxShadow: "0 30px 80px rgba(233,30,140,0.5)",
-            maxWidth: 300, margin: "0 auto",
+            maxWidth: 300, margin: "60px auto 0",
+            position: "relative", zIndex: 3,
+            animation: "float 5s ease-in-out infinite",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <span style={{ color: "rgba(255,255,255,0.72)", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase" }}>Your Invitation</span>
@@ -667,6 +714,34 @@ export default function HomePage() {
               <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 10.5, fontWeight: 600 }}>QR Code Included</span>
               <span style={{ color: "rgba(255,255,255,0.42)", fontSize: 10 }}>via WhatsApp</span>
             </div>
+          </div>
+          {/* Floating: Live check-ins — bottom left */}
+          <div style={{
+            position: "absolute", bottom: "2%", left: "0%",
+            background: "rgba(255,255,255,0.055)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 14, padding: "12px 14px",
+            minWidth: 170,
+            zIndex: 4,
+            animation: "float 5.5s ease-in-out infinite 1.1s",
+          }}>
+            <p style={{ color: "rgba(255,255,255,0.38)", fontSize: 8.5, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Live Check-ins</p>
+            {[
+              { name: "Adaeze N.", init: "AN", in_: true },
+              { name: "Kofi M.", init: "KM", in_: true },
+              { name: "Temi A.", init: "TA", in_: false },
+            ].map((g) => (
+              <div key={g.name} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#E91E8C,#C4166F)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ color: "white", fontSize: 7.5, fontWeight: 800 }}>{g.init}</span>
+                </div>
+                <span style={{ flex: 1, color: "rgba(255,255,255,0.8)", fontSize: 10, fontWeight: 600 }}>{g.name}</span>
+                <span style={{ fontSize: 10, fontWeight: 800, color: g.in_ ? "#4ade80" : "rgba(255,255,255,0.25)" }}>{g.in_ ? "✓" : "○"}</span>
+              </div>
+            ))}
+            <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.28)", fontSize: 9 }}>247 / 300 checked in</div>
           </div>
         </div>
       </section>

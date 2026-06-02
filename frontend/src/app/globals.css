@@ -510,21 +510,23 @@
   gap: 0.5rem;
   padding: 0.75rem 1.75rem;
   border-radius: var(--radius);
-  background: transparent;
+  background: rgba(255,255,255,0.08);
   color: white;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 0.9rem;
-  border: 1.5px solid rgba(255,255,255,0.25);
+  border: 2px solid rgba(255,255,255,0.4);
   cursor: pointer;
   transition: all 0.2s ease;
   backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 }
 
 .btn-secondary:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.4);
-  transform: translateY(-1px);
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.65);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
 }
 
 .btn-outline-pink {

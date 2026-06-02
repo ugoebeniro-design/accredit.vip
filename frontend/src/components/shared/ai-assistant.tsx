@@ -23,9 +23,11 @@ export function AIAssistant({ open: initialOpen = false }: { open?: boolean } = 
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const right = typeof window !== "undefined" ? 24 : 24;
-    const bottom = typeof window !== "undefined" ? 80 : 80;
-    setPos({ x: right, y: bottom });
+    if (typeof window !== "undefined") {
+      const right = window.innerWidth <= 640 ? 12 : 24;
+      const bottom = 80;
+      setPos({ x: right, y: bottom });
+    }
   }, []);
 
   useEffect(() => {
@@ -66,21 +68,26 @@ export function AIAssistant({ open: initialOpen = false }: { open?: boolean } = 
 
   useEffect(() => {
     if (!dragging) return;
+    const clamp = (n: number, max: number) => Math.max(0, Math.min(n, max));
     const handleMouseMove = (e: MouseEvent) => {
       const dx = e.clientX - dragStart.current.x;
       const dy = e.clientY - dragStart.current.y;
+      const maxX = typeof window !== "undefined" ? window.innerWidth - 80 : 200;
+      const maxY = typeof window !== "undefined" ? window.innerHeight - 120 : 200;
       setPos({
-        x: Math.max(0, dragStart.current.posX - dx),
-        y: Math.max(0, dragStart.current.posY - dy),
+        x: clamp(dragStart.current.posX - dx, maxX),
+        y: clamp(dragStart.current.posY - dy, maxY),
       });
     };
     const handleTouchMove = (e: TouchEvent) => {
       if (e.touches.length > 0) {
         const dx = e.touches[0].clientX - dragStart.current.x;
         const dy = e.touches[0].clientY - dragStart.current.y;
+        const maxX = typeof window !== "undefined" ? window.innerWidth - 80 : 200;
+        const maxY = typeof window !== "undefined" ? window.innerHeight - 120 : 200;
         setPos({
-          x: Math.max(0, dragStart.current.posX - dx),
-          y: Math.max(0, dragStart.current.posY - dy),
+          x: clamp(dragStart.current.posX - dx, maxX),
+          y: clamp(dragStart.current.posY - dy, maxY),
         });
       }
     };
@@ -121,10 +128,14 @@ export function AIAssistant({ open: initialOpen = false }: { open?: boolean } = 
     <>
       {open && (
         <div
-          className="fixed bottom-20 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[380px] max-h-[520px] bg-background border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-          style={{ right: typeof pos.x === "number" ? `${pos.x}px` : undefined }}
+          className="fixed z-50 w-[calc(100vw-2rem)] sm:w-[380px] max-h-[520px] bg-background border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          style={{ bottom: `${pos.y + 60}px`, right: `${pos.x}px` }}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b bg-primary text-primary-foreground">
+          <div
+            className="flex items-center justify-between px-4 py-3 border-b bg-primary text-primary-foreground cursor-grab active:cursor-grabbing"
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+          >
             <span className="text-sm font-semibold">Accredit.vip Assistant</span>
             <button onClick={() => setOpen(false)} className="text-primary-foreground/80 hover:text-primary-foreground">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
