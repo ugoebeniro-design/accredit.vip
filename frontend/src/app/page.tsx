@@ -710,7 +710,7 @@ export default function HomePage() {
             {features.map((f) => (
               <Link key={f.title} href={f.href} className="feature-card group block no-underline">
                 <div
-                  className="rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110"
+                  className="rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110 feature-icon"
                   style={{ width: 52, height: 52, background: `${f.color}14`, color: f.color }}
                 >
                   {f.icon}
@@ -770,7 +770,7 @@ export default function HomePage() {
             {howItWorks.map((step, i) => (
               <div key={step.step} className="text-center group">
                 <div
-                  className="w-28 h-28 rounded-3xl mx-auto flex flex-col items-center justify-center mb-7 transition-transform duration-300 group-hover:-translate-y-2"
+                  className="w-28 h-28 rounded-3xl mx-auto flex flex-col items-center justify-center mb-7 transition-transform duration-300 group-hover:-translate-y-2 how-it-works-icon"
                   style={{
                     background:
                       i === 1
@@ -837,7 +837,7 @@ export default function HomePage() {
                 ].map((ch) => (
                   <li key={ch.label} className="flex items-center gap-4 group">
                     <div
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 transition-transform duration-200 group-hover:scale-110 delivery-icon"
                       style={{ background: `${ch.color}15` }}
                     >
                       {ch.icon}

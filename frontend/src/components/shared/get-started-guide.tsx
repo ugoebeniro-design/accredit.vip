@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+const IconMap: Record<string, React.ReactNode> = {
+  welcome: <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 15H7a4 4 0 0 0-4 4v2h14v-2a4 4 0 0 0-4-4h-4z"/><circle cx="12" cy="7" r="4"/></svg>,
+  invite: <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7-10-7"/></svg>,
+  discover: <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4"/><path d="m12 10v8"/></svg>,
+  post: <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,
+  next: <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/><path d="M12 6v6l4 2"/></svg>,
+};
+
 export function GetStartedGuide() {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -25,21 +33,21 @@ export function GetStartedGuide() {
   const steps = [
     {
       title: "Welcome to Accredit.vip",
-      icon: "🎉",
+      icon: "welcome",
       content: (
         <div className="space-y-4">
           <p className="text-lg text-gray-700">
             Welcome! We're the premium event infrastructure platform for Africa. Whether you're planning a wedding, concert, conference, or gathering — we've got you covered.
           </p>
           <p className="text-gray-600">
-            Let's walk you through what you can do in just a few minutes. Ready? Click Next to begin! 👇
+            Let's walk you through what you can do in just a few minutes. Ready? Click Next to begin!
           </p>
         </div>
       ),
     },
     {
       title: "CREATE INVITE - Test First",
-      icon: "💌",
+      icon: "invite",
       content: (
         <div className="space-y-4">
           <p className="text-gray-700">
@@ -69,7 +77,7 @@ export function GetStartedGuide() {
     },
     {
       title: "DISCOVER EVENTS - Find & Buy Tickets",
-      icon: "🎪",
+      icon: "discover",
       content: (
         <div className="space-y-4">
           <p className="text-gray-700">
@@ -99,7 +107,7 @@ export function GetStartedGuide() {
     },
     {
       title: "POST EVENT - Go Public",
-      icon: "🚀",
+      icon: "post",
       content: (
         <div className="space-y-4">
           <p className="text-gray-700">
@@ -129,7 +137,7 @@ export function GetStartedGuide() {
     },
     {
       title: "Your Next Steps",
-      icon: "🎯",
+      icon: "next",
       content: (
         <div className="space-y-4">
           <p className="text-lg text-gray-700 font-semibold">
@@ -168,7 +176,9 @@ export function GetStartedGuide() {
         {/* Header */}
         <div className="bg-gradient-to-r from-[#E91E8C] to-[#d0147a] px-6 py-8 text-white">
           <div className="flex items-center gap-4">
-            <span className="text-5xl">{currentStep.icon}</span>
+            <div className="w-12 h-12 flex items-center justify-center" style={{ color: "white" }}>
+              {IconMap[currentStep.icon] || <span className="text-3xl">{currentStep.icon}</span>}
+            </div>
             <div>
               <h2 className="text-3xl font-bold">{currentStep.title}</h2>
               <p className="text-white/80 text-sm mt-1">Step {step} of {steps.length}</p>

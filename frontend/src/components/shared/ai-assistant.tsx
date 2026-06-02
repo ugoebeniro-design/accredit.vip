@@ -43,16 +43,26 @@ export function AIAssistant({ open: initialOpen = false }: { open?: boolean } = 
     return () => { clearTimeout(timer); };
   }, [open]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const startDrag = useCallback((clientX: number, clientY: number) => {
     setDragging(true);
     dragStart.current = {
-      x: e.clientX,
-      y: e.clientY,
+      x: clientX,
+      y: clientY,
       posX: pos.x,
       posY: pos.y,
     };
     setShowTooltip(false);
   }, [pos]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    startDrag(e.clientX, e.clientY);
+  }, [startDrag]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length > 0) {
+      startDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, [startDrag]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -64,12 +74,26 @@ export function AIAssistant({ open: initialOpen = false }: { open?: boolean } = 
         y: Math.max(0, dragStart.current.posY - dy),
       });
     };
-    const handleMouseUp = () => setDragging(false);
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const dx = e.touches[0].clientX - dragStart.current.x;
+        const dy = e.touches[0].clientY - dragStart.current.y;
+        setPos({
+          x: Math.max(0, dragStart.current.posX - dx),
+          y: Math.max(0, dragStart.current.posY - dy),
+        });
+      }
+    };
+    const handleEnd = () => setDragging(false);
     window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("mouseup", handleEnd);
+    window.addEventListener("touchmove", handleTouchMove);
+    window.addEventListener("touchend", handleEnd);
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("mouseup", handleEnd);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleEnd);
     };
   }, [dragging]);
 
@@ -133,9 +157,10 @@ export function AIAssistant({ open: initialOpen = false }: { open?: boolean } = 
         </div>
       )}
       <div
-        className="fixed z-50"
+        className="fixed z-50 touch-none"
         style={{ bottom: `${pos.y}px`, right: `${pos.x}px` }}
         onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
       >
         <div className="relative">
           {showTooltip && !open && (
