@@ -19,6 +19,8 @@ type Guest = {
   email: string | null;
   rsvp_status: string;
   invite_sent: boolean;
+  invite_attempts?: number;
+  invite_viewed_at?: string | null;
 };
 
 type SendResult = {
@@ -87,6 +89,9 @@ function EventDetailContent() {
   const [publishing, setPublishing] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; variant?: "danger" | "warning" | "default"; onConfirm: () => void } | null>(null);
   const [publishError, setPublishError] = useState("");
+  const [checkinStats, setCheckinStats] = useState<{ checked_in: number; rsvp_accepted: number; total_guests: number; recent_checkins: any[] } | null>(null);
+  const [accreditationLog, setAccreditationLog] = useState<{ attempts: any[]; suspicious_count: number } | null>(null);
+  const [showAccreditationLog, setShowAccreditationLog] = useState(false);
 
   const loadGuests = useCallback(async (search?: string, rsvpStatus?: string) => {
     try {
@@ -111,6 +116,8 @@ function EventDetailContent() {
       loadRsvpStats();
       loadPurchases();
       loadFliers();
+      loadCheckinStats();
+      loadAccreditationLog();
     }
   }, [user, loading, id, loadGuests]);
 
@@ -159,6 +166,20 @@ function EventDetailContent() {
     try {
       const s = await apiClient<RSVPStats>(`/events/${id}/rsvp-stats`);
       setRsvpStats(s);
+    } catch {}
+  };
+
+  const loadCheckinStats = async () => {
+    try {
+      const s = await apiClient<any>(`/qr/events/${id}/checkin-stats`);
+      setCheckinStats(s);
+    } catch {}
+  };
+
+  const loadAccreditationLog = async () => {
+    try {
+      const l = await apiClient<any>(`/qr/events/${id}/accreditation-log`);
+      setAccreditationLog(l);
     } catch {}
   };
 
@@ -226,6 +247,7 @@ function EventDetailContent() {
       setGuestName(""); setGuestPhone(""); setGuestEmail("");
       loadGuests();
       loadRsvpStats();
+      loadCheckinStats();
     } catch (err) {
       setCsvResult(err instanceof Error ? err.message : "Could not add guest.");
     }
@@ -278,6 +300,8 @@ function EventDetailContent() {
       if (res.already_sent) {
         setSendResult(null);
         setSendError("All guests have already been invited.");
+      } else if (res.skipped_max_attempts > 0) {
+        setSendError(`${res.skipped_max_attempts} guest(s) skipped (max 3 invite attempts reached). Create a new event to invite them again.`);
       }
     } catch (err: any) {
       const detail = err.detail || err.message;
@@ -297,8 +321,13 @@ function EventDetailContent() {
   };
 
   const sendGuestInvite = async (guestId: number) => {
+    setSendError(null);
+    setSendResult(null);
     try {
-      await apiClient(`/events/${id}/guests/${guestId}/send-invite?force=true`, { method: "POST", body: { channel } });
+      const res = await apiClient<any>(`/events/${id}/guests/${guestId}/send-invite?force=true`, { method: "POST", body: { channel } });
+      if (res.status === "max_attempts") {
+        setSendError(res.message || "Maximum invite attempts reached.");
+      }
       loadGuests();
     } catch (err: any) {
       const detail = err.detail || err.message;
@@ -467,10 +496,27 @@ function EventDetailContent() {
         </div>
 
         {rsvpStats && (
-          <div className="flex gap-4 mb-8 flex-wrap">
+          <div className="flex gap-4 mb-4 flex-wrap">
             <div className="rounded-lg border px-4 py-2 text-sm"><span className="font-medium">{rsvpStats.accepted}</span> Accepted</div>
             <div className="rounded-lg border px-4 py-2 text-sm"><span className="font-medium">{rsvpStats.declined}</span> Declined</div>
             <div className="rounded-lg border px-4 py-2 text-sm"><span className="font-medium">{rsvpStats.pending}</span> Pending</div>
+          </div>
+        )}
+        {checkinStats && (
+          <div className="flex gap-4 mb-8 flex-wrap">
+            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm">
+              <span className="font-medium text-green-800">{checkinStats.checked_in}</span>
+              <span className="text-green-700"> Checked In</span>
+              <span className="text-green-500 text-xs ml-1">/ {checkinStats.rsvp_accepted} accepted</span>
+            </div>
+            {checkinStats.recent_checkins?.length > 0 && (
+              <button
+                onClick={() => setShowAccreditationLog(!showAccreditationLog)}
+                className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 hover:bg-amber-100"
+              >
+                {accreditationLog?.suspicious_count ? `⚠ ${accreditationLog.suspicious_count} suspicious` : "View scan log"}
+              </button>
+            )}
           </div>
         )}
 
@@ -503,6 +549,39 @@ function EventDetailContent() {
             </div>
             {publishError && (
               <p className="text-sm text-destructive mt-3">{publishError}</p>
+            )}
+          </div>
+        )}
+
+        {showAccreditationLog && accreditationLog && (
+          <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-amber-900">Accreditation Scan Log</h3>
+              <button onClick={() => setShowAccreditationLog(false)} className="text-xs text-amber-700 hover:underline">Close</button>
+            </div>
+            {accreditationLog.attempts.length === 0 ? (
+              <p className="text-xs text-amber-700">No scan attempts recorded yet.</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {accreditationLog.attempts.map((a: any) => (
+                  <div key={a.id} className={`rounded-lg border px-3 py-2 text-xs ${a.status === 'checked_in' ? 'bg-white border-green-200' : a.status === 'already_used' ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{a.guest_name || 'Unknown'}</span>
+                      <span className={`font-semibold ${a.status === 'checked_in' ? 'text-green-700' : a.status === 'already_used' ? 'text-red-700' : a.status === 'invalid_token' ? 'text-red-700' : 'text-amber-700'}`}>
+                        {a.status === 'checked_in' ? '✓ Checked in' : a.status === 'already_used' ? '✗ Already used (possible impersonation)' : a.status === 'expired' ? '⌛ Expired' : a.status === 'invalid_token' ? '✗ Invalid token' : a.status}
+                      </span>
+                    </div>
+                    {a.device_info && <p className="text-[10px] text-muted-foreground mt-1">Device: {a.device_info}</p>}
+                    {a.ip_address && <p className="text-[10px] text-muted-foreground">IP: {a.ip_address}</p>}
+                    <p className="text-[10px] text-muted-foreground">{a.created_at}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {accreditationLog.suspicious_count > 0 && (
+              <p className="mt-2 text-xs font-medium text-red-700">
+                ⚠ {accreditationLog.suspicious_count} suspicious attempt{accreditationLog.suspicious_count === 1 ? '' : 's'} detected (repeated scan or invalid tokens)
+              </p>
             )}
           </div>
         )}
@@ -677,6 +756,14 @@ function EventDetailContent() {
                           </p>
                           {guest.invite_sent && (
                             <span className="mt-1 inline-block text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded">Invite Sent</span>
+                          )}
+                          {typeof guest.invite_attempts === 'number' && guest.invite_attempts > 0 && (
+                            <span className={`mt-1 inline-block text-xs font-medium px-2 py-0.5 rounded ${guest.invite_attempts >= 3 ? 'text-red-700 bg-red-100' : 'text-amber-700 bg-amber-100'}`}>
+                              {guest.invite_attempts}/3 attempts
+                            </span>
+                          )}
+                          {guest.invite_viewed_at && (
+                            <span className="mt-1 inline-block text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded">Viewed</span>
                           )}
                           {phoneChannelSelected && !isValidPhone(guest.phone) && (
                             <p className="mt-1 text-xs font-medium text-amber-700">Check phone number before WhatsApp/SMS send</p>

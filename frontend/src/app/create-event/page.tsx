@@ -855,6 +855,16 @@ export default function CreateEventPage() {
         0%, 100% { box-shadow: 0 0 0 0 rgba(233,30,140,0.7); }
         50% { box-shadow: 0 0 20px 10px rgba(233,30,140,0.3); }
       }
+      @keyframes dance {
+        0%, 100% { transform: translateY(0) scale(1); }
+        25% { transform: translateY(-8px) scale(1.02); }
+        50% { transform: translateY(0) scale(1); }
+        75% { transform: translateY(-4px) scale(1.01); }
+      }
+      @keyframes pulse-breathing {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(233,30,140,0.4); }
+        50% { box-shadow: 0 0 0 8px rgba(233,30,140,0.1); }
+      }
     `}</style>
     <div className="flex min-h-screen flex-col bg-white">
       <Navbar variant="light" />
@@ -907,6 +917,7 @@ export default function CreateEventPage() {
                         ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
                         : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
                     }`}
+                    style={mode === "invite" ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1" } : {}}
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">
@@ -967,6 +978,7 @@ export default function CreateEventPage() {
                         ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
                         : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
                     }`}
+                    style={mode === "event" ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1 0.1s both" } : {}}
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">

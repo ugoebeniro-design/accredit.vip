@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.models.guest import Guest
 from app.models.event import Event
+from app.models.notification import Notification
+from app.models.invite import InviteMessage
 
 router = APIRouter()
 
@@ -14,6 +16,22 @@ router = APIRouter()
 class RSVPRequest(BaseModel):
     token: str
     status: str
+
+
+async def _create_rsvp_notification(guest: Guest, event: Event, db: AsyncSession):
+    if not guest or not event:
+        return
+    status_label = {"accepted": "accepted", "declined": "declined", "maybe": "said maybe"}
+    label = status_label.get(guest.rsvp_status, "responded to")
+    notif = Notification(
+        user_id=event.organizer_id,
+        event_id=event.id,
+        title=f"{guest.name} {label} your invite",
+        message=f"{guest.name} has {label} the invite for {event.title}.",
+        notification_type="rsvp",
+    )
+    db.add(notif)
+    await db.flush()
 
 
 @router.post("/rsvp")
@@ -31,6 +49,11 @@ async def submit_rsvp(req: RSVPRequest, db: AsyncSession = Depends(get_db)):
 
     guest.rsvp_status = req.status
     guest.rsvped_at = datetime.now(timezone.utc)
+
+    event_result = await db.execute(select(Event).where(Event.id == guest.event_id))
+    event = event_result.scalar_one_or_none()
+
+    await _create_rsvp_notification(guest, event, db)
     await db.commit()
 
     return {"message": "RSVP updated", "status": req.status}
@@ -43,8 +66,23 @@ async def get_rsvp_info(token: str, db: AsyncSession = Depends(get_db)):
     if not guest:
         raise HTTPException(status_code=404, detail="Invalid RSVP link")
 
+    if guest.invite_viewed_at is None:
+        guest.invite_viewed_at = datetime.now(timezone.utc)
+
     event_result = await db.execute(select(Event).where(Event.id == guest.event_id))
     event = event_result.scalar_one_or_none()
+
+    msg_result = await db.execute(
+        select(InviteMessage).where(
+            InviteMessage.guest_id == guest.id,
+            InviteMessage.opened_at.is_(None),
+        ).order_by(InviteMessage.created_at.desc()).limit(1)
+    )
+    msg = msg_result.scalar_one_or_none()
+    if msg:
+        msg.opened_at = datetime.now(timezone.utc)
+
+    await db.commit()
 
     return {
         "guest": {

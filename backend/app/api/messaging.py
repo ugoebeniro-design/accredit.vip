@@ -107,6 +107,7 @@ def _build_invite_message(
     qr_url: str | None = None,
     flyer_url: str | None = None,
     qr_image_url: str | None = None,
+    message_id: int | None = None,
 ) -> tuple[str, str, str]:
     rsvp_link = f"{settings.FRONTEND_URL}/rsvp/{guest.rsvp_token}"
     subject = f"You're Invited: {event.title}"
@@ -165,9 +166,13 @@ def _build_invite_message(
         f'<p style="margin:0 0 4px;font-size:14px;font-weight:bold;color:#fff">Hosted by {event.host_name}</p>'
         '<p style="margin:0;letter-spacing:1px">Accredit.vip — Premium Event Infrastructure</p>'
         '</div>'
-        '</div>'
+        + (f'<img src="{settings.FRONTEND_URL}/api/v1/track/open/{message_id}" alt="" width="1" height="1" style="display:none" />' if message_id else '')
+        + '</div>'
     )
     return subject, body, html
+
+
+MAX_INVITE_ATTEMPTS = 3
 
 
 async def _send_to_guest(
@@ -177,6 +182,10 @@ async def _send_to_guest(
     batch_id: int,
     db: AsyncSession,
 ) -> tuple[bool, str]:
+    if guest.invite_attempts >= MAX_INVITE_ATTEMPTS:
+        return False, "max_attempts"
+
+    guest.invite_attempts += 1
     qr = await get_or_create_guest_qr(db, event.id, guest.id)
     qr_token_url = f"{settings.FRONTEND_URL}/api/v1/qr/{qr.token}"
 
@@ -188,10 +197,11 @@ async def _send_to_guest(
     qr_image_url_obj = qr_gif_to_url(qr_data, size=250, style="pulsing")
     qr_image_url = qr_image_url_obj if qr_image_url_obj else None
 
-    subject, body, html = _build_invite_message(guest, event, qr_url=qr_token_url, flyer_url=flyer_url, qr_image_url=qr_image_url)
-
     msg = InviteMessage(batch_id=batch_id, guest_id=guest.id, channel=channel)
     db.add(msg)
+    await db.flush()
+
+    subject, body, html = _build_invite_message(guest, event, qr_url=qr_token_url, flyer_url=flyer_url, qr_image_url=qr_image_url, message_id=msg.id)
 
     try:
         if channel == "email" and guest.email:
@@ -382,8 +392,12 @@ async def send_invites(
     await db.flush()
 
     sent = 0
+    skipped_attempts = 0
     for guest in guests:
         ok, status = await _send_to_guest(guest, event, req.channel, batch.id, db)
+        if status == "max_attempts":
+            skipped_attempts += 1
+            continue
         if status != "skipped":
             guest.invite_sent = True
         if ok:
@@ -394,7 +408,7 @@ async def send_invites(
     batch.status = "completed"
     await db.commit()
 
-    return {"batch_id": batch.id, "channel": req.channel, "sent": sent, "total": len(guests)}
+    return {"batch_id": batch.id, "channel": req.channel, "sent": sent, "total": len(guests), "skipped_max_attempts": skipped_attempts}
 
 
 # ── Send invite to ONE specific guest ──
@@ -454,6 +468,12 @@ async def send_guest_invite(
     await db.flush()
 
     ok, status = await _send_to_guest(guest, event, req.channel, batch.id, db)
+
+    if status == "max_attempts":
+        batch.total_sent = 0
+        batch.status = "completed"
+        await db.commit()
+        return {"guest_id": guest_id, "channel": req.channel, "sent": False, "status": "max_attempts", "message": f"{guest.name} has reached the maximum of {MAX_INVITE_ATTEMPTS} invite attempts. Create a new event to invite them again."}
 
     if status != "skipped":
         guest.invite_sent = True
