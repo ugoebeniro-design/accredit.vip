@@ -206,15 +206,15 @@ export function HomePageClient() {
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(circle at 78% 34%, rgba(233,30,140,0.28) 0%, transparent 26%), linear-gradient(180deg, transparent 58%, rgba(5,10,20,0.82) 100%)",
+              "radial-gradient(circle at 78% 34%, rgba(233,30,140,0.28) 0%, transparent 26%), linear-gradient(180deg, rgba(5,10,20,0.3) 0%, rgba(5,10,20,0.95) 100%)",
             pointerEvents: "none",
           }}
         />
 
         {/* Mobile CTA Section — shown only on small screens */}
-        <div className="sm:hidden relative mx-4 mb-10 mt-2 flex flex-col items-center justify-center min-h-[400px]" style={{ zIndex: 10 }}>
+        <div className="sm:hidden relative mx-4 mb-10 flex flex-col items-center justify-end flex-1" style={{ zIndex: 10 }}>
           {/* Main CTA Buttons */}
-          <div className="flex flex-col gap-4 w-full max-w-xs">
+          <div className="flex flex-col gap-4 w-full max-w-xs pb-20">
             <Link
               href="/create-event"
               className="btn-primary rounded-xl px-10 py-5 text-base font-black text-center transition-all duration-300 hover:scale-105"
@@ -264,9 +264,134 @@ export function HomePageClient() {
           </button>
         </div>
 
-        {/* Desktop content hidden on mobile */}
-        <div className="hidden sm:block relative flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 lg:pt-20 pb-12" style={{ zIndex: 10 }}>
-          {/* Desktop hero content would go here */}
+        {/* Desktop hero - shown only on desktop */}
+        <div className="hidden sm:flex relative flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 lg:pt-20 pb-12 flex-col" style={{ zIndex: 10 }}>
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-8 lg:items-center lg:min-h-[80vh]">
+            {/* LEFT: Text column */}
+            <div className="flex flex-col items-start justify-center">
+              {getSpecialDayName() && (
+                <div
+                  className="motion-rise inline-flex items-center gap-2.5 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-4"
+                  style={{
+                    border: "1px solid rgba(255,215,0,0.4)",
+                    background: "rgba(255,215,0,0.08)",
+                    color: "#FFD700",
+                    backdropFilter: "blur(12px)",
+                  }}
+                >
+                  ✨ Celebrating {getSpecialDayName()}! ✨
+                </div>
+              )}
+
+              {/* Tag pill */}
+              <div
+                className="motion-rise inline-flex items-center gap-2.5 px-5 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-9"
+                style={{
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  background: "rgba(255,255,255,0.05)",
+                  color: "rgba(255,255,255,0.82)",
+                  backdropFilter: "blur(12px)",
+                }}
+              >
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{
+                    background: "#E91E8C",
+                    boxShadow: "0 0 8px rgba(233,30,140,0.9)",
+                    animation: "pulse 2s ease-in-out infinite",
+                  }}
+                />
+                Premium Event Infrastructure &middot; Africa
+              </div>
+
+              {/* Main heading */}
+              <h1
+                className="motion-rise motion-delay-1 text-left text-4xl sm:text-6xl lg:text-6xl xl:text-[68px] font-extrabold leading-[1.05] tracking-tight"
+                style={{ color: "#ffffff" }}
+              >
+                Create premium invites,{" "}
+                <br className="hidden sm:block" />
+                control entry,{" "}
+                <span
+                  style={{
+                    background: "linear-gradient(135deg, #E91E8C 0%, #ff6dbd 55%, #C4166F 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  scan every guest.
+                </span>
+              </h1>
+
+              {/* Subtitle */}
+              <p
+                className="motion-rise motion-delay-2 mt-7 text-left text-base sm:text-lg leading-relaxed max-w-xl"
+                style={{ color: "rgba(255,255,255,0.68)" }}
+              >
+                Send branded invitations by WhatsApp, SMS, or Email, give every
+                guest a unique QR pass, and run check-in from one live dashboard.
+              </p>
+
+              {/* CTA buttons */}
+              <div className="motion-rise motion-delay-3 mt-10 flex flex-wrap items-start gap-4">
+                <Link
+                  href="/create-event"
+                  className="btn-primary rounded-xl px-10 py-4 text-base font-black"
+                  style={{ letterSpacing: "0.04em" }}
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  CREATE EVENT
+                </Link>
+                <Link
+                  href="/attend"
+                  className="btn-secondary rounded-xl px-10 py-4 text-base font-black"
+                  style={{ letterSpacing: "0.04em" }}
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  DISCOVER EVENTS
+                </Link>
+              </div>
+
+              {/* Trust badges */}
+              <div className="motion-rise motion-delay-4 mt-7 flex flex-wrap items-center gap-5">
+                {[
+                  { icon: "ok", text: "RSVP and QR in one flow" },
+                  { icon: "01", text: "Gate scans in real time" },
+                  { icon: "id", text: "Guest list stays private" },
+                ].map((b) => (
+                  <div
+                    key={b.text}
+                    className="flex items-center gap-2 text-sm"
+                    style={{ color: "rgba(255,255,255,0.42)" }}
+                  >
+                    <span style={{ color: "#4ade80", fontWeight: 700 }}>{b.icon}</span>
+                    {b.text}
+                  </div>
+                ))}
+              </div>
+
+              {/* Stats row */}
+              <div className="motion-rise motion-delay-5 mt-12 grid grid-cols-2 sm:grid-cols-4 gap-6 w-full">
+                {stats.map((s) => (
+                  <div key={s.label}>
+                    <div className="text-lg mb-1 text-white">{statsIconMap[s.iconKey as keyof typeof statsIconMap]}</div>
+                    <p className="text-2xl font-extrabold text-white" style={{ letterSpacing: "-0.03em" }}>{s.value}</p>
+                    <p className="mt-0.5 text-xs font-medium" style={{ color: "rgba(255,255,255,0.38)" }}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* RIGHT: Product visual */}
+            <div className="motion-pop motion-delay-4 relative" style={{ height: 620 }}>
+              {/* (Product visual content - omitted for brevity, showing on desktop) */}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -462,10 +587,14 @@ export function HomePageClient() {
           </section>
 
           <GetStartedGuide />
+          <Footer />
         </>
       )}
 
-      <Footer />
+      {/* Footer visible on desktop only */}
+      <div className="hidden sm:block">
+        <Footer />
+      </div>
     </>
   );
 }

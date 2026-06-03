@@ -870,7 +870,7 @@ export default function CreateEventPage() {
       <Navbar variant="light" />
 
       <main className="flex-1">
-        <section className="px-4 py-6 sm:py-16 sm:px-6 lg:px-8 bg-white border-b border-[#e8edf2]">
+        <section className="px-4 py-2 sm:py-16 sm:px-6 lg:px-8 bg-white border-b border-[#e8edf2]">
           <div className="mx-auto grid max-w-6xl gap-6 lg:gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             {step === 0 && (
             <div>
@@ -917,7 +917,7 @@ export default function CreateEventPage() {
                         ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
                         : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
                     }`}
-                    style={mode === "invite" ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1" } : {}}
+                    style={step === 0 && !mode ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1" } : {}}
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">
@@ -978,7 +978,7 @@ export default function CreateEventPage() {
                         ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
                         : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
                     }`}
-                    style={mode === "event" ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1 0.1s both" } : {}}
+                    style={step === 0 && !mode ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1 0.1s both" } : {}}
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">
@@ -2401,7 +2401,10 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
         </div>
       )}
 
-      <Footer />
+      {/* Footer visible on desktop only */}
+      <div className="hidden sm:block">
+        <Footer />
+      </div>
     </div>
     </>
   );
