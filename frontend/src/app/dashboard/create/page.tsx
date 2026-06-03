@@ -166,11 +166,7 @@ export default function CreateEventPage() {
         tickets_available: form.tickets_available ? Number(form.tickets_available) : undefined,
         pass_packages: mode === "event" ? cleanPassPackages(passPackages) : undefined,
         lineup: mode === "event" ? cleanLineup(lineup) : undefined,
-        city: locationData.city || undefined,
-        state: locationData.state || undefined,
         country: locationData.country || "Nigeria",
-        latitude: locationData.lat || undefined,
-        longitude: locationData.lng || undefined,
       });
       router.push("/dashboard");
     } catch (err) {
