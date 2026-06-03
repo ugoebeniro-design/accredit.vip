@@ -28,6 +28,7 @@ import {
   updateUserRole,
   updateTicketStatus,
   downloadAdminExport,
+  changeEmail,
   getAdminCommunityPosts,
   createAdminCommunityPost,
   updateAdminCommunityPost,
@@ -73,6 +74,7 @@ import {
   type DeliveryEventGuest,
   type DeliveryEventDetail,
 } from "@/lib/api/admin";
+import { apiClient } from "@/lib/api-client";
 
 function TabIcon({ id }: { id: string }) {
   const cls = "w-4 h-4";
@@ -95,6 +97,7 @@ function TabIcon({ id }: { id: string }) {
     export: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33A3 3 0 0116.5 19.5H6.75z" /></svg>,
     "event-review": <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>,
     "data-management": <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+    settings: <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
   };
   return <>{icons[id] || <svg className={cls} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" /></svg>}</>;
 }
@@ -142,7 +145,7 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
   );
 }
 
-type TabId = "overview" | "users" | "events" | "payments" | "delivery" | "support" | "scans" | "staff" | "analytics" | "audit" | "fraud" | "accreditation" | "community" | "revenue" | "tickets" | "export" | "event-review" | "data-management";
+type TabId = "overview" | "users" | "events" | "payments" | "delivery" | "support" | "scans" | "staff" | "analytics" | "audit" | "fraud" | "accreditation" | "community" | "revenue" | "tickets" | "export" | "event-review" | "data-management" | "settings";
 
 export default function AdminPage() {
   const { user, loading, logout, login } = useAuth();
@@ -171,7 +174,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<TabId>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("admin_active_tab");
-      if (saved && ["overview","users","events","payments","delivery","support","scans","staff","analytics","audit","fraud","accreditation","community","revenue","tickets","export","event-review","data-management"].includes(saved)) {
+      if (saved && ["overview","users","events","payments","delivery","support","scans","staff","analytics","audit","fraud","accreditation","community","revenue","tickets","export","event-review","data-management","settings"].includes(saved)) {
         return saved as TabId;
       }
     }
@@ -184,6 +187,10 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [showSettEmailPass, setShowSettEmailPass] = useState(false);
+  const [showSettCurrPass, setShowSettCurrPass] = useState(false);
+  const [showSettNewPass, setShowSettNewPass] = useState(false);
+  const [showSettConfirmPass, setShowSettConfirmPass] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; variant?: "danger" | "warning" | "default"; onConfirm: () => void } | null>(null);
   const [roleUpdating, setRoleUpdating] = useState<number | null>(null);
   const [userSearch, setUserSearch] = useState("");
@@ -226,6 +233,17 @@ export default function AdminPage() {
   const [deliveryGuestStatusFilter, setDeliveryGuestStatusFilter] = useState("");
   const [deliverySearch, setDeliverySearch] = useState("");
   const [deliveryClientsLoading, setDeliveryClientsLoading] = useState(false);
+  const [settingsEmail, setSettingsEmail] = useState("");
+  const [settingsEmailPassword, setSettingsEmailPassword] = useState("");
+  const [settingsEmailLoading, setSettingsEmailLoading] = useState(false);
+  const [settingsEmailError, setSettingsEmailError] = useState("");
+  const [settingsEmailSuccess, setSettingsEmailSuccess] = useState("");
+  const [settingsPassCurrent, setSettingsPassCurrent] = useState("");
+  const [settingsPassNew, setSettingsPassNew] = useState("");
+  const [settingsPassConfirm, setSettingsPassConfirm] = useState("");
+  const [settingsPassLoading, setSettingsPassLoading] = useState(false);
+  const [settingsPassError, setSettingsPassError] = useState("");
+  const [settingsPassSuccess, setSettingsPassSuccess] = useState("");
 
   const loadUserPage = useCallback(async (page: number, search: string, roleFilter = "", activeFilter = "") => {
     const res = await getAdminUsers({
@@ -263,7 +281,7 @@ export default function AdminPage() {
         getAdminRevenue().then(setRevenue).catch(() => {}),
       ]).finally(() => setStatsLoading(false));
       const savedTab = localStorage.getItem("admin_active_tab") as TabId | null;
-      if (savedTab && savedTab !== "overview" && ["overview","users","events","payments","delivery","support","scans","staff","analytics","audit","fraud","accreditation","community","revenue","tickets","export","event-review","data-management"].includes(savedTab)) {
+      if (savedTab && savedTab !== "overview" && ["overview","users","events","payments","delivery","support","scans","staff","analytics","audit","fraud","accreditation","community","revenue","tickets","export","event-review","data-management","settings"].includes(savedTab)) {
         loadSection(savedTab);
       }
     }
@@ -375,14 +393,14 @@ export default function AdminPage() {
   }
 
   const statCards = [
-    { label: "Total Users", value: statsLoading ? "—" : (stats?.users ?? 0), color: "#E91E8C", bg: "rgba(233,30,140,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg> },
-    { label: "Total Events", value: statsLoading ? "—" : (stats?.events ?? 0), color: "#0D1B2A", bg: "rgba(13,27,42,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
-    { label: "Guests Managed", value: statsLoading ? "—" : (stats?.guests ?? 0), color: "#10b981", bg: "rgba(16,185,129,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg> },
-    { label: "Check-ins", value: statsLoading ? "—" : (stats?.checkins ?? 0), color: "#3b82f6", bg: "rgba(59,130,246,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
-    { label: "Transactions", value: statsLoading ? "—" : (stats?.payments ?? 0), color: "#f59e0b", bg: "rgba(245,158,11,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg> },
-    { label: "Total Revenue", value: statsLoading ? "—" : (stats ? `₦${(stats.total_revenue / 1000).toFixed(1)}k` : "₦0"), color: "#8b5cf6", bg: "rgba(139,92,246,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
-    { label: "Support Tickets", value: statsLoading ? "—" : (stats?.tickets ?? 0), color: "#ef4444", bg: "rgba(239,68,68,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9h2m0 0h2m-2 0v2" /></svg> },
-    { label: "Accred. Requests", value: statsLoading ? "—" : (stats?.accreditation_requests ?? 0), color: "#06b6d4", bg: "rgba(6,182,212,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> },
+    { label: "Total Users", value: statsLoading ? "-" : (stats?.users ?? 0), color: "#E91E8C", bg: "rgba(233,30,140,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg> },
+    { label: "Total Events", value: statsLoading ? "-" : (stats?.events ?? 0), color: "#0D1B2A", bg: "rgba(13,27,42,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
+    { label: "Guests Managed", value: statsLoading ? "-" : (stats?.guests ?? 0), color: "#10b981", bg: "rgba(16,185,129,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg> },
+    { label: "Check-ins", value: statsLoading ? "-" : (stats?.checkins ?? 0), color: "#3b82f6", bg: "rgba(59,130,246,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+    { label: "Transactions", value: statsLoading ? "-" : (stats?.payments ?? 0), color: "#f59e0b", bg: "rgba(245,158,11,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg> },
+    { label: "Total Revenue", value: statsLoading ? "-" : (stats ? `₦${(stats.total_revenue / 1000).toFixed(1)}k` : "₦0"), color: "#8b5cf6", bg: "rgba(139,92,246,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+    { label: "Support Tickets", value: statsLoading ? "-" : (stats?.tickets ?? 0), color: "#ef4444", bg: "rgba(239,68,68,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9h2m0 0h2m-2 0v2" /></svg> },
+    { label: "Accred. Requests", value: statsLoading ? "-" : (stats?.accreditation_requests ?? 0), color: "#06b6d4", bg: "rgba(6,182,212,0.08)", icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> },
   ];
 
   const tabs: { id: TabId; label: string }[] = [
@@ -404,6 +422,7 @@ export default function AdminPage() {
     { id: "data-management", label: "Data" },
     { id: "community", label: "Community" },
     { id: "export", label: "Export" },
+    { id: "settings", label: "Settings" },
   ];
 
   type PanelGroup = { key: string; icon: React.ReactNode; label: string; items: TabId[] };
@@ -414,6 +433,7 @@ export default function AdminPage() {
     { key: "operations", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, label: "Operations", items: ["delivery", "support", "scans", "staff", "accreditation"] },
     { key: "monitoring", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>, label: "Monitoring", items: ["audit", "fraud", "export"] },
     { key: "partners", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 19H9a6 6 0 0112 0v1H9v-1z" /><path strokeLinecap="round" strokeLinejoin="round" d="M7 6.5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>, label: "Partners", items: ["data-management"] },
+    { key: "settings", icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>, label: "Account", items: ["settings"] },
   ];
 
   const handleRoleChange = async (userId: number, newRole: string) => {
@@ -441,18 +461,9 @@ export default function AdminPage() {
         {/* Top Header */}
         <header className="h-14 flex items-center justify-between px-5 flex-shrink-0" style={{ background: "white", borderBottom: "1px solid #e8edf2" }}>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors flex-shrink-0"
-              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 4H5a2 2 0 00-2 2v14a2 2 0 002 2h4m0-18v18m0-18l10-4v18L9 22" />
-              </svg>
-            </button>
             <Link href="/" className="flex items-center gap-1.5 hidden sm:flex">
-              <Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-5 w-auto" />
-              <span className="text-xs font-bold text-gray-600">Admin</span>
+              <Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-8 w-auto" />
+              <span className="text-sm font-bold text-gray-600">Admin</span>
             </Link>
           </div>
           <div className="flex items-center gap-3">
@@ -469,11 +480,19 @@ export default function AdminPage() {
         <div className="flex flex-1">
         {/* Sidebar (left, collapsible) */}
         <aside className={`${sidebarOpen ? 'w-56' : 'w-20'} flex-shrink-0 flex-col overflow-hidden transition-all duration-200 order-first`} style={{ background: "#f8f9fc", borderRight: "1px solid #e8edf2" }}>
-          {/* Logo section */}
-          <div className="px-3 py-4 border-b border-[#e8edf2] flex-shrink-0 flex items-center">
+          {/* Toggle + Logo section */}
+          <div className="px-3 py-4 border-b border-[#e8edf2] flex-shrink-0 flex items-center justify-between">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors flex-shrink-0"
+              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <path d="M3.75 8.5C3.75 8.08579 4.08579 7.75 4.5 7.75H5.75C6.16421 7.75 6.5 8.08579 6.5 8.5C6.5 8.91421 6.16421 9.25 5.75 9.25H4.5C4.08579 9.25 3.75 8.91421 3.75 8.5ZM3.75 12C3.75 11.5858 4.08579 11.25 4.5 11.25H5.75C6.16421 11.25 6.5 11.5858 6.5 12C6.5 12.4142 6.16421 12.75 5.75 12.75H4.5C4.08579 12.75 3.75 12.4142 3.75 12ZM3.75 15.5C3.75 15.0858 4.08579 14.75 4.5 14.75H5.75C6.16421 14.75 6.5 15.0858 6.5 15.5C6.5 15.9142 6.16421 16.25 5.75 16.25H4.5C4.08579 16.25 3.75 15.9142 3.75 15.5ZM4.25 3C2.45507 3 1 4.45507 1 6.25V17.75C1 19.5449 2.45508 21 4.25 21H19.75C21.5449 21 23 19.5449 23 17.75V6.25C23 4.45507 21.5449 3 19.75 3H4.25ZM19.75 19.5H9V4.5H19.75C20.7165 4.5 21.5 5.2835 21.5 6.25V17.75C21.5 18.7165 20.7165 19.5 19.75 19.5ZM4.25 4.5H7.5V19.5H4.25C3.2835 19.5 2.5 18.7165 2.5 17.75V6.25C2.5 5.2835 3.2835 4.5 4.25 4.5Z" />
+              </svg>
+            </button>
             {sidebarOpen && (
-              <div className="flex items-center gap-2 flex-1">
-                <Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-6 w-auto" />
+              <div className="flex items-center gap-2 flex-1 ml-2">
                 <span className="text-xs font-bold text-gray-600">Admin</span>
               </div>
             )}
@@ -490,6 +509,8 @@ export default function AdminPage() {
                     onClick={() => {
                       if (sidebarOpen) {
                         setOpenPanels((prev: Record<string, boolean>) => ({ ...prev, [group.key]: !prev[group.key] }));
+                      } else {
+                        handleTabChange(group.items[0]);
                       }
                     }}
                     className={`flex items-center gap-2 w-full text-left px-2.5 py-2 text-xs font-bold rounded-lg transition-colors relative group ${!sidebarOpen ? 'justify-center' : ''}`}
@@ -518,6 +539,25 @@ export default function AdminPage() {
                           >
                             <span className="flex-shrink-0 w-4 flex justify-center"><TabIcon id={itemId} /></span>
                             <span className="truncate">{t.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {!sidebarOpen && (
+                    <div className="grid grid-cols-3 gap-0.5 mt-1">
+                      {group.items.map((itemId) => {
+                        const t = tabs.find((x) => x.id === itemId)!;
+                        return (
+                          <button key={itemId} onClick={() => handleTabChange(itemId)}
+                            className="flex items-center justify-center w-full h-8 rounded-md transition-all"
+                            style={{
+                              color: tab === itemId ? "#E91E8C" : "#64748b",
+                              background: tab === itemId ? "rgba(233,30,140,0.07)" : "transparent",
+                            }}
+                            title={t.label}
+                          >
+                            <TabIcon id={itemId} />
                           </button>
                         );
                       })}
@@ -1134,8 +1174,8 @@ export default function AdminPage() {
                                   "bg-amber-100 text-amber-700"
                                 }`}>{g.status}</span>
                               </td>
-                              <td className="px-4 py-3 text-xs text-red-500 max-w-[200px] truncate">{g.error || "—"}</td>
-                              <td className="px-4 py-3 text-gray-400 text-xs">{g.sent_at ? new Date(g.sent_at).toLocaleString() : "—"}</td>
+                              <td className="px-4 py-3 text-xs text-red-500 max-w-[200px] truncate">{g.error || "-"}</td>
+                              <td className="px-4 py-3 text-gray-400 text-xs">{g.sent_at ? new Date(g.sent_at).toLocaleString() : "-"}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1459,7 +1499,7 @@ export default function AdminPage() {
                   )}
                 </div>
                 {(fraudFlags.inactive_users + fraudFlags.unverified_users + fraudFlags.failed_payments + fraudFlags.failed_deliveries + fraudFlags.flagged_events) === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-4">No flags detected — platform health looks good.</p>
+                  <p className="text-sm text-gray-400 text-center py-4">No flags detected - platform health looks good.</p>
                 )}
               </div>
             )}
@@ -1734,8 +1774,8 @@ export default function AdminPage() {
                       <tbody>
                         {revenue.map((r, i) => (
                           <tr key={i} style={{ borderBottom: i < revenue.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                            <td className="px-4 py-3 text-gray-600">—</td>
-                            <td className="px-4 py-3 text-gray-600">—</td>
+                            <td className="px-4 py-3 text-gray-600">-</td>
+                            <td className="px-4 py-3 text-gray-600">-</td>
                             <td className="px-4 py-3 font-semibold text-[#0D1B2A]">₦{r.total.toFixed(0)}</td>
                             <td className="px-4 py-3 text-gray-500 capitalize">{r.provider}</td>
                             <td className="px-4 py-3"><span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.1)", color: "#10b981" }}>Completed</span></td>
@@ -1836,6 +1876,106 @@ export default function AdminPage() {
                 </div>
               </div>
             )}
+
+            {!sectionLoading && tab === "settings" && (
+              <div className="max-w-lg mx-auto space-y-8">
+                {/* User Info */}
+                <div className="rounded-2xl p-6 flex items-center gap-4" style={{ background: "white", border: "1px solid #e8edf2", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+                  <div className="w-12 h-12 rounded-full bg-[#E91E8C] flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
+                    {user.email?.charAt(0).toUpperCase() || "A"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-[#0D1B2A] truncate">{user.full_name || "Admin"}</p>
+                    <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: "rgba(233,30,140,0.1)", color: "#E91E8C" }}>
+                    {user.role || "admin"}
+                  </span>
+                </div>
+
+                {/* Change Email */}
+                <div className="rounded-2xl p-6" style={{ background: "white", border: "1px solid #e8edf2", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+                  <h2 className="text-base font-bold text-[#0D1B2A] mb-4 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    Change Email
+                  </h2>
+                  <form onSubmit={async (e) => { e.preventDefault(); setSettingsEmailError(""); setSettingsEmailSuccess(""); setSettingsEmailLoading(true); try { const res = await changeEmail(settingsEmail, settingsEmailPassword); setSettingsEmailSuccess("Email updated successfully"); setSettingsEmail(""); setSettingsEmailPassword(""); } catch (err) { setSettingsEmailError(err instanceof Error ? err.message : "Failed to update email"); } setSettingsEmailLoading(false); }} className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">New Email</label>
+                      <input type="email" required value={settingsEmail} onChange={(e) => setSettingsEmail(e.target.value)} className="w-full h-11 rounded-xl border border-gray-300 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30 focus:border-[#E91E8C]" placeholder="new@example.com" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">Current Password</label>
+                      <div className="relative">
+                        <input type={showSettEmailPass ? "text" : "password"} required value={settingsEmailPassword} onChange={(e) => setSettingsEmailPassword(e.target.value)} className="w-full h-11 rounded-xl border border-gray-300 pl-4 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30 focus:border-[#E91E8C]" placeholder="Enter your password" />
+                        <button type="button" onClick={() => setShowSettEmailPass(!showSettEmailPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                          {showSettEmailPass ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" /></svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    {settingsEmailError && <p className="text-sm text-red-500">{settingsEmailError}</p>}
+                    {settingsEmailSuccess && <p className="text-sm text-green-600">{settingsEmailSuccess}</p>}
+                    <button type="submit" disabled={settingsEmailLoading} className="w-full h-11 rounded-xl font-bold text-white transition-all" style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}>{settingsEmailLoading ? "Updating..." : "Update Email"}</button>
+                  </form>
+                </div>
+
+                {/* Change Password */}
+                <div className="rounded-2xl p-6" style={{ background: "white", border: "1px solid #e8edf2", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+                  <h2 className="text-base font-bold text-[#0D1B2A] mb-4 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    Change Password
+                  </h2>
+                  <form onSubmit={async (e) => { e.preventDefault(); setSettingsPassError(""); setSettingsPassSuccess(""); if (settingsPassNew !== settingsPassConfirm) { setSettingsPassError("Passwords do not match"); return; } setSettingsPassLoading(true); try { await apiClient("/auth/change-password", { method: "POST", body: { current_password: settingsPassCurrent, new_password: settingsPassNew } }); setSettingsPassSuccess("Password changed successfully"); setSettingsPassCurrent(""); setSettingsPassNew(""); setSettingsPassConfirm(""); } catch (err) { setSettingsPassError(err instanceof Error ? err.message : "Failed to change password"); } setSettingsPassLoading(false); }} className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">Current Password</label>
+                      <div className="relative">
+                        <input type={showSettCurrPass ? "text" : "password"} required value={settingsPassCurrent} onChange={(e) => setSettingsPassCurrent(e.target.value)} className="w-full h-11 rounded-xl border border-gray-300 pl-4 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30 focus:border-[#E91E8C]" placeholder="Enter current password" />
+                        <button type="button" onClick={() => setShowSettCurrPass(!showSettCurrPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                          {showSettCurrPass ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" /></svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">New Password</label>
+                      <div className="relative">
+                        <input type={showSettNewPass ? "text" : "password"} required value={settingsPassNew} onChange={(e) => setSettingsPassNew(e.target.value)} className="w-full h-11 rounded-xl border border-gray-300 pl-4 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30 focus:border-[#E91E8C]" placeholder="Enter new password" />
+                        <button type="button" onClick={() => setShowSettNewPass(!showSettNewPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                          {showSettNewPass ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" /></svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">Confirm New Password</label>
+                      <div className="relative">
+                        <input type={showSettConfirmPass ? "text" : "password"} required value={settingsPassConfirm} onChange={(e) => setSettingsPassConfirm(e.target.value)} className="w-full h-11 rounded-xl border border-gray-300 pl-4 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30 focus:border-[#E91E8C]" placeholder="Confirm new password" />
+                        <button type="button" onClick={() => setShowSettConfirmPass(!showSettConfirmPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                          {showSettConfirmPass ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" /></svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    {settingsPassError && <p className="text-sm text-red-500">{settingsPassError}</p>}
+                    {settingsPassSuccess && <p className="text-sm text-green-600">{settingsPassSuccess}</p>}
+                    <button type="submit" disabled={settingsPassLoading} className="w-full h-11 rounded-xl font-bold text-white transition-all" style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}>{settingsPassLoading ? "Changing..." : "Change Password"}</button>
+                  </form>
+                </div>
+              </div>
+            )}
             </div>
           </div>
           </div>
@@ -1854,7 +1994,7 @@ export default function AdminPage() {
               <div><p className="text-base font-bold text-[#0D1B2A]">{selectedUser.full_name}</p><p className="text-xs text-gray-400">{selectedUser.email}</p></div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Phone</p><p className="font-semibold text-[#0D1B2A]">{selectedUser.phone || "—"}</p></div>
+              <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Phone</p><p className="font-semibold text-[#0D1B2A]">{selectedUser.phone || "-"}</p></div>
               <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Role</p><p className="font-semibold text-[#0D1B2A]">{selectedUser.role}</p></div>
               <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Status</p><p className={`font-semibold ${selectedUser.is_active ? "text-[#10b981]" : "text-[#ef4444]"}`}>{selectedUser.is_active ? "Active" : "Inactive"}</p></div>
               <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Verified</p><p className={`font-semibold ${selectedUser.is_verified ? "text-[#10b981]" : "text-[#f59e0b]"}`}>{selectedUser.is_verified ? "Yes" : "No"}</p></div>
@@ -1884,11 +2024,11 @@ export default function AdminPage() {
               <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Organizer</p><p className="font-semibold text-[#0D1B2A]">{selectedEvent.organizer}</p></div>
               <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Host</p><p className="font-semibold text-[#0D1B2A]">{selectedEvent.host_name}</p></div>
               <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Date</p><p className="font-semibold text-[#0D1B2A]">{selectedEvent.event_date} · {selectedEvent.event_time} {selectedEvent.timezone}</p></div>
-              <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Venue</p><p className="font-semibold text-[#0D1B2A]">{selectedEvent.venue || "—"}</p></div>
+              <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Venue</p><p className="font-semibold text-[#0D1B2A]">{selectedEvent.venue || "-"}</p></div>
               <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Guests</p><p className="font-semibold text-[#0D1B2A]">{selectedEvent.guest_count}</p></div>
               <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Check-ins</p><p className="font-semibold text-[#0D1B2A]">{selectedEvent.checkin_count}</p></div>
               <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Revenue</p><p className="font-bold text-[#E91E8C]">₦{(selectedEvent.revenue / 1000).toFixed(1)}k</p></div>
-              <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Category</p><p className="font-semibold text-[#0D1B2A]">{selectedEvent.category || "—"}</p></div>
+              <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}><p className="text-xs text-gray-400">Category</p><p className="font-semibold text-[#0D1B2A]">{selectedEvent.category || "-"}</p></div>
             </div>
             {selectedEvent.description && (
               <div className="p-3 rounded-xl" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}>

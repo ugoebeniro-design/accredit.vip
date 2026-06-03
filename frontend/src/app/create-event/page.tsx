@@ -477,6 +477,7 @@ const qrStyleConfig: Record<string, { wrapper: string; square: string }> = {
 
 export default function CreateEventPage() {
   const [mode, setMode] = useState<Mode | null>(null);
+  const [step, setStep] = useState(0);
   const [fingerprint, setFingerprint] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [usedTrials, setUsedTrials] = useState<Record<Mode, boolean>>({ invite: false, event: false });
@@ -869,199 +870,219 @@ export default function CreateEventPage() {
   };
 
   return (
+    <>
+    <style>{`
+      @keyframes pulse-accent {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(233,30,140,0.7); }
+        50% { box-shadow: 0 0 20px 10px rgba(233,30,140,0.3); }
+      }
+    `}</style>
     <div className="flex min-h-screen flex-col bg-white">
       <Navbar variant="light" />
 
       <main className="flex-1">
         <section className="px-4 py-6 sm:py-16 sm:px-6 lg:px-8 bg-white border-b border-[#e8edf2]">
           <div className="mx-auto grid max-w-6xl gap-6 lg:gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+            {step === 0 && (
             <div>
-              <p className="mb-2 sm:mb-4 text-xs font-bold uppercase tracking-[0.24em] text-[#E91E8C]">
-                Create Event
-              </p>
               <h1 className="max-w-3xl text-2xl sm:text-5xl lg:text-6xl font-black leading-tight text-[#0D1B2A]">
                 Test your invite
               </h1>
               <p className="mt-2 sm:mt-6 max-w-2xl text-sm sm:text-lg leading-6 sm:leading-8 text-gray-500">
                 Choose CREATE INVITE for private guest lists or POST EVENT for public discovery.
-                The test previews exactly what your guests will see — no payment required.
+                The test previews exactly what your guests will see - no payment required.
               </p>
             </div>
+            )}
 
-            <div className="rounded-2xl border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-600">
-                Choose one to get started
-              </p>
-              {/* Flier upload shortcut — gated by mode selection */}
-              {!mode ? (
-                <div className="mb-3 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                  <svg className="w-4 h-4 text-amber-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  <p className="text-sm font-medium text-amber-800">Please select CREATE INVITE or POST EVENT first</p>
-                </div>
-              ) : flierParsing ? (
-                <div className="mb-3 flex items-center gap-3 rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
-                  <div className="w-4 h-4 rounded-full border-2 border-[#E91E8C] border-t-transparent animate-spin flex-shrink-0" />
-                  <p className="text-sm font-semibold text-[#0D1B2A]">AI is reading your flier…</p>
-                </div>
-              ) : flierParsed ? (
-                <div className="mb-3 flex items-center gap-3 rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
-                  {flierPreview && <img src={flierPreview} alt="Flier" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-emerald-600">Flier parsed — form pre-filled</p>
-                    <p className="text-xs text-[#94a3b8] mt-0.5">Review the fields below and adjust as needed</p>
-                  </div>
-                  <label className="cursor-pointer text-xs font-bold text-[#E91E8C] hover:underline flex-shrink-0">
-                    Change
-                    <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} disabled={!mode} />
-                  </label>
-                </div>
-              ) : (
-                <label className={`mb-3 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-4 py-3 transition-colors ${mode ? "border-[#d9e2ec] bg-white hover:border-[#E91E8C]" : "border-gray-300 bg-gray-50 cursor-not-allowed opacity-50"}`}>
-                  <div className="w-8 h-8 rounded-lg bg-[#fff1f8] flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-[#0D1B2A]">Already have a flier? Upload to auto-fill</p>
-                    <p className="text-xs text-[#94a3b8] truncate">AI extracts title, date, lineup, tickets and more</p>
-                  </div>
-                  <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} disabled={!mode} />
-                </label>
-              )}
-              {flierParseError && (
-                <p className="mb-2 text-xs text-amber-600 font-medium px-1">{flierParseError}</p>
-              )}
+            {step === 0 && (
+              <div className="rounded-2xl border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-600">
+                  Choose one to get started
+                </p>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newMode = mode === "invite" ? null : "invite";
-                    if (newMode !== mode) {
-                      setForm({ ...DEFAULT_FORM });
-                      setPassPackages([{ name: "Regular", price: "" }]);
-                      setSocialHandles([{ platform: "instagram", handle: "" }]);
-                      setLineup([{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
-                      if (uploadedImagePreviewUrl) URL.revokeObjectURL(uploadedImagePreviewUrl);
-                      setUploadedImagePreviewUrl(null);
-                      setUploadedImageData(null);
-                      setDayPart(""); setMonthPart(""); setYearPart("");
-                      setFlierPreview(null); setFlierParsed(false); setFlierParseError("");
-                    }
-                    setMode(() => newMode);
-                    setMessage("");
-                    setError("");
-                    setTrialComplete(false);
-                  }}
-                  className={`rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${
-                    mode === "invite"
-                      ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
-                      : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
-                  }`}
-                >
-                  {/* Selection indicator */}
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">
-                      CREATE INVITE
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newMode = mode === "invite" ? null : "invite";
+                      if (newMode !== mode) {
+                        setForm({ ...DEFAULT_FORM });
+                        setPassPackages([{ name: "Regular", price: "" }]);
+                        setSocialHandles([{ platform: "instagram", handle: "" }]);
+                        setLineup([{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
+                        if (uploadedImagePreviewUrl) URL.revokeObjectURL(uploadedImagePreviewUrl);
+                        setUploadedImagePreviewUrl(null);
+                        setUploadedImageData(null);
+                        setDayPart(""); setMonthPart(""); setYearPart("");
+                        setFlierPreview(null); setFlierParsed(false); setFlierParseError("");
+                      }
+                      setMode(() => newMode);
+                      if (newMode) setStep(1); else setStep(0);
+                      setMessage("");
+                      setError("");
+                      setTrialComplete(false);
+                    }}
+                    className={`rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${
+                      mode === "invite"
+                        ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
+                        : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
+                    }`}
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">
+                        CREATE INVITE
+                      </span>
+                      <span
+                        className="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all"
+                        style={{
+                          borderColor: mode === "invite" ? "#E91E8C" : "#d1d5db",
+                          background: mode === "invite" ? "#E91E8C" : "white",
+                        }}
+                      >
+                        {mode === "invite" && (
+                          <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+                    <strong className="block text-xl font-black text-[#07182f]">Private invitation</strong>
+                    <span className="mt-2 block text-sm text-gray-500">
+                      Guest upload, RSVP, reminders, WhatsApp/SMS/Email, QR access.
                     </span>
                     <span
-                      className="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all"
-                      style={{
-                        borderColor: mode === "invite" ? "#E91E8C" : "#d1d5db",
-                        background: mode === "invite" ? "#E91E8C" : "white",
-                      }}
+                      className="mt-4 inline-flex items-center gap-1 text-xs font-bold"
+                      style={{ color: mode === "invite" ? "#E91E8C" : "#9ca3af" }}
                     >
-                      {mode === "invite" && (
-                        <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
+                      {mode === "invite" ? "Selected" : "Select"}
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
                     </span>
-                  </div>
-                  <strong className="block text-xl font-black text-[#07182f]">Private invitation</strong>
-                  <span className="mt-2 block text-sm text-gray-500">
-                    Guest upload, RSVP, reminders, WhatsApp/SMS/Email, QR access.
-                  </span>
-                  <span
-                    className="mt-4 inline-flex items-center gap-1 text-xs font-bold"
-                    style={{ color: mode === "invite" ? "#E91E8C" : "#9ca3af" }}
-                  >
-                    {mode === "invite" ? "Selected" : "Select"}
-                    <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </span>
-                </button>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newMode = mode === "event" ? null : "event";
-                    if (newMode !== mode) {
-                      setForm({ ...DEFAULT_FORM });
-                      setPassPackages([{ name: "Regular", price: "" }]);
-                      setSocialHandles([{ platform: "instagram", handle: "" }]);
-                      setLineup([{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
-                      if (uploadedImagePreviewUrl) URL.revokeObjectURL(uploadedImagePreviewUrl);
-                      setUploadedImagePreviewUrl(null);
-                      setUploadedImageData(null);
-                      setDayPart(""); setMonthPart(""); setYearPart("");
-                      setFlierPreview(null); setFlierParsed(false); setFlierParseError("");
-                    }
-                    setMode(() => newMode);
-                    setMessage("");
-                    setError("");
-                    setTrialComplete(false);
-                  }}
-                  className={`rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${
-                    mode === "event"
-                      ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
-                      : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
-                  }`}
-                >
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">
-                      POST EVENT
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newMode = mode === "event" ? null : "event";
+                      if (newMode !== mode) {
+                        setForm({ ...DEFAULT_FORM });
+                        setPassPackages([{ name: "Regular", price: "" }]);
+                        setSocialHandles([{ platform: "instagram", handle: "" }]);
+                        setLineup([{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
+                        if (uploadedImagePreviewUrl) URL.revokeObjectURL(uploadedImagePreviewUrl);
+                        setUploadedImagePreviewUrl(null);
+                        setUploadedImageData(null);
+                        setDayPart(""); setMonthPart(""); setYearPart("");
+                        setFlierPreview(null); setFlierParsed(false); setFlierParseError("");
+                      }
+                      setMode(() => newMode);
+                      if (newMode) setStep(1); else setStep(0);
+                      setMessage("");
+                      setError("");
+                      setTrialComplete(false);
+                    }}
+                    className={`rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${
+                      mode === "event"
+                        ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
+                        : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
+                    }`}
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">
+                        POST EVENT
+                      </span>
+                      <span
+                        className="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all"
+                        style={{
+                          borderColor: mode === "event" ? "#E91E8C" : "#d1d5db",
+                          background: mode === "event" ? "#E91E8C" : "white",
+                        }}
+                      >
+                        {mode === "event" && (
+                          <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+                    <strong className="block text-xl font-black text-[#07182f]">POST EVENT</strong>
+                    <span className="mt-2 block text-sm text-gray-500">
+                      Public listing on Discover Events, ticket sales, flyer/banner, lineup, gate fee.
                     </span>
                     <span
-                      className="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all"
-                      style={{
-                        borderColor: mode === "event" ? "#E91E8C" : "#d1d5db",
-                        background: mode === "event" ? "#E91E8C" : "white",
-                      }}
+                      className="mt-4 inline-flex items-center gap-1 text-xs font-bold"
+                      style={{ color: mode === "event" ? "#E91E8C" : "#9ca3af" }}
                     >
-                      {mode === "event" && (
-                        <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
+                      {mode === "event" ? "Selected" : "Select"}
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
                     </span>
-                  </div>
-                  <strong className="block text-xl font-black text-[#07182f]">POST EVENT</strong>
-                  <span className="mt-2 block text-sm text-gray-500">
-                    Public listing on Discover Events, ticket sales, flyer/banner, lineup, gate fee.
-                  </span>
-                  <span
-                    className="mt-4 inline-flex items-center gap-1 text-xs font-bold"
-                    style={{ color: mode === "event" ? "#E91E8C" : "#9ca3af" }}
-                  >
-                    {mode === "event" ? "Selected" : "Select"}
-                    <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </span>
-                </button>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
 
         <section className="px-4 py-14 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_390px]">
-            <form onSubmit={showEmailModal} className="rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-8">
+            <form id="create-event-form" onSubmit={showEmailModal} className={`rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-8 ${step === 1 ? '' : 'hidden'}`}>
+              {step === 1 && (
+              <>
+
+              {/* Previous button */}
+              <button
+                type="button"
+                onClick={() => { setStep(0); setMode(null); }}
+                className="mb-6 inline-flex items-center gap-2 rounded-xl border-2 border-[#d9e2ec] bg-white px-4 py-2.5 text-sm font-bold text-[#0D1B2A] transition-all hover:border-[#E91E8C]/50 hover:bg-[#fff1f8] hover:text-[#E91E8C]"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+              </button>
+
+              {/* Flier upload for both modes */}
+              <div className="mb-6">
+                {flierParsing ? (
+                  <div className="flex items-center gap-3 rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
+                    <div className="w-4 h-4 rounded-full border-2 border-[#E91E8C] border-t-transparent animate-spin flex-shrink-0" />
+                    <p className="text-sm font-semibold text-[#0D1B2A]">AI is reading your flier…</p>
+                  </div>
+                ) : flierParsed ? (
+                  <div className="flex items-center gap-3 rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
+                    {flierPreview && <img src={flierPreview} alt="Flier" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-emerald-600">Flier parsed - form pre-filled</p>
+                      <p className="text-xs text-[#94a3b8] mt-0.5">Review the fields below and adjust as needed</p>
+                    </div>
+                    <label className="cursor-pointer text-xs font-bold text-[#E91E8C] hover:underline flex-shrink-0">
+                      Change
+                      <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
+                    </label>
+                  </div>
+                ) : (
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#d9e2ec] bg-white px-4 py-3 transition-colors hover:border-[#E91E8C]">
+                    <div className="w-8 h-8 rounded-lg bg-[#fff1f8] flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-[#0D1B2A]">Already have a flier? Upload to auto-fill</p>
+                      <p className="text-xs text-[#94a3b8] truncate">AI extracts title, date, lineup, tickets and more</p>
+                    </div>
+                    <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
+                  </label>
+                )}
+                {flierParseError && (
+                  <p className="mt-2 text-xs text-amber-600 font-medium">{flierParseError}</p>
+                )}
+              </div>
+
               <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
@@ -1096,7 +1117,7 @@ export default function CreateEventPage() {
                     <div className="flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] px-4 py-3">
                       {flierPreview && <img src={flierPreview} alt="Flier" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />}
                       <div className="flex-1">
-                        <p className="text-sm font-bold text-emerald-600">Flier parsed — form pre-filled below</p>
+                        <p className="text-sm font-bold text-emerald-600">Flier parsed - form pre-filled below</p>
                         <p className="text-xs text-[#94a3b8] mt-0.5">Review each field and make any corrections before testing</p>
                       </div>
                       <label className="cursor-pointer text-xs font-bold text-[#E91E8C] hover:underline flex-shrink-0">
@@ -1129,9 +1150,14 @@ export default function CreateEventPage() {
 
               {/* Event template selection — POST EVENT only */}
               {mode === "event" && (
-                <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
-                  <legend className="px-2 text-sm font-semibold text-[#23466f]">Event flyer style</legend>
-                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                <details open className="rounded-xl border border-[#d9e2ec] p-4 group">
+                  <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
+                    <span className="px-2">Event flyer style</span>
+                    <svg className="w-4 h-4 text-[#94a3b8] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                     {inviteTemplates.filter(t => t.value !== null).map((template) => (
                       <div
                         key={String(template.value)}
@@ -1167,7 +1193,7 @@ export default function CreateEventPage() {
                       </div>
                     ))}
                   </div>
-                </fieldset>
+                </details>
               )}
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -1495,9 +1521,14 @@ export default function CreateEventPage() {
                     </label>
                   </div>
 
-                  <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
-                    <legend className="px-2 text-sm font-semibold text-[#23466f]">Invitation template style</legend>
-                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  <details open className="rounded-xl border border-[#d9e2ec] p-4 group">
+                    <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
+                      <span className="px-2">Invitation template style</span>
+                      <svg className="w-4 h-4 text-[#94a3b8] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </summary>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                       {inviteTemplates.map((template) => (
                         <div
                           key={String(template.value)}
@@ -1533,7 +1564,7 @@ export default function CreateEventPage() {
                         </div>
                       ))}
                     </div>
-                  </fieldset>
+                  </details>
 
                   {/* QR code option - AFTER template */}
                   <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
@@ -1933,255 +1964,286 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                 />
               </div>
 
-              {error && <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
-              {message && (
-                <div className="mt-5 rounded-xl bg-[#f7fbff] px-4 py-4 text-sm text-[#23466f]">
-                  <p className="font-semibold text-[#07182f]">{message}</p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-xl bg-white p-3">
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">Preview</p>
-                      <p className="mt-1 font-bold text-[#07182f]">{mode === "event" ? "Flyer ready" : "Invite ready"}</p>
-                    </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR</p>
-                      <p className="mt-1 font-bold text-[#07182f]">Ready</p>
-                    </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
-                        {mode === "event" ? "Discover" : "Channels"}
-                      </p>
-                      <p className="mt-1 font-bold text-[#07182f]">
-                        {mode === "event" ? "Publish after signup" : selectedChannelNames.join(" + ")}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                    <Link href="/register" className="btn-primary justify-center rounded-xl px-6 py-3">
-                      Continue with account
-                    </Link>
-                    <Link href="/contact" className="justify-center rounded-xl border border-[#d9e2ec] px-6 py-3 text-center font-semibold text-[#07182f]">
-                      Talk to sales
-                    </Link>
-                  </div>
-                </div>
-              )}
-
               <button
-                type="submit"
-                disabled={submitting || (hydrated && mode ? usedTrials[mode] : false)}
-                className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-sm font-bold text-white transition-all hover:bg-[#C4166F] disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                onClick={() => {
+                  const form = document.getElementById('create-event-form') as HTMLFormElement;
+                  if (form?.reportValidity()) {
+                    setStep(2);
+                  }
+                }}
+                className="mt-6 flex h-12 w-full items-center justify-center rounded-xl border-2 border-[#E91E8C] bg-white px-6 text-sm font-bold text-[#E91E8C] transition-all hover:bg-[#fff1f8]"
               >
-                {submitting ? "Preparing preview..." : "Test this feature"}
+                Next: Preview →
               </button>
+              </>
+              )}
             </form>
 
-            <aside className="sticky top-8 self-start rounded-2xl bg-white p-6 text-[#0D1B2A] shadow-[0_18px_48px_rgba(0,0,0,0.08)] border border-[#e8edf2]">
-              {mode === "event" ? (
-                <>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Flyer builder</p>
-                  <h3 className="mt-3 text-3xl font-black">Discovery preview</h3>
-                  <p className="mt-2 text-sm text-gray-500">
-                    POST EVENT creates a flyer/banner-style preview for Discover Events. Invite delivery pricing does not apply here.
-                  </p>
-                </>
-              ) : (
-                <div className="rounded-xl bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 border border-[#fce4f0]">
-                  <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
-                  </div>
-                  <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
-                  <p className="mt-2 text-sm text-gray-500">
-                    {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
-                  </p>
+            {step === 2 && (
+              <div className="space-y-6 lg:col-span-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="inline-flex items-center gap-2 rounded-xl border-2 border-[#d9e2ec] bg-white px-4 py-2.5 text-sm font-bold text-[#0D1B2A] transition-all hover:border-[#E91E8C]/50 hover:bg-[#fff1f8] hover:text-[#E91E8C]"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Previous: Edit form
+                </button>
 
-                  <div className="mt-5 space-y-2">
-                    {form.delivery_channels.length === 0 ? (
-                      <p className="rounded-xl bg-white/80 p-3 text-sm text-gray-500 border border-[#e8edf2]">Select at least one channel.</p>
-                    ) : (
-                      form.delivery_channels.map((channel) => (
-                        <div key={channel} className="flex items-center justify-between rounded-xl bg-white/80 p-3 text-sm border border-[#e8edf2]">
-                          <span className="text-gray-700">{channelLabels[channel]}</span>
-                          <strong className="text-[#0D1B2A]">{formatNaira(pricing[channel] * pricingUnits)}</strong>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-8 space-y-5">
-                {(uploadedImagePreviewUrl || form.generated_image_url) && (
-                  <div className="overflow-hidden rounded-xl bg-white">
-                    <img
-                      src={uploadedImagePreviewUrl || form.generated_image_url}
-                      alt="Event image"
-                      className="w-full object-cover"
-                    />
-                  </div>
-                )}
-                <div className="overflow-hidden rounded-xl bg-white text-[#07182f]">
-                  {(() => {
-                    const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
-                    const styles = activeTemplate ? templateStyles[activeTemplate] : null;
-                    const headerText = styles ? styles.textColor : "white";
-                    return (
-                      <>
-                        <div
-                          className="flex min-h-36 flex-col justify-end p-5"
-                          style={{
-                            background: styles ? styles.headerBg : (
-                              mode === "invite"
-                                ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
-                                : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)"
-                            ),
-                            color: headerText,
-                          }}
-                        >
-                          <p className="text-xs font-black uppercase tracking-[0.22em] opacity-75">
-                            {mode === "event" ? "Event flyer" : "Invite flyer"}
-                          </p>
-                          <h4 className="mt-3 text-3xl font-black leading-tight">{form.title || "Your Event Title"}</h4>
-                          <p className="mt-2 text-sm opacity-85">
-                            {detailsToBeCommunicated ? "Venue to be communicated" : form.venue || "Event venue"}
-                          </p>
-                        </div>
-                        <div className="p-4">
-                  <h4 className="text-xl font-black">{form.title || "Your Event Title"}</h4>
-                  <p className="mt-1 text-sm text-[#64748b]">{form.host_name || "Host name"}</p>
-                    {mode === "event" ? (
+                <aside className="sticky top-8 self-start rounded-2xl bg-white p-6 text-[#0D1B2A] shadow-[0_18px_48px_rgba(0,0,0,0.08)] border border-[#e8edf2]">
+                  {mode === "event" ? (
                     <>
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                        <div className="rounded-lg bg-[#f8fafc] p-2">
-                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
-                          <dd className="mt-1 font-semibold">{formatDisplayDate(form.event_date) || "Event date"}</dd>
-                        </div>
-                        <div className="rounded-lg bg-[#f8fafc] p-2">
-                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
-                          <dd className="mt-1 font-semibold">{form.event_time || "Event time"}</dd>
-                        </div>
-                        <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
-                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
-                          <dd className="mt-1 font-semibold">{form.venue || "Event venue"}</dd>
-                        </div>
-                        <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
-                          <dt className="font-bold uppercase tracking-widest text-[#475569]">
-                            {visiblePassPackages.length > 0 ? "Tickets / Gate fee" : "Gate fee"}
-                          </dt>
-                          {visiblePassPackages.length > 0 ? (
-                            visiblePassPackages.map((pkg, i) => (
-                              <dd key={i} className="mt-1 font-semibold">
-                                {pkg.name}{pkg.price ? ` — ${pkg.price}` : ""}
-                              </dd>
-                            ))
-                          ) : (
-                            <dd className="mt-1 font-semibold">Free entry</dd>
-                          )}
-                        </div>
-                        <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
-                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
-                        </div>
-                        <div className="rounded-lg bg-[#f8fafc] p-2">
-                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
-                          <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
-                        </div>
-                        <div className="rounded-lg bg-[#f8fafc] p-2">
-                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
-                          <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
-                        </div>
-                        {visibleSocialHandles.length > 0 && (
-                          <div className="rounded-lg bg-[#f8fafc] p-2">
-                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Social</dt>
-                            <dd className="mt-1 font-semibold truncate">{visibleSocialHandles[0].handle}</dd>
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-4 space-y-3 text-sm text-[#23466f]">
-                        {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
-                          ? (form.description || "").split(/\n{2,}/).map((para, i) => (
-                              <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
-                            ))
-                          : <p>Your event description will appear here in the test preview.</p>}
-                      </div>
-                      {visibleLineup.length > 0 && (
-                        <p className="mt-3 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
-                          Featuring: {visibleLineup.map((p) => p.name).filter(Boolean).join(" · ")}
-                        </p>
-                      )}
-                      {form.after_party_enabled && (
-                        <p className="mt-2 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
-                          After party at {form.after_party_location || "TBD"}{form.after_party_time ? ` by ${form.after_party_time}` : ""}
-                        </p>
-                      )}
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Flyer builder</p>
+                      <h3 className="mt-3 text-3xl font-black">Discovery preview</h3>
+                      <p className="mt-2 text-sm text-gray-500">
+                        POST EVENT creates a flyer/banner-style preview for Discover Events. Invite delivery pricing does not apply here.
+                      </p>
                     </>
                   ) : (
-                    <>
-                      <div className="mt-4 space-y-3 text-sm text-[#23466f]">
-                        <p className="font-semibold">Dear <span className="text-[#E91E8C]">[Guest Name]</span>,</p>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="rounded-lg bg-[#f8fafc] p-2">
-                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
-                            <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : formatDisplayDate(form.event_date) || "Event date"}</dd>
-                          </div>
-                          <div className="rounded-lg bg-[#f8fafc] p-2">
-                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
-                            <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.event_time || "Event time"}</dd>
-                          </div>
-                          <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
-                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
-                            <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.venue || "Event venue"}</dd>
-                          </div>
-                          <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
-                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
-                          </div>
-                          <div className="rounded-lg bg-[#f8fafc] p-2">
-                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
-                            <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
-                          </div>
-                          <div className="rounded-lg bg-[#f8fafc] p-2">
-                            <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
-                            <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
-                          </div>
-                        </div>
-                        {(() => {
-                          const desc = form.description || "";
-                          const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
-                          if (paragraphs.length === 0) {
-                            return <p className="mt-3">Your AI-generated or edited message will appear here in the test preview.</p>;
-                          }
-                          return paragraphs.map((para, i) => (
-                            <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
-                          ));
-                        })()}
+                    <div className="rounded-xl bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 border border-[#fce4f0]">
+                      <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
                       </div>
-                    </>
+                      <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
+                      <p className="mt-2 text-sm text-gray-500">
+                        {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
+                      </p>
+                      <div className="mt-5 space-y-2">
+                        {form.delivery_channels.length === 0 ? (
+                          <p className="rounded-xl bg-white/80 p-3 text-sm text-gray-500 border border-[#e8edf2]">Select at least one channel.</p>
+                        ) : (
+                          form.delivery_channels.map((channel) => (
+                            <div key={channel} className="flex items-center justify-between rounded-xl bg-white/80 p-3 text-sm border border-[#e8edf2]">
+                              <span className="text-gray-700">{channelLabels[channel]}</span>
+                              <strong className="text-[#0D1B2A]">{formatNaira(pricing[channel] * pricingUnits)}</strong>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
                   )}
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-                {mode === "invite" && form.qr_delivery !== "without_qr" && (
-                  <div className="rounded-xl bg-white p-4 text-[#07182f]">
-                    <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR code</p>
-                    {(form.qr_message || form.qr_delivery === "with_qr") && (
-                      <p className="mt-2 text-sm text-[#23466f]">{form.qr_message || "Attached to this invite is your QR code. Kindly present it at the event for entry."}</p>
+
+                  <div className="mt-8 space-y-5">
+                    {(uploadedImagePreviewUrl || form.generated_image_url) && (
+                      <div className="overflow-hidden rounded-xl bg-white">
+                        <img
+                          src={uploadedImagePreviewUrl || form.generated_image_url}
+                          alt="Event image"
+                          className="w-full object-cover"
+                        />
+                      </div>
                     )}
-                    <div className={`mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)] ${qrStyleConfig[form.qr_style]?.wrapper || "animate-pulse"}`}>
-                      {form.qr_style === "custom" ? (
-                        <div className="col-span-5 flex items-center justify-center text-[10px] text-gray-400 text-center">Your custom QR design</div>
+                    <div className="overflow-hidden rounded-xl bg-white text-[#07182f]">
+                      {(() => {
+                        const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
+                        const styles = activeTemplate ? templateStyles[activeTemplate] : null;
+                        const headerText = styles ? styles.textColor : "white";
+                        return (
+                          <>
+                            <div
+                              className="flex min-h-36 flex-col justify-end p-5"
+                              style={{
+                                background: styles ? styles.headerBg : (
+                                  mode === "invite"
+                                    ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
+                                    : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)"
+                                ),
+                                color: headerText,
+                              }}
+                            >
+                              <p className="text-xs font-black uppercase tracking-[0.22em] opacity-75">
+                                {mode === "event" ? "Event flyer" : "Invite flyer"}
+                              </p>
+                              <h4 className="mt-3 text-3xl font-black leading-tight">{form.title || "Your Event Title"}</h4>
+                              <p className="mt-2 text-sm opacity-85">
+                                {detailsToBeCommunicated ? "Venue to be communicated" : form.venue || "Event venue"}
+                              </p>
+                            </div>
+                            <div className="p-4">
+                      <h4 className="text-xl font-black">{form.title || "Your Event Title"}</h4>
+                      <p className="mt-1 text-sm text-[#64748b]">{form.host_name || "Host name"}</p>
+                        {mode === "event" ? (
+                        <>
+                          <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                            <div className="rounded-lg bg-[#f8fafc] p-2">
+                              <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
+                              <dd className="mt-1 font-semibold">{formatDisplayDate(form.event_date) || "Event date"}</dd>
+                            </div>
+                            <div className="rounded-lg bg-[#f8fafc] p-2">
+                              <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
+                              <dd className="mt-1 font-semibold">{form.event_time || "Event time"}</dd>
+                            </div>
+                            <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                              <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
+                              <dd className="mt-1 font-semibold">{form.venue || "Event venue"}</dd>
+                            </div>
+                            <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                              <dt className="font-bold uppercase tracking-widest text-[#475569]">
+                                {visiblePassPackages.length > 0 ? "Tickets / Gate fee" : "Gate fee"}
+                              </dt>
+                              {visiblePassPackages.length > 0 ? (
+                                visiblePassPackages.map((pkg, i) => (
+                                  <dd key={i} className="mt-1 font-semibold">
+                                    {pkg.name}{pkg.price ? ` - ${pkg.price}` : ""}
+                                  </dd>
+                                ))
+                              ) : (
+                                <dd className="mt-1 font-semibold">Free entry</dd>
+                              )}
+                            </div>
+                            <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                              <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
+                            </div>
+                            <div className="rounded-lg bg-[#f8fafc] p-2">
+                              <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
+                              <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
+                            </div>
+                            <div className="rounded-lg bg-[#f8fafc] p-2">
+                              <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
+                              <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
+                            </div>
+                            {visibleSocialHandles.length > 0 && (
+                              <div className="rounded-lg bg-[#f8fafc] p-2">
+                                <dt className="font-bold uppercase tracking-widest text-[#475569]">Social</dt>
+                                <dd className="mt-1 font-semibold truncate">{visibleSocialHandles[0].handle}</dd>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                            {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
+                              ? (form.description || "").split(/\n{2,}/).map((para, i) => (
+                                  <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                                ))
+                              : <p>Your event description will appear here in the test preview.</p>}
+                          </div>
+                          {visibleLineup.length > 0 && (
+                            <p className="mt-3 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
+                              Featuring: {visibleLineup.map((p) => p.name).filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                          {form.after_party_enabled && (
+                            <p className="mt-2 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
+                              After party at {form.after_party_location || "TBD"}{form.after_party_time ? ` by ${form.after_party_time}` : ""}
+                            </p>
+                          )}
+                        </>
                       ) : (
-                        Array.from({ length: 25 }).map((_, index) => (
-                          <span
-                            key={index}
-                            className={`rounded-sm ${qrStyleConfig[form.qr_style]?.square || ""} ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
-                          />
-                        ))
+                        <>
+                          <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                            <p className="font-semibold">Dear <span className="text-[#E91E8C]">[Guest Name]</span>,</p>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="rounded-lg bg-[#f8fafc] p-2">
+                                <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
+                                <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : formatDisplayDate(form.event_date) || "Event date"}</dd>
+                              </div>
+                              <div className="rounded-lg bg-[#f8fafc] p-2">
+                                <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
+                                <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.event_time || "Event time"}</dd>
+                              </div>
+                              <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
+                                <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.venue || "Event venue"}</dd>
+                              </div>
+                              <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
+                              </div>
+                              <div className="rounded-lg bg-[#f8fafc] p-2">
+                                <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
+                                <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
+                              </div>
+                              <div className="rounded-lg bg-[#f8fafc] p-2">
+                                <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
+                                <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
+                              </div>
+                            </div>
+                            {(() => {
+                              const desc = form.description || "";
+                              const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
+                              if (paragraphs.length === 0) {
+                                return <p className="mt-3">Your AI-generated or edited message will appear here in the test preview.</p>;
+                              }
+                              return paragraphs.map((para, i) => (
+                                <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                              ));
+                            })()}
+                          </div>
+                        </>
                       )}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                    {mode === "invite" && form.qr_delivery !== "without_qr" && (
+                      <div className="rounded-xl bg-white p-4 text-[#07182f]">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR code</p>
+                        {(form.qr_message || form.qr_delivery === "with_qr") && (
+                          <p className="mt-2 text-sm text-[#23466f]">{form.qr_message || "Attached to this invite is your QR code. Kindly present it at the event for entry."}</p>
+                        )}
+                        <div className={`mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)] ${qrStyleConfig[form.qr_style]?.wrapper || "animate-pulse"}`}>
+                          {form.qr_style === "custom" ? (
+                            <div className="col-span-5 flex items-center justify-center text-[10px] text-gray-400 text-center">Your custom QR design</div>
+                          ) : (
+                            Array.from({ length: 25 }).map((_, index) => (
+                              <span
+                                key={index}
+                                className={`rounded-sm ${qrStyleConfig[form.qr_style]?.square || ""} ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
+                              />
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </aside>
+
+                <button
+                  type="submit"
+                  form="create-event-form"
+                  disabled={submitting || (hydrated && mode ? usedTrials[mode] : false)}
+                  className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-sm font-bold text-white transition-all hover:bg-[#C4166F] disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ animation: 'pulse-accent 2s infinite' }}
+                >
+                  {submitting ? "Preparing preview..." : "Test this feature"}
+                </button>
+
+                {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
+                {message && (
+                  <div className="rounded-xl bg-[#f7fbff] px-4 py-4 text-sm text-[#23466f]">
+                    <p className="font-semibold text-[#07182f]">{message}</p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl bg-white p-3">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">Preview</p>
+                        <p className="mt-1 font-bold text-[#07182f]">{mode === "event" ? "Flyer ready" : "Invite ready"}</p>
+                      </div>
+                      <div className="rounded-xl bg-white p-3">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR</p>
+                        <p className="mt-1 font-bold text-[#07182f]">Ready</p>
+                      </div>
+                      <div className="rounded-xl bg-white p-3">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
+                          {mode === "event" ? "Discover" : "Channels"}
+                        </p>
+                        <p className="mt-1 font-bold text-[#07182f]">
+                          {mode === "event" ? "Publish after signup" : selectedChannelNames.join(" + ")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                      <Link href="/register" className="btn-primary justify-center rounded-xl px-6 py-3">
+                        Continue with account
+                      </Link>
+                      <Link href="/contact" className="justify-center rounded-xl border border-[#d9e2ec] px-6 py-3 text-center font-semibold text-[#07182f]">
+                        Talk to sales
+                      </Link>
                     </div>
                   </div>
                 )}
               </div>
-            </aside>
+            )}
           </div>
         </section>
       </main>
@@ -2296,5 +2358,6 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
 
       <Footer />
     </div>
+    </>
   );
 }
