@@ -682,3 +682,10 @@ export async function downloadDataExport(groupId: number): Promise<void> {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+export async function changeEmail(newEmail: string, password: string) {
+  return apiClient<{ message: string; email: string }>("/auth/email", {
+    method: "PUT",
+    body: { new_email: newEmail, password },
+  });
+}
