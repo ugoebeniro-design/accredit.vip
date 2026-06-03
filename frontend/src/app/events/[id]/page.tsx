@@ -281,14 +281,34 @@ function PublicEventContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </span>
-              <div>
+              <div className="flex-1">
                 <p className="text-xs font-bold uppercase tracking-wider text-[#94a3b8]">Venue</p>
                 <p className="text-sm font-semibold text-[#0D1B2A] mt-0.5">{event.venue}</p>
-                {event.map_link && (
-                  <a href={event.map_link} target="_blank" rel="noopener noreferrer" className="text-xs text-[#E91E8C] font-semibold mt-1 inline-block hover:underline">
-                    View on map →
-                  </a>
-                )}
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  {event.latitude && event.longitude ? (
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${event.latitude},${event.longitude}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                      style={{ background: "rgba(233,30,140,0.1)", color: "#E91E8C" }}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                      </svg>
+                      Get Directions
+                    </a>
+                  ) : event.map_link ? (
+                    <a href={event.map_link} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                      style={{ background: "rgba(233,30,140,0.1)", color: "#E91E8C" }}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      View on Map
+                    </a>
+                  ) : null}
+                </div>
               </div>
             </div>
 

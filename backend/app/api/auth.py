@@ -280,6 +280,11 @@ async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(g
     return {"message": "Password reset successful"}
 
 
+class UpdateEmailRequest(BaseModel):
+    new_email: str
+    password: str
+
+
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
@@ -297,3 +302,26 @@ async def change_password(
     user.password_hash = hash_password(req.new_password)
     await db.commit()
     return {"message": "Password changed successfully"}
+
+
+@router.put("/email")
+async def update_email(
+    req: UpdateEmailRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(req.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Password is incorrect")
+
+    if req.new_email == user.email:
+        raise HTTPException(status_code=400, detail="New email is the same as current email")
+
+    result = await db.execute(select(User).where(User.email == req.new_email))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Email already in use")
+
+    user.email = req.new_email
+    user.is_verified = False
+    await db.commit()
+    await db.refresh(user)
+    return {"message": "Email updated successfully", "email": user.email}

@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_WHATSAPP_FROM: str = ""
+    WHATSAPP_CLOUD_TOKEN: str = ""
+    WHATSAPP_CLOUD_PHONE_ID: str = ""
     SMTP_HOST: str = ""
     SMTP_PORT: int = 465
     SMTP_USERNAME: str = ""

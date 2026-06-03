@@ -32,20 +32,21 @@ async def send_email_with_images(to: str, subject: str, html: str, images: list[
     return True
 
 
-def _build_multipart_with_images(html: str, images: list[tuple[str, str]]) -> str:
+def _build_multipart_with_images(html: str, images: list[tuple[str, str]]) -> MIMEMultipart:
     msg = MIMEMultipart("related")
     msg.attach(MIMEText(html, "html"))
     for cid, filepath in images:
         try:
             with open(filepath, "rb") as f:
                 img_data = f.read()
-            img = MIMEImage(img_data)
+            subtype = filepath.rsplit(".", 1)[-1] if "." in filepath else None
+            img = MIMEImage(img_data, _subtype=subtype)
             img.add_header("Content-ID", f"<{cid}>")
             img.add_header("Content-Disposition", "inline")
             msg.attach(img)
         except Exception as e:
             print(f"[Email] Failed to attach image {filepath}: {e}")
-    return msg.as_string()
+    return msg
 
 
 async def _send_smtp(to: str, subject: str, html: str, from_addr: str) -> bool:
@@ -79,7 +80,11 @@ async def _send_smtp(to: str, subject: str, html: str, from_addr: str) -> bool:
 async def _send_smtp_with_images(to: str, subject: str, html: str, images: list[tuple[str, str]], from_addr: str) -> bool:
     def _sync_send():
         try:
-            msg_str = _build_multipart_with_images(html, images)
+            msg = _build_multipart_with_images(html, images)
+            msg["Subject"] = subject
+            msg["From"] = from_addr
+            msg["To"] = to
+            msg_str = msg.as_string()
             ctx = ssl.create_default_context()
             with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, context=ctx, timeout=10) as server:
                 server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)

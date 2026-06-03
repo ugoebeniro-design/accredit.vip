@@ -33,7 +33,7 @@ export default function RootLayout({
       lang="en"
       className={`${plusJakartaSans.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" style={{ fontFamily: "var(--font-plus-jakarta), system-ui, sans-serif" }}>
         <AuthProvider>
           {children}
           <ClientProviders />

@@ -19,6 +19,11 @@ export type EventData = {
   event_time: string;
   timezone: string;
   venue: string;
+  city: string | null;
+  state: string | null;
+  country: string;
+  latitude: number | null;
+  longitude: number | null;
   guest_count_range: string;
   status: string;
   is_public: boolean;
@@ -35,6 +40,7 @@ export type EventData = {
   after_party_location: string | null;
   after_party_time: string | null;
   slug: string | null;
+  distance_km?: number;
 };
 
 export type EventFilters = {
@@ -45,6 +51,9 @@ export type EventFilters = {
   price_type?: string;
   date_from?: string;
   date_to?: string;
+  near_lat?: number;
+  near_lng?: number;
+  radius_km?: number;
 };
 
 export type CreateEventInput = {
@@ -55,6 +64,11 @@ export type CreateEventInput = {
   event_time: string;
   timezone?: string;
   venue: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
   guest_count_range: string;
   is_public?: boolean;
   category?: string;
@@ -90,6 +104,9 @@ export async function getPublicEvents(filters?: EventFilters): Promise<EventData
   if (filters?.price_type) params.set("price_type", filters.price_type);
   if (filters?.date_from) params.set("date_from", filters.date_from);
   if (filters?.date_to) params.set("date_to", filters.date_to);
+  if (filters?.near_lat) params.set("near_lat", String(filters.near_lat));
+  if (filters?.near_lng) params.set("near_lng", String(filters.near_lng));
+  if (filters?.radius_km) params.set("radius_km", String(filters.radius_km));
   const qs = params.toString();
   return apiClient(`/events/public${qs ? `?${qs}` : ""}`);
 }

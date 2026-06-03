@@ -140,10 +140,9 @@ def qr_gif_to_base64(data: str, size: int = 200, style: str = "pulsing") -> str:
 
 
 def qr_gif_to_url(data: str, size: int = 200, style: str = "pulsing") -> str | None:
-    """Generate animated QR code GIF, save to uploads, return URL."""
+    """Generate animated QR code GIF, save to uploads, return relative URL."""
     import os
     from datetime import datetime
-    from app.core.config import settings as app_settings
     try:
         gif_bytes = generate_animated_qr_gif(data, size, style=style)
         upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "qrs")
@@ -152,6 +151,6 @@ def qr_gif_to_url(data: str, size: int = 200, style: str = "pulsing") -> str | N
         filepath = os.path.join(upload_dir, filename)
         with open(filepath, "wb") as f:
             f.write(gif_bytes)
-        return f"{app_settings.BACKEND_URL}/uploads/qrs/{filename}"
+        return f"/uploads/qrs/{filename}"
     except Exception:
         return None

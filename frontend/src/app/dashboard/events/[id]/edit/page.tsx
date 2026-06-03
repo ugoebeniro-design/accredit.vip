@@ -31,6 +31,7 @@ export default function EditEventPage() {
     ticket_price: "",
     tickets_available: "",
   });
+  const [locationData, setLocationData] = useState<{ city: string | null; state: string | null; country: string | null; lat: number | null; lng: number | null }>({ city: null, state: null, country: "Nigeria", lat: null, lng: null });
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
@@ -73,6 +74,11 @@ export default function EditEventPage() {
         category: form.event_type,
         ticket_price: form.ticket_price ? Number(form.ticket_price) : undefined,
         tickets_available: form.tickets_available ? Number(form.tickets_available) : undefined,
+        city: locationData.city || event?.city || undefined,
+        state: locationData.state || event?.state || undefined,
+        country: locationData.country || event?.country || "Nigeria",
+        latitude: locationData.lat ?? event?.latitude ?? undefined,
+        longitude: locationData.lng ?? event?.longitude ?? undefined,
       });
       router.push(`/dashboard/events/${id}`);
     } catch (err) {
@@ -277,6 +283,7 @@ export default function EditEventPage() {
             <VenueInput
               value={form.venue}
               onChange={(v) => setForm({ ...form, venue: v })}
+              onLocationChange={setLocationData}
               required
             />
           </div>

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Date, Time, ForeignKey, JSON, func
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Date, Time, Float, ForeignKey, JSON, func
 from app.core.database import Base
 
 
@@ -15,6 +15,11 @@ class Event(Base):
     event_time = Column(Time, nullable=False)
     timezone = Column(String, default="WAT")
     venue = Column(String, nullable=False)
+    city = Column(String, nullable=True)
+    state = Column(String, nullable=True)
+    country = Column(String, default="Nigeria")
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     map_link = Column(String, nullable=True)
     dress_code = Column(String, nullable=True)
     description = Column(Text, nullable=True)

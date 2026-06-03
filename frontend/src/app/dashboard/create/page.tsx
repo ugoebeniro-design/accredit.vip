@@ -723,41 +723,41 @@ export default function CreateEventPage() {
             {submitting ? "Creating…" : mode === "event" ? "Publish Event" : "Create Invite"}
           </button>
           </>)}
-        </form>
 
-        {/* Sticky Bottom Navigation Bar for Form Pages */}
-        <div className="sticky bottom-4 z-30 flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-white px-4 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
-          <button
-            type="button"
-            onClick={() => {
-              if (formPage === 0) {
-                setMode(null);
-              } else {
-                setFormPage(formPage - 1);
-              }
-            }}
-            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Previous
-          </button>
-          {formPage < 2 && (
-          <button
-            type="button"
-            onClick={() => setFormPage(formPage + 1)}
-            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
-          >
-            Next
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          )}
-        </div>
+          {/* Sticky Bottom Navigation Bar for Form Pages */}
+          <div className="sticky bottom-4 z-30 flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-white px-4 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
+            <button
+              type="button"
+              onClick={() => {
+                if (formPage === 0) {
+                  setMode(null);
+                } else {
+                  setFormPage(formPage - 1);
+                }
+              }}
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Previous
+            </button>
+            {formPage < 2 && (
+            <button
+              type="button"
+              onClick={() => setFormPage(formPage + 1)}
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
+            >
+              Next
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            )}
+          </div>
+        </form>
       </div>
     </div>
   );

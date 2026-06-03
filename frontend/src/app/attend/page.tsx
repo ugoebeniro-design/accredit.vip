@@ -27,6 +27,12 @@ function formatCardTime(timeStr: string): string {
   return `${h % 12 || 12}:${String(min).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
 }
 
+function formatDistance(km: number | undefined): string | null {
+  if (km === undefined || km === null) return null;
+  if (km < 1) return `${Math.round(km * 1000)}m away`;
+  return `${km.toFixed(1)}km away`;
+}
+
 const CATEGORIES = [
   { value: "", label: "All Events" },
   { value: "concert", label: "Concert" },
@@ -84,6 +90,10 @@ function AttendContent() {
   const [location, setLocation] = useState("Lagos");
   const [month, setMonth] = useState(0);
   const [priceType, setPriceType] = useState("");
+  const [nearLat, setNearLat] = useState<number | undefined>(undefined);
+  const [nearLng, setNearLng] = useState<number | undefined>(undefined);
+  const [findingLocation, setFindingLocation] = useState(false);
+  const [, setGeoError] = useState<string | null>(null);
 
   const buildFilters = () => ({
     search: search || undefined,
@@ -91,6 +101,9 @@ function AttendContent() {
     location: location || undefined,
     month: month || undefined,
     price_type: priceType || undefined,
+    near_lat: nearLat,
+    near_lng: nearLng,
+    radius_km: nearLat ? 50 : undefined,
   });
 
   const loadEvents = useCallback(async (filters?: EventFilters) => {
@@ -109,12 +122,36 @@ function AttendContent() {
     loadEvents(buildFilters());
   };
 
+  const handleNearMe = () => {
+    if (!navigator.geolocation) {
+      setGeoError("Geolocation is not supported by your browser");
+      return;
+    }
+    setFindingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setNearLat(lat);
+        setNearLng(lng);
+        setFindingLocation(false);
+        loadEvents({ ...buildFilters(), near_lat: lat, near_lng: lng, radius_km: 50 });
+      },
+      (err) => {
+        setFindingLocation(false);
+        setGeoError(err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const handleReset = () => {
     setSearch(""); setCategory(""); setLocation("Lagos"); setMonth(0); setPriceType("");
+    setNearLat(undefined); setNearLng(undefined);
     loadEvents({ location: "Lagos" });
   };
 
-  const filtersActive = search || category || location !== "Lagos" || month || priceType;
+  const filtersActive = search || category || location !== "Lagos" || month || priceType || nearLat !== undefined;
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
@@ -175,12 +212,23 @@ function AttendContent() {
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative flex-1 min-w-[160px] max-w-xs">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-              <input type="text" placeholder="Location..." value={location}
+              <input type="text" placeholder="City or state..." value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                onBlur={() => loadEvents(buildFilters())}
+                onBlur={() => { setNearLat(undefined); setNearLng(undefined); loadEvents(buildFilters()); }}
                 className="w-full h-9 pl-8 pr-3 rounded-lg border border-[#d9e2ec] text-xs outline-none focus:border-[#E91E8C]"
               />
             </div>
+            <button onClick={handleNearMe} disabled={findingLocation}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold transition-all"
+              style={{ background: nearLat ? "linear-gradient(135deg, #E91E8C, #C4166F)" : "#f1f5f9", color: nearLat ? "white" : "#64748b" }}
+            >
+              {findingLocation ? (
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              )}
+              {nearLat ? "Nearby" : "Near Me"}
+            </button>
             <select value={month} onChange={(e) => { setMonth(Number(e.target.value)); loadEvents({ ...buildFilters(), month: Number(e.target.value) || undefined }); }}
               className="h-9 px-3 rounded-lg border border-[#d9e2ec] text-xs outline-none focus:border-[#E91E8C] text-gray-500"
             >
@@ -280,6 +328,9 @@ function AttendContent() {
                               <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                             <span className="truncate">{event.venue}</span>
+                            {event.distance_km !== undefined && (
+                              <span className="flex-shrink-0 font-medium" style={{ color: "#E91E8C" }}>{formatDistance(event.distance_km)}</span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-gray-400">
                             <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

@@ -25,7 +25,7 @@ const DEFAULT_FORM = {
   after_party_location: "",
   after_party_time: "",
   guest_range: "1 - 100",
-  delivery_channels: ["whatsapp"] as Channel[],
+  delivery_channels: [] as Channel[],
   qr_delivery: "with_qr" as QrDeliveryOption,
   qr_later_title: "",
   qr_later_message: "",
@@ -479,7 +479,7 @@ export default function CreateEventPage() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [step, setStep] = useState(0);
   const [formPage, setFormPage] = useState(0);
-  const totalFormPages = mode === "event" ? 4 : 3;
+  const totalFormPages = 3;
   const [fingerprint, setFingerprint] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [usedTrials, setUsedTrials] = useState<Record<Mode, boolean>>({ invite: false, event: false });
@@ -545,29 +545,6 @@ export default function CreateEventPage() {
   }, []);
 
   useEffect(() => {
-    const savedMode = localStorage.getItem("accredit_last_mode") as Mode | null;
-    if (savedMode) setMode(savedMode);
-    const key = DRAFT_KEYS[savedMode || "invite"];
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.form) setForm(parsed.form);
-        if (parsed.passPackages) setPassPackages(parsed.passPackages);
-        if (parsed.socialHandles) setSocialHandles(parsed.socialHandles);
-        if (parsed.lineup) setLineup(parsed.lineup);
-        if (parsed.uploadedImageData) {
-          setUploadedImageData(parsed.uploadedImageData);
-          setUploadedImagePreviewUrl(URL.createObjectURL(dataUriToBlob(parsed.uploadedImageData)));
-        }
-        if (parsed.form?.event_date) {
-          const parts = parseDateParts(parsed.form.event_date);
-          setDayPart(String(parseInt(parts.day || "0", 10)) || "");
-          setMonthPart(parts.month || "");
-          setYearPart(parts.year || "");
-        }
-      } catch {}
-    }
     const timer = window.setTimeout(() => {
       setFingerprint(getTrialFingerprint());
       setHydrated(true);
@@ -1029,14 +1006,34 @@ export default function CreateEventPage() {
           </div>
         </section>
 
-        <section className={`px-4 sm:px-6 lg:px-8 ${step > 0 ? 'py-4' : 'py-14'}`}>
+        <section className={`px-4 sm:px-6 lg:px-8 ${step > 0 ? 'pt-2 pb-0' : 'py-14'}`}>
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_390px]">
             <form id="create-event-form" onSubmit={showEmailModal} className={`rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-8 ${step === 1 ? '' : 'hidden'}`}>
               {step === 1 && (
               <>
               {formPage === 0 && (<>
 
-              {/* Flier upload for both modes */}
+              {/* Mode header */}
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">
+                      {mode === "event" ? "Post Event Test" : "Create Invite Test"}
+                    </p>
+                  </div>
+                  <h2 className="mt-2 text-2xl font-black text-[#07182f]">
+                    {mode ? "Try it once, then continue securely" : "Choose a flow above"}
+                  </h2>
+                </div>
+                {mode && usedTrials[mode] && (
+                  <span className="rounded-full bg-[#fff1f8] px-3 py-1 text-xs font-bold text-[#C4166F]">
+                    Trial already used
+                  </span>
+                )}
+              </div>
+
+              {/* Flier upload - INVITE only */}
+              {mode === "invite" && (
               <div className="mb-6">
                 {flierParsing ? (
                   <div className="flex items-center gap-3 rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
@@ -1073,28 +1070,7 @@ export default function CreateEventPage() {
                   <p className="mt-2 text-xs text-amber-600 font-medium">{flierParseError}</p>
                 )}
               </div>
-
-              <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">
-                      {mode === "event" ? "Post Event Test" : "Create Invite Test"}
-                    </p>
-                  </div>
-                  <h2 className="mt-2 text-2xl font-black text-[#07182f]">
-                    {mode ? "Try it once, then continue securely" : "Choose a flow above"}
-                  </h2>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-[#64748b]">
-                    One trial is allowed per feature before signup. The server checks browser fingerprint,
-                    IP signature, and rate limits, so refreshing or clearing local storage cannot unlock extra tests.
-                  </p>
-                </div>
-                {mode && usedTrials[mode] && (
-                  <span className="rounded-full bg-[#fff1f8] px-3 py-1 text-xs font-bold text-[#C4166F]">
-                    Trial already used
-                  </span>
-                )}
-              </div>
+              )}
 
               {/* Flier upload strip — POST EVENT only */}
               {mode === "event" && (
@@ -1141,7 +1117,7 @@ export default function CreateEventPage() {
 
               {/* Event template selection — POST EVENT only */}
               {mode === "event" && (
-                <details open className="rounded-xl border border-[#d9e2ec] p-4 group">
+                <details className="rounded-xl border border-[#d9e2ec] p-4 group">
                   <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
                     <span className="px-2">Event flyer style</span>
                     <svg className="w-4 h-4 text-[#94a3b8] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -1514,7 +1490,7 @@ export default function CreateEventPage() {
                     </label>
                   </div>
 
-                  <details open className="rounded-xl border border-[#d9e2ec] p-4 group">
+                  <details className="rounded-xl border border-[#d9e2ec] p-4 group">
                     <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
                       <span className="px-2">Invitation template style</span>
                       <svg className="w-4 h-4 text-[#94a3b8] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -1963,54 +1939,53 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
               )}
               </>
               )}
-            </form>
-
-            {/* Sticky Bottom Navigation Bar for Form Pages */}
-            {(step === 1) && mode && (
-              <div className="sticky bottom-4 z-30 flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-white px-4 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (formPage === 0) {
-                      setStep(0); setMode(null);
-                    } else if (mode === "event" && formPage === 1) {
-                      setFormPage(0);
-                    } else {
-                      setFormPage(formPage - 1);
-                    }
-                  }}
-                  className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (formPage === totalFormPages - 1) {
-                      const form = document.getElementById('create-event-form') as HTMLFormElement;
-                      if (form?.reportValidity()) {
-                        setStep(2);
+              {/* Sticky Bottom Navigation Bar for Form Pages */}
+              {(step === 1) && mode && (
+                <div className="sticky bottom-4 z-30 flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-white px-4 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formPage === 0) {
+                        setStep(0); setMode(null);
+                      } else if (mode === "event" && formPage === 1) {
+                        setFormPage(0);
+                      } else {
+                        setFormPage(formPage - 1);
                       }
-                    } else if (mode === "event" && formPage === 0) {
-                      setFormPage(2);
-                    } else {
-                      setFormPage(formPage + 1);
-                    }
-                  }}
-                  className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
-                >
-                  {formPage === totalFormPages - 1 ? "Next: Preview" : "Next"}
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            )}
+                    }}
+                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formPage === totalFormPages - 1) {
+                        const form = document.getElementById('create-event-form') as HTMLFormElement;
+                        if (form?.reportValidity()) {
+                          setStep(2);
+                        }
+                      } else if (mode === "event" && formPage === 0) {
+                        setFormPage(2);
+                      } else {
+                        setFormPage(formPage + 1);
+                      }
+                    }}
+                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
+                  >
+                    {formPage === totalFormPages - 1 ? "Next: Preview" : "Next"}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </form>
 
             {step === 2 && (
               <div className="space-y-6 lg:col-span-2">

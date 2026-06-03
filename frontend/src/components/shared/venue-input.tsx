@@ -2,19 +2,36 @@
 
 import { useState, useRef, useEffect } from "react";
 
+export type LocationData = {
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  lat: number | null;
+  lng: number | null;
+  display_name: string;
+};
+
 type Suggestion = {
   display_name: string;
   lat: string;
   lon: string;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    state?: string;
+    country?: string;
+  };
 };
 
 type VenueInputProps = {
   value: string;
   onChange: (value: string) => void;
+  onLocationChange?: (loc: LocationData) => void;
   required?: boolean;
 };
 
-export function VenueInput({ value, onChange, required }: VenueInputProps) {
+export function VenueInput({ value, onChange, onLocationChange, required }: VenueInputProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -39,7 +56,7 @@ export function VenueInput({ value, onChange, required }: VenueInputProps) {
     timer.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=5&accept-language=en`,
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=5&accept-language=en&addressdetails=1`,
           { headers: { "User-Agent": "AccreditVIP/1.0" } }
         );
         const data: Suggestion[] = await res.json();
@@ -52,6 +69,15 @@ export function VenueInput({ value, onChange, required }: VenueInputProps) {
 
   const select = (s: Suggestion) => {
     onChange(s.display_name);
+    const addr = s.address || {};
+    onLocationChange?.({
+      display_name: s.display_name,
+      city: addr.city || addr.town || addr.village || null,
+      state: addr.state || null,
+      country: addr.country || null,
+      lat: parseFloat(s.lat) || null,
+      lng: parseFloat(s.lon) || null,
+    });
     setSuggestions([]);
     setOpen(false);
   };

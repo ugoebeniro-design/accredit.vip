@@ -1,9 +1,9 @@
-import re, unicodedata
+import re, math, unicodedata
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func
+from sqlalchemy import select, or_, and_, func
 from pydantic import BaseModel
-from datetime import date, time
+from datetime import date, time, datetime
 from typing import Any
 
 from app.core.database import get_db
@@ -41,6 +41,11 @@ class EventCreateRequest(BaseModel):
     event_date: date
     event_time: time
     venue: str
+    city: str | None = None
+    state: str | None = None
+    country: str = "Nigeria"
+    latitude: float | None = None
+    longitude: float | None = None
     map_link: str | None = None
     dress_code: str | None = None
     description: str | None = None
@@ -56,6 +61,47 @@ class EventCreateRequest(BaseModel):
     after_party_enabled: bool = False
     after_party_location: str | None = None
     after_party_time: str | None = None
+
+
+class EventPublicResponse(BaseModel):
+    id: int
+    organizer_id: int
+    title: str
+    slug: str | None
+    event_type: str
+    host_name: str
+    event_date: date
+    event_time: time
+    timezone: str
+    venue: str
+    city: str | None
+    state: str | None
+    country: str
+    latitude: float | None
+    longitude: float | None
+    map_link: str | None
+    dress_code: str | None
+    description: str | None
+    cover_image: str | None
+    guest_count_range: str
+    status: str
+    is_public: bool
+    category: str | None
+    ticket_price: int | None
+    tickets_available: int | None
+    pass_packages: list[dict[str, Any]] | None
+    lineup: list[dict[str, Any]] | None
+    after_party_enabled: bool
+    after_party_location: str | None
+    after_party_time: str | None
+    review_status: str
+    review_note: str | None
+    flagged_keywords: list[str] | None
+    created_at: datetime | None
+    updated_at: datetime | None
+    distance_km: float | None = None
+
+    model_config = {"from_attributes": True}
 
 
 @router.post("")
@@ -107,16 +153,19 @@ async def list_events(
     return result.scalars().all()
 
 
-@router.get("/public")
+@router.get("/public", response_model=list[EventPublicResponse])
 async def list_public_events(
     db: AsyncSession = Depends(get_db),
     search: str = Query(None, description="Search by title or venue"),
     category: str = Query(None, description="Filter by category"),
-    location: str = Query(None, description="Filter by venue/location"),
+    location: str = Query(None, description="Filter by city or state name"),
     month: int = Query(None, description="Filter by month (1-12)"),
     price_type: str = Query(None, description="Filter by price: free, paid, or all"),
     date_from: str = Query(None, description="Filter events on or after this date (YYYY-MM-DD)"),
     date_to: str = Query(None, description="Filter events on or before this date (YYYY-MM-DD)"),
+    near_lat: float = Query(None, description="User's latitude for proximity search"),
+    near_lng: float = Query(None, description="User's longitude for proximity search"),
+    radius_km: float = Query(50, description="Search radius in km (default 50)"),
 ):
     query = select(Event).where(Event.is_public == True)
     if search:
@@ -126,7 +175,9 @@ async def list_public_events(
     if category:
         query = query.where(Event.category == category)
     if location:
-        query = query.where(Event.venue.ilike(f"%{location}%"))
+        query = query.where(
+            or_(Event.city.ilike(f"%{location}%"), Event.state.ilike(f"%{location}%"))
+        )
     if month:
         query = query.where(func.extract("month", Event.event_date) == month)
     if price_type == "free":
@@ -143,7 +194,34 @@ async def list_public_events(
         query = query.where(Event.event_date <= date.fromisoformat(date_to))
     query = query.order_by(Event.event_date.asc())
     result = await db.execute(query)
-    return result.scalars().all()
+    events = result.scalars().all()
+
+    # Proximity filtering via bounding box + exact distance
+    if near_lat is not None and near_lng is not None:
+        lat_deg = radius_km / 111.0
+        lng_deg = radius_km / (111.0 * math.cos(math.radians(near_lat)))
+        filtered = []
+        for ev in events:
+            if ev.latitude is None or ev.longitude is None:
+                continue
+            if not (near_lat - lat_deg <= ev.latitude <= near_lat + lat_deg):
+                continue
+            if not (near_lng - lng_deg <= ev.longitude <= near_lng + lng_deg):
+                continue
+            d = math.acos(
+                math.sin(math.radians(near_lat)) * math.sin(math.radians(ev.latitude)) +
+                math.cos(math.radians(near_lat)) * math.cos(math.radians(ev.latitude)) *
+                math.cos(math.radians(ev.longitude) - math.radians(near_lng))
+            ) * 6371
+            if d <= radius_km:
+                ev.distance_km = round(d, 1)
+                filtered.append(ev)
+        filtered.sort(key=lambda e: e.distance_km)
+        events = filtered
+        if not events:
+            return []
+
+    return [EventPublicResponse.model_validate(e) for e in events]
 
 
 @router.get("/by-slug/{slug}")

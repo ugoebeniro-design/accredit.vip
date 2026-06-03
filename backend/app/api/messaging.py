@@ -18,6 +18,7 @@ from app.api.qr_codes import get_or_create_guest_qr
 from app.services.email_service import send_email, send_email_with_images
 from app.services.sms_service import send_sms
 from app.services.whatsapp_service import send_whatsapp
+from app.services.whatsapp_cloud_service import send_whatsapp_cloud
 from app.services.qr_service import qr_gif_to_url
 
 RESEND_PRICE_PER_GUEST = 500  # NGN per guest for re-sending
@@ -38,6 +39,56 @@ def is_valid_phone(value: str | None) -> bool:
         return False
     compact = re.sub(r"[\s().-]", "", value)
     return bool(re.fullmatch(r"\+?[1-9]\d{7,14}", compact))
+
+
+async def _send_whatsapp(to: str, message: str, media_url: str | None = None) -> bool:
+    if settings.WHATSAPP_CLOUD_TOKEN and settings.WHATSAPP_CLOUD_PHONE_ID:
+        return await send_whatsapp_cloud(to, message, media_url)
+    return await send_whatsapp(to, message, media_url)
+
+
+def _format_date(date_val) -> str:
+    """Convert date to format like 'Monday 20th July, 2026'."""
+    from datetime import date
+    if isinstance(date_val, str):
+        try:
+            date_val = date.fromisoformat(date_val)
+        except ValueError:
+            return date_val
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    day = date_val.day
+    suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    return f"{days[date_val.weekday()]} {day}{suffix} {months[date_val.month - 1]}, {date_val.year}"
+
+
+def _format_time(time_val, tz: str = "WAT") -> str:
+    """Convert time to 12-hour format like '8:00 PM (WAT)'."""
+    from datetime import time
+    if isinstance(time_val, str):
+        try:
+            parts = time_val.split(":")
+            time_val = time(int(parts[0]), int(parts[1]), int(parts[2]) if len(parts) > 2 else 0)
+        except (ValueError, IndexError):
+            return time_val
+    hour = time_val.hour
+    minute = time_val.minute
+    ampm = "AM" if hour < 12 else "PM"
+    hour12 = hour if hour <= 12 else hour - 12
+    if hour12 == 0:
+        hour12 = 12
+    minute_str = f":{minute:02d}" if minute else ""
+    return f"{hour12}{minute_str} {ampm} ({tz})"
+
+
+def _absolute_url(url: str | None) -> str | None:
+    if not url:
+        return None
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    if url.startswith("/"):
+        return f"{settings.FRONTEND_URL}{url}"
+    return url
 
 
 def _upload_path_from_url(url: str) -> str:
@@ -73,34 +124,46 @@ def _build_invite_message(
         f"\n"
         f"Warm regards,\n{event.host_name or 'The Host'}"
     )
+    from datetime import date as dt_date, time as dt_time
+    formatted_date = _format_date(event.event_date)
+    formatted_time = _format_time(event.event_time, event.timezone or "WAT")
     description_html = f"<p>{event.description}</p>" if event.description else ""
     qr_html = ""
     if qr_image_url:
         qr_html = f"""
         <div style="text-align:center;padding:16px;background:#f8f9fc;border-radius:12px;margin:16px 0">
             <p style="color:#23466f;font-size:13px;font-weight:bold;margin:0 0 12px">YOUR UNIQUE ENTRY CODE</p>
-            <img src="cid:qr_code" alt="Entry QR Code" style="width:180px;height:180px" />
-            <p style="color:#94a3b8;font-size:11px;margin:8px 0 0">Show this code at the gate to enter</p>
+            <img src="cid:qr_code" alt="Entry QR Code" style="width:180px;height:180px;display:block;margin:0 auto" />
+            <p style="color:#94a3b8;font-size:11px;margin:8px 0 0">Show this code at the venue entrance</p>
         </div>"""
     elif qr_url:
         qr_html = (
-            f'<p style="padding:14px;border:1px dashed #94a3b8;border-radius:12px">Unique QR access: <a href="{qr_url}">{qr_url}</a></p>'
+            f'<p style="padding:14px;border:1px dashed #94a3b8;border-radius:12px;text-align:center">Your unique QR access code is attached to this email</p>'
         )
     flyer_html = ""
     if flyer_url:
-        flyer_html = f'<img src="cid:flyer" alt="{event.title}" style="width:100%;max-width:500px;display:block" />'
+        flyer_html = f'<img src="cid:flyer" alt="{event.title}" style="width:100%;max-width:600px;display:block;border-radius:0" />'
     html = (
-        '<div style="max-width:640px;border:1px solid #e6edf5;border-radius:16px;overflow:hidden;font-family:Arial,sans-serif;color:#102033">'
+        '<div style="max-width:600px;margin:0 auto;font-family:Georgia,serif;color:#1a1a2e">'
         f'{flyer_html}'
-        '<div style="padding:24px;background:#ffffff">'
-        f'<p style="font-size:18px;margin-top:0">Dear <strong>{guest.name}</strong>,</p>'
-        f'{description_html}'
-        f'<p>Date: <strong>{event.event_date}</strong>. Time: <strong>{event.event_time}</strong>. Venue: <strong>{event.venue}</strong>.</p>'
-        f'<p><a style="display:inline-block;background:#E91E8C;color:#fff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold" href="{rsvp_link}">RSVP now</a></p>'
+        '<div style="padding:32px 28px;background:#ffffff">'
+        f'<p style="font-size:13px;color:#888;text-transform:uppercase;letter-spacing:2px;margin:0 0 4px">You are cordially invited to</p>'
+        f'<h1 style="font-size:28px;color:#07182f;margin:0 0 16px;line-height:1.2">{event.title}</h1>'
+        f'<p style="font-size:15px;color:#555;line-height:1.6;margin:0 0 20px">{event.description or "Join us for this special occasion."}</p>'
+        '<table style="width:100%;border-collapse:collapse;margin:0 0 24px">'
+        f'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">DATE</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{formatted_date}</td></tr>'
+        f'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">TIME</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{formatted_time}</td></tr>'
+        f'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">VENUE</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{event.venue}</td></tr>'
+        f'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">DRESS CODE</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{event.dress_code or "Any"}</td></tr>'
+        '</table>'
+        f'<div style="text-align:center;margin:24px 0">'
+        f'<a href="{rsvp_link}" style="display:inline-block;background:#E91E8C;color:#fff;padding:14px 40px;border-radius:50px;text-decoration:none;font-weight:bold;font-size:15px;font-family:Arial,sans-serif">RSVP NOW</a>'
+        '</div>'
         f'{qr_html}'
         '</div>'
-        '<div style="background:#07182f;color:#fff;padding:20px;text-align:center;font-size:12px">'
-        f'<p style="margin:0;color:#d9e8f7">Hosted by {event.host_name}</p>'
+        '<div style="background:#07182f;color:#d9e8f7;padding:24px;text-align:center;font-size:12px;font-family:Arial,sans-serif">'
+        f'<p style="margin:0 0 4px;font-size:14px;font-weight:bold;color:#fff">Hosted by {event.host_name}</p>'
+        '<p style="margin:0;letter-spacing:1px">Accredit.vip — Premium Event Infrastructure</p>'
         '</div>'
         '</div>'
     )
@@ -143,10 +206,11 @@ async def _send_to_guest(
             else:
                 ok = await send_email(guest.email, subject, html, from_addr=from_addr)
         elif channel == "whatsapp" and guest.phone:
-            media_to_send = flyer_url or qr_image_url
-            ok = await send_whatsapp(guest.phone, body, media_url=media_to_send)
-            if not ok and qr_image_url and qr_image_url != media_to_send:
-                await send_whatsapp(guest.phone, "Your entry QR code is ready!", media_url=qr_image_url)
+            media_to_send = _absolute_url(flyer_url) or _absolute_url(qr_image_url)
+            ok = await _send_whatsapp(guest.phone, body, media_url=media_to_send)
+            qr_abs = _absolute_url(qr_image_url)
+            if not ok and qr_abs and qr_abs != media_to_send:
+                await _send_whatsapp(guest.phone, "Your entry QR code is ready!", media_url=qr_abs)
         elif channel == "sms" and guest.phone:
             ok = await send_sms(guest.phone, body)
         else:
@@ -179,19 +243,23 @@ def _build_qr_message(guest: Guest, event: Event, qr_image_url: str | None = Non
     )
     qr_img_html = ""
     if qr_image_url:
-        qr_img_html = f'<img src="cid:qr_code" alt="Entry QR Code" style="width:200px;height:200px" />'
+        qr_img_html = f'<img src="cid:qr_code" alt="Entry QR Code" style="width:200px;height:200px;display:block;margin:0 auto" />'
     html = (
-        '<div style="max-width:640px;border:1px solid #e6edf5;border-radius:16px;overflow:hidden;font-family:Arial,sans-serif;color:#102033">'
-        '<div style="background:#07182f;color:#fff;padding:28px">'
-        '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#ffb4d9">QR Access Code</div>'
-        f'<h1 style="margin:10px 0 6px;font-size:34px;line-height:1.05">{event.title}</h1>'
-        f'<p style="margin:0;color:#d9e8f7">Sent to {guest.name}</p>'
+        '<div style="max-width:600px;margin:0 auto;font-family:Georgia,serif;color:#1a1a2e">'
+        '<div style="background:#07182f;color:#fff;padding:32px 28px;text-align:center">'
+        '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#ffb4d9;margin-bottom:8px">QR Access Code</div>'
+        f'<h1 style="margin:0 0 4px;font-size:30px;line-height:1.1;color:#fff">{event.title}</h1>'
+        f'<p style="margin:0;color:#d9e8f7;font-size:13px">Sent to {guest.name}</p>'
         '</div>'
-        '<div style="padding:24px;background:#ffffff;text-align:center">'
-        f'<p>Your unique QR access code is ready.</p>'
+        '<div style="padding:32px 28px;background:#ffffff;text-align:center">'
+        f'<p style="margin:0 0 20px;font-size:14px;color:#555">Your unique QR access code is ready for entry.</p>'
         f'{qr_img_html}'
-        f'<p style="font-size:12px;color:#64748b">Show this QR code at the event entrance for quick access.</p>'
-        '</div></div>'
+        f'<p style="margin:20px 0 0;font-size:12px;color:#94a3b8">Show this code at the venue entrance for quick access.</p>'
+        '</div>'
+        '<div style="background:#07182f;color:#d9e8f7;padding:20px;text-align:center;font-size:11px;font-family:Arial,sans-serif">'
+        '<p style="margin:0;letter-spacing:1px">Accredit.vip — Premium Event Infrastructure</p>'
+        '</div>'
+        '</div>'
     )
     return subject, body, html
 
@@ -222,7 +290,7 @@ async def _send_qr_to_guest(
             else:
                 ok = await send_email(guest.email, subject, html, from_addr=from_addr)
         elif channel == "whatsapp" and guest.phone:
-            ok = await send_whatsapp(guest.phone, body, media_url=qr_image_url)
+            ok = await _send_whatsapp(guest.phone, body, media_url=_absolute_url(qr_image_url))
         elif channel == "sms" and guest.phone:
             ok = await send_sms(guest.phone, body)
         else:
@@ -554,7 +622,7 @@ async def test_send(
         ok = await send_email(req.email, "Accredit.vip Test Message", "<h2>Test Send</h2><p>This is a test message from Accredit.vip.</p>")
         sent.append(f"email to {req.email}: {'OK' if ok else 'FAILED'}")
     elif req.channel == "whatsapp" and req.phone:
-        ok = await send_whatsapp(req.phone, "Hello! This is a test WhatsApp message from Accredit.vip.")
+        ok = await _send_whatsapp(req.phone, "Hello! This is a test WhatsApp message from Accredit.vip.")
         sent.append(f"whatsapp to {req.phone}: {'OK' if ok else 'FAILED'}")
     elif req.channel == "sms" and req.phone:
         ok = await send_sms(req.phone, "Hello! This is a test SMS from Accredit.vip.")
