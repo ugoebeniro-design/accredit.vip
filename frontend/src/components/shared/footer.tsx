@@ -17,28 +17,26 @@ export function Footer() {
       <div style={{ height: "2px", background: "linear-gradient(90deg, transparent, #E91E8C 30%, #C4166F 70%, transparent)" }} />
 
       {/* Main footer body */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
 
           {/* ── Brand column ── */}
-          <div className="md:col-span-5">
-            <Link href="/" className="mb-5 flex h-14 w-52 max-w-full items-center sm:w-72">
+          <div className="md:col-span-4">
+            <Link href="/" className="mb-4 flex h-10 w-44 max-w-full items-center sm:w-56">
               <Image
                 src="/logo-dark-trim.png"
                 alt="accredit.vip"
                 width={4086}
                 height={801}
-                className="h-10 w-auto object-contain opacity-90 transition-opacity hover:opacity-100 sm:h-12"
+                className="h-8 w-auto object-contain opacity-90 transition-opacity hover:opacity-100 sm:h-10"
               />
             </Link>
-            <p className="text-sm leading-relaxed max-w-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
-              Premium event accreditation &amp; guest management infrastructure
-              built for Africa. Create events, manage guests, and handle
-              accreditation — all from one platform.
+            <p className="text-xs leading-relaxed max-w-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+              Premium event accreditation &amp; guest management for Africa.
             </p>
 
             {/* Social icons */}
-            <div className="flex items-center gap-3 mt-7">
+            <div className="flex items-center gap-2 mt-4">
               {[
                 {
                   label: "WhatsApp",
@@ -89,74 +87,64 @@ export function Footer() {
             </div>
           </div>
 
-          {/* ── Platform links ── */}
-          <div className="md:col-span-2">
-            <h4
-              className="text-xs font-bold uppercase tracking-widest mb-5"
-              style={{ color: "rgba(255,255,255,0.35)" }}
-            >
-              Platform
-            </h4>
-            <ul className="space-y-3">
-              {[
-                { label: "Create Event", href: "/create-event" },
-                { label: "Attend Events", href: "/attend" },
-                { label: "Community", href: "/community" },
-                { label: "Pricing", href: "/pricing" },
-                { label: "Dashboard", href: "/dashboard" },
-              ].map((l) => (
-                <li key={l.href}>
-                  <Link
-                    href={l.href}
-                    className="text-sm transition-colors duration-150 text-[rgba(255,255,255,0.45)] hover:text-white"
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* ── Company links ── */}
-          <div className="md:col-span-2">
-            <h4
-              className="text-xs font-bold uppercase tracking-widest mb-5"
-              style={{ color: "rgba(255,255,255,0.35)" }}
-            >
-              Company
-            </h4>
-            <ul className="space-y-3">
-              {[
-                { label: "Contact Us", href: "/contact" },
-                { label: "Sign In", href: "/login" },
-                { label: "Register", href: "/register" },
-                { label: "Privacy Policy", href: "/contact" },
-                { label: "Terms of Use", href: "/contact" },
-              ].map((l) => (
-                <li key={l.label}>
-                  <Link
-                    href={l.href}
-                    className="text-sm transition-colors duration-150 text-[rgba(255,255,255,0.45)] hover:text-white"
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          {/* ── Links ── */}
+          <div className="md:col-span-3">
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  Platform
+                </h4>
+                <ul className="space-y-2.5">
+                  {[
+                    { label: "Create Event", href: "/create-event" },
+                    { label: "Attend Events", href: "/attend" },
+                    { label: "Community", href: "/community" },
+                    { label: "Pricing", href: "/pricing" },
+                    { label: "Dashboard", href: "/dashboard" },
+                  ].map((l) => (
+                    <li key={l.href}>
+                      <Link href={l.href} className="text-sm transition-colors duration-150 text-[rgba(255,255,255,0.45)] hover:text-white">
+                        {l.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  Company
+                </h4>
+                <ul className="space-y-2.5">
+                  {[
+                    { label: "Contact Us", href: "/contact" },
+                    { label: "Sign In", href: "/login" },
+                    { label: "Register", href: "/register" },
+                    { label: "Privacy Policy", href: "/contact" },
+                    { label: "Terms of Use", href: "/contact" },
+                  ].map((l) => (
+                    <li key={l.label}>
+                      <Link href={l.href} className="text-sm transition-colors duration-150 text-[rgba(255,255,255,0.45)] hover:text-white">
+                        {l.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
 
           {/* ── Newsletter ── */}
-          <div className="md:col-span-3">
+          <div className="md:col-span-5">
             <h4
-              className="text-xs font-bold uppercase tracking-widest mb-5"
+              className="text-xs font-bold uppercase tracking-widest mb-3"
               style={{ color: "rgba(255,255,255,0.35)" }}
             >
               Stay Updated
             </h4>
-            <p className="text-sm mb-4" style={{ color: "rgba(255,255,255,0.45)" }}>
-              Get event tips and platform updates in your inbox.
+            <p className="text-xs mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>
+              Get event tips and platform updates.
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 max-w-sm">
               <input
                 type="email"
                 placeholder="your@email.com"

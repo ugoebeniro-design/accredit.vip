@@ -1006,9 +1006,9 @@ export default function CreateEventPage() {
           </div>
         </section>
 
-        <section className={`px-4 sm:px-6 lg:px-8 ${step > 0 ? 'pt-2 pb-0' : 'py-14'}`}>
-          <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_390px]">
-            <form id="create-event-form" onSubmit={showEmailModal} className={`rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-8 ${step === 1 ? '' : 'hidden'}`}>
+        <section className={`px-4 sm:px-6 lg:px-8 ${step > 0 ? 'pt-0 pb-0' : 'py-14'}`}>
+          <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-[1fr_390px]">
+            <form id="create-event-form" onSubmit={showEmailModal} className={`rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-4 ${step === 1 ? '' : 'hidden'}`}>
               {step === 1 && (
               <>
               {formPage === 0 && (<>
@@ -1036,16 +1036,16 @@ export default function CreateEventPage() {
               {mode === "invite" && (
               <div className="mb-6">
                 {flierParsing ? (
-                  <div className="flex items-center gap-3 rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
+                  <div className="flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] px-4 py-3">
                     <div className="w-4 h-4 rounded-full border-2 border-[#E91E8C] border-t-transparent animate-spin flex-shrink-0" />
-                    <p className="text-sm font-semibold text-[#0D1B2A]">AI is reading your flier…</p>
+                    <p className="text-sm font-semibold text-[#0D1B2A]">AI is reading your flier and filling the form…</p>
                   </div>
                 ) : flierParsed ? (
-                  <div className="flex items-center gap-3 rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
-                    {flierPreview && <img src={flierPreview} alt="Flier" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
+                  <div className="flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] px-4 py-3">
+                    {flierPreview && <img src={flierPreview} alt="Flier" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />}
                     <div className="flex-1">
-                      <p className="text-xs font-bold text-emerald-600">Flier parsed - form pre-filled</p>
-                      <p className="text-xs text-[#94a3b8] mt-0.5">Review the fields below and adjust as needed</p>
+                      <p className="text-sm font-bold text-emerald-600">Flier parsed - form pre-filled below</p>
+                      <p className="text-xs text-[#94a3b8] mt-0.5">Review each field and make any corrections before testing</p>
                     </div>
                     <label className="cursor-pointer text-xs font-bold text-[#E91E8C] hover:underline flex-shrink-0">
                       Change
@@ -1053,21 +1053,24 @@ export default function CreateEventPage() {
                     </label>
                   </div>
                 ) : (
-                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#d9e2ec] bg-white px-4 py-3 transition-colors hover:border-[#E91E8C]">
-                    <div className="w-8 h-8 rounded-lg bg-[#fff1f8] flex items-center justify-center flex-shrink-0">
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#d9e2ec] bg-[#f8f9fc] px-4 py-3 hover:border-[#E91E8C] transition-colors group">
+                    <div className="w-9 h-9 rounded-xl bg-white border border-[#e8edf2] flex items-center justify-center flex-shrink-0 group-hover:border-[#E91E8C] transition-colors">
                       <svg className="w-4 h-4 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-[#0D1B2A]">Already have a flier? Upload to auto-fill</p>
-                      <p className="text-xs text-[#94a3b8] truncate">AI extracts title, date, lineup, tickets and more</p>
+                      <p className="text-sm font-bold text-[#0D1B2A]">Have a flier? Upload it to auto-fill this form</p>
+                      <p className="text-xs text-[#94a3b8] mt-0.5">AI extracts title, date, venue, lineup, tickets, dress code and more</p>
                     </div>
+                    <span className="flex-shrink-0 rounded-lg border border-[#E91E8C] px-3 py-1.5 text-xs font-bold text-[#E91E8C] group-hover:bg-[#fff1f8] transition-colors">
+                      Upload
+                    </span>
                     <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
                   </label>
                 )}
                 {flierParseError && (
-                  <p className="mt-2 text-xs text-amber-600 font-medium">{flierParseError}</p>
+                  <p className="mt-2 text-xs font-medium text-amber-600">{flierParseError}</p>
                 )}
               </div>
               )}
@@ -1252,18 +1255,22 @@ export default function CreateEventPage() {
                     </select>
                   </label>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-semibold text-[#23466f]">Social media handles</span>
+                  <details className="rounded-xl border border-[#d9e2ec] group">
+                    <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
+                      <span>Social media handles</span>
+                      <svg className="w-4 h-4 text-[#94a3b8] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </summary>
+                    <div className="px-4 pb-4">
                       <button
                         type="button"
                         onClick={() => setSocialHandles((current) => [...current, { platform: "instagram", handle: "" }])}
-                        className="rounded-lg border border-[#d9e2ec] px-3 py-2 text-xs font-bold text-[#23466f] hover:bg-[#fff1f8]"
+                        className="mb-3 rounded-lg border border-[#d9e2ec] px-3 py-2 text-xs font-bold text-[#23466f] hover:bg-[#fff1f8]"
                       >
                         Add
                       </button>
-                    </div>
-                    <div className="space-y-2">
+                      <div className="space-y-2">
                       {socialHandles.map((social, index) => {
                         const platform = socialPlatforms.find((item) => item.value === social.platform) || socialPlatforms[0];
                         return (
@@ -1297,6 +1304,7 @@ export default function CreateEventPage() {
                       })}
                     </div>
                   </div>
+                  </details>
                 )}
 
                 {mode === "invite" && (
@@ -1535,10 +1543,16 @@ export default function CreateEventPage() {
                     </div>
                   </details>
 
-                  {/* QR code option - AFTER template */}
-                  <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
-                    <legend className="px-2 text-sm font-semibold text-[#23466f]">QR code option</legend>
-                    <div className="grid gap-3 md:grid-cols-3">
+                  {/* QR code option - collapsible */}
+                    <details className="rounded-xl border border-[#d9e2ec] group">
+                    <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
+                      <span>QR code option</span>
+                      <svg className="w-4 h-4 text-[#94a3b8] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </summary>
+                    <div className="px-4 pb-4">
+                      <div className="grid gap-3 md:grid-cols-3">
                       {qrDeliveryOptions.map((option) => (
                         <label key={option.value} className="flex cursor-pointer flex-col gap-2 rounded-xl border border-[#edf2f7] p-3 text-sm text-[#23466f]">
                           <span className="flex items-center gap-2 font-bold">
@@ -1553,7 +1567,7 @@ export default function CreateEventPage() {
                           <span className="text-xs leading-5 text-[#64748b]">{option.description}</span>
                         </label>
                       ))}
-                    </div>
+                      </div>
 
                     {/* Animated QR style - ONLY when "With QR" is selected */}
                     {form.qr_delivery === "with_qr" && (
@@ -1652,7 +1666,8 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                         </p>
                       </div>
                     )}
-                  </fieldset>
+                  </div>
+                </details>
                 </div>
               )}
               </>)}
@@ -1662,17 +1677,21 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                 <>
                 {/* Note: Venue and Dress Code are now in the invite-specific section above for both CREATE INVITE and POST EVENT modes */}
                 <div className="mt-5 space-y-5">
-                  <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
-                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <legend className="text-sm font-bold text-[#23466f]">Gate fee / pass packages</legend>
+                  <details className="rounded-xl border border-[#d9e2ec] group">
+                    <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-bold text-[#23466f] [&::-webkit-details-marker]:hidden">
+                      <span>Gate fee / pass packages</span>
+                      <svg className="w-4 h-4 text-[#94a3b8] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </summary>
+                    <div className="px-4 pb-4">
                       <button
                         type="button"
                         onClick={() => setPassPackages((current) => [...current, { name: "", price: "" }])}
-                        className="w-fit cursor-pointer rounded-lg bg-[#E91E8C] px-3 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#C4166F]"
+                        className="mb-3 w-fit cursor-pointer rounded-lg bg-[#E91E8C] px-3 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#C4166F]"
                       >
                         Add package
                       </button>
-                    </div>
                     <div className="space-y-3">
                       {passPackages.map((item, index) => (
                         <div key={index} className="grid gap-3 rounded-xl bg-[#f8fafc] p-3 md:grid-cols-[1fr_1fr_auto]">
@@ -1698,11 +1717,17 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                         </div>
                       ))}
                     </div>
-                  </fieldset>
+                  </div>
+                  </details>
 
-                  <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
-                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <legend className="text-sm font-bold text-[#23466f]">Headliners, speakers or artistes</legend>
+                  <details className="rounded-xl border border-[#d9e2ec] group">
+                    <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-bold text-[#23466f] [&::-webkit-details-marker]:hidden">
+                      <span>Headliners, speakers or artistes</span>
+                      <svg className="w-4 h-4 text-[#94a3b8] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </summary>
+                    <div className="px-4 pb-4">
                       <button
                         type="button"
                         onClick={() =>
@@ -1711,11 +1736,10 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                             { role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false },
                           ])
                         }
-                        className="w-fit cursor-pointer rounded-lg bg-[#E91E8C] px-3 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#C4166F]"
+                        className="mb-3 w-fit cursor-pointer rounded-lg bg-[#E91E8C] px-3 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#C4166F]"
                       >
                         Add person
                       </button>
-                    </div>
                     <div className="space-y-4">
                       {lineup.map((person, index) => (
                         <div key={index} className="space-y-3 rounded-xl bg-[#f8fafc] p-3">
@@ -1796,7 +1820,8 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                         </div>
                       ))}
                     </div>
-                  </fieldset>
+                  </div>
+                  </details>
 
                   <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
                     <label className="flex cursor-pointer items-center gap-2 text-sm font-bold text-[#23466f]">
@@ -1947,7 +1972,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     onClick={() => {
                       if (formPage === 0) {
                         setStep(0); setMode(null);
-                      } else if (mode === "event" && formPage === 1) {
+                      } else if (mode === "event" && formPage === 2) {
                         setFormPage(0);
                       } else {
                         setFormPage(formPage - 1);
@@ -2205,18 +2230,18 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                         </div>
                       </div>
                     )}
+
+                    <button
+                      type="submit"
+                      form="create-event-form"
+                      disabled={submitting || (hydrated && mode ? usedTrials[mode] : false)}
+                      className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-sm font-bold text-white transition-all hover:bg-[#C4166F] disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{ animation: 'pulse-accent 2s infinite' }}
+                    >
+                      {submitting ? "Preparing preview..." : "Test this feature"}
+                    </button>
                   </div>
                 </aside>
-
-                <button
-                  type="submit"
-                  form="create-event-form"
-                  disabled={submitting || (hydrated && mode ? usedTrials[mode] : false)}
-                  className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-sm font-bold text-white transition-all hover:bg-[#C4166F] disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{ animation: 'pulse-accent 2s infinite' }}
-                >
-                  {submitting ? "Preparing preview..." : "Test this feature"}
-                </button>
 
                 {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
                 {message && (

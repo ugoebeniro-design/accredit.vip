@@ -99,16 +99,16 @@ function ContactContent() {
       <Navbar variant="light" />
 
       {/* Hero */}
-      <section className="bg-hero-gradient py-16 px-4 text-center">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4">Get in touch</h1>
-        <p className="text-white/60 text-lg max-w-lg mx-auto">
+      <section className="bg-hero-gradient py-8 px-4 text-center">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-2">Get in touch</h1>
+        <p className="text-white/60 text-sm max-w-lg mx-auto">
           Have questions about pricing, features, or accreditation support? We&apos;re here to help.
         </p>
       </section>
 
       {/* Content */}
-      <div className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid lg:grid-cols-5 gap-12">
+      <div className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid lg:grid-cols-5 gap-8">
           {/* Left — info */}
           <div className="lg:col-span-2 space-y-6">
             <div>
@@ -222,7 +222,7 @@ function ContactContent() {
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    rows={5}
+                    rows={8}
                     className="input-premium h-auto resize-none py-3"
                     placeholder="Tell us about your event, how many guests, delivery channels needed..."
                     required

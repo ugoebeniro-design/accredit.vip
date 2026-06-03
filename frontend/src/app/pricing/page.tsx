@@ -35,16 +35,16 @@ export default function PricingPage() {
       <Navbar variant="light" />
 
       <main className="flex-1">
-        <section className="bg-[#07182f] px-4 py-16 text-white sm:px-6 lg:px-8">
+        <section className="bg-[#07182f] px-4 py-8 text-white sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#ff7abf]">
               Channel pricing
             </p>
-            <div className="mt-5 grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-end">
-              <h1 className="text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
+            <div className="mt-4 grid gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+              <h1 className="text-2xl font-black leading-tight sm:text-3xl lg:text-4xl">
                 Pay by invite channel, not by package.
               </h1>
-              <p className="max-w-2xl text-base leading-8 text-white/68 sm:text-lg">
+              <p className="max-w-2xl text-sm leading-7 text-white/68">
                 Each channel price covers 1-100 guests and includes the QR accreditation flow.
                 Users can test CREATE INVITE or POST EVENT once before creating an account.
               </p>
@@ -52,12 +52,12 @@ export default function PricingPage() {
           </div>
         </section>
 
-        <section className="px-4 py-14 sm:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-3">
+        <section className="px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-3">
             {channels.map((channel) => (
               <article
                 key={channel.id}
-                className="flex min-h-[420px] flex-col rounded-2xl border p-8 shadow-[0_12px_32px_rgba(15,23,42,0.08)]"
+                className="flex flex-col rounded-2xl border p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)]"
                 style={{
                   background: channel.highlight ? "#101c2c" : "white",
                   borderColor: channel.highlight ? "rgba(233,30,140,0.55)" : "#e2e8f0",
