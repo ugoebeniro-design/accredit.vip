@@ -38,6 +38,7 @@ type ParsedFlier = {
 export default function CreateEventPage() {
   const { user, loading } = useAuth();
   const [mode, setMode] = useState<"invite" | "event" | null>(null);
+  const [formPage, setFormPage] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [flierParsing, setFlierParsing] = useState(false);
@@ -50,6 +51,8 @@ export default function CreateEventPage() {
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
+
+  const [locationData, setLocationData] = useState<{ city: string | null; state: string | null; country: string | null; lat: number | null; lng: number | null }>({ city: null, state: null, country: "Nigeria", lat: null, lng: null });
 
   const [form, setForm] = useState({
     title: "",
@@ -163,6 +166,11 @@ export default function CreateEventPage() {
         tickets_available: form.tickets_available ? Number(form.tickets_available) : undefined,
         pass_packages: mode === "event" ? cleanPassPackages(passPackages) : undefined,
         lineup: mode === "event" ? cleanLineup(lineup) : undefined,
+        city: locationData.city || undefined,
+        state: locationData.state || undefined,
+        country: locationData.country || "Nigeria",
+        latitude: locationData.lat || undefined,
+        longitude: locationData.lng || undefined,
       });
       router.push("/dashboard");
     } catch (err) {
@@ -236,7 +244,7 @@ export default function CreateEventPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <button
-                onClick={() => setMode("invite")}
+                onClick={() => { setFormPage(0); setMode("invite"); }}
                 className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-6 text-left transition-all hover:border-[#E91E8C] hover:shadow-md"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#f8f9fc] flex items-center justify-center mb-3">
@@ -250,7 +258,7 @@ export default function CreateEventPage() {
                 </p>
               </button>
               <button
-                onClick={() => setMode("event")}
+                onClick={() => { setFormPage(0); setMode("event"); }}
                 className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-6 text-left transition-all hover:border-[#E91E8C] hover:shadow-md"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#f8f9fc] flex items-center justify-center mb-3">
@@ -341,6 +349,7 @@ export default function CreateEventPage() {
         )}
 
         <form className="space-y-5" onSubmit={handleSubmit}>
+          {formPage === 0 && (<>
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 font-medium">
               {error}
@@ -501,6 +510,9 @@ export default function CreateEventPage() {
               </fieldset>
             </>
           )}
+          </>)}
+
+          {formPage === 1 && (<>
 
           {/* Date / Time / Timezone */}
           <div className="grid gap-4 md:grid-cols-2">
@@ -550,7 +562,7 @@ export default function CreateEventPage() {
           {/* Venue */}
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-[#23466f]">Venue</label>
-            <VenueInput value={form.venue} onChange={(v) => setForm({ ...form, venue: v })} required />
+            <VenueInput value={form.venue} onChange={(v) => setForm({ ...form, venue: v })} onLocationChange={setLocationData} required />
           </div>
 
           {/* Map link */}
@@ -578,6 +590,9 @@ export default function CreateEventPage() {
               placeholder="Smart casual, all white, black tie, beach wear..."
             />
           </div>
+          </>)}
+
+          {formPage === 2 && (<>
 
           {/* Lineup — event mode only */}
           {mode === "event" && (
@@ -711,7 +726,42 @@ export default function CreateEventPage() {
           >
             {submitting ? "Creating…" : mode === "event" ? "Publish Event" : "Create Invite"}
           </button>
+          </>)}
         </form>
+
+        {/* Sticky Bottom Navigation Bar for Form Pages */}
+        <div className="sticky bottom-4 z-30 flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-white px-4 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
+          <button
+            type="button"
+            onClick={() => {
+              if (formPage === 0) {
+                setMode(null);
+              } else {
+                setFormPage(formPage - 1);
+              }
+            }}
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Previous
+          </button>
+          {formPage < 2 && (
+          <button
+            type="button"
+            onClick={() => setFormPage(formPage + 1)}
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
+          >
+            Next
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          )}
+        </div>
       </div>
     </div>
   );

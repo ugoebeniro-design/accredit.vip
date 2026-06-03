@@ -478,6 +478,8 @@ const qrStyleConfig: Record<string, { wrapper: string; square: string }> = {
 export default function CreateEventPage() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [step, setStep] = useState(0);
+  const [formPage, setFormPage] = useState(0);
+  const totalFormPages = mode === "event" ? 4 : 3;
   const [fingerprint, setFingerprint] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [usedTrials, setUsedTrials] = useState<Record<Mode, boolean>>({ invite: false, event: false });
@@ -918,7 +920,7 @@ export default function CreateEventPage() {
                         setFlierPreview(null); setFlierParsed(false); setFlierParseError("");
                       }
                       setMode(() => newMode);
-                      if (newMode) setStep(1); else setStep(0);
+                      if (newMode) { setStep(1); setFormPage(0); } else setStep(0);
                       setMessage("");
                       setError("");
                       setTrialComplete(false);
@@ -978,7 +980,7 @@ export default function CreateEventPage() {
                         setFlierPreview(null); setFlierParsed(false); setFlierParseError("");
                       }
                       setMode(() => newMode);
-                      if (newMode) setStep(1); else setStep(0);
+                      if (newMode) { setStep(1); setFormPage(0); } else setStep(0);
                       setMessage("");
                       setError("");
                       setTrialComplete(false);
@@ -1027,23 +1029,12 @@ export default function CreateEventPage() {
           </div>
         </section>
 
-        <section className="px-4 py-14 sm:px-6 lg:px-8">
+        <section className={`px-4 sm:px-6 lg:px-8 ${step > 0 ? 'py-4' : 'py-14'}`}>
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_390px]">
             <form id="create-event-form" onSubmit={showEmailModal} className={`rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-8 ${step === 1 ? '' : 'hidden'}`}>
               {step === 1 && (
               <>
-
-              {/* Previous button */}
-              <button
-                type="button"
-                onClick={() => { setStep(0); setMode(null); }}
-                className="mb-6 inline-flex items-center gap-2 rounded-xl border-2 border-[#d9e2ec] bg-white px-4 py-2.5 text-sm font-bold text-[#0D1B2A] transition-all hover:border-[#E91E8C]/50 hover:bg-[#fff1f8] hover:text-[#E91E8C]"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-                Previous
-              </button>
+              {formPage === 0 && (<>
 
               {/* Flier upload for both modes */}
               <div className="mb-6">
@@ -1437,7 +1428,9 @@ export default function CreateEventPage() {
                   </select>
                 </label>
               </div>
+              </>)}
 
+              {formPage === 1 && mode === 'invite' && (<>
               {mode === "invite" && (
                 <div className="mt-5 space-y-5">
                   <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
@@ -1686,7 +1679,9 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                   </fieldset>
                 </div>
               )}
+              </>)}
 
+              {formPage === 2 && (<>
               {mode === "event" ? (
                 <>
                 {/* Note: Venue and Dress Code are now in the invite-specific section above for both CREATE INVITE and POST EVENT modes */}
@@ -1964,28 +1959,66 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                 />
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  const form = document.getElementById('create-event-form') as HTMLFormElement;
-                  if (form?.reportValidity()) {
-                    setStep(2);
-                  }
-                }}
-                className="mt-6 flex h-12 w-full items-center justify-center rounded-xl border-2 border-[#E91E8C] bg-white px-6 text-sm font-bold text-[#E91E8C] transition-all hover:bg-[#fff1f8]"
-              >
-                Next: Preview →
-              </button>
+              </>
+              )}
               </>
               )}
             </form>
+
+            {/* Sticky Bottom Navigation Bar for Form Pages */}
+            {(step === 1) && mode && (
+              <div className="sticky bottom-4 z-30 flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-white px-4 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (formPage === 0) {
+                      setStep(0); setMode(null);
+                    } else if (mode === "event" && formPage === 1) {
+                      setFormPage(0);
+                    } else {
+                      setFormPage(formPage - 1);
+                    }
+                  }}
+                  className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (formPage === totalFormPages - 1) {
+                      const form = document.getElementById('create-event-form') as HTMLFormElement;
+                      if (form?.reportValidity()) {
+                        setStep(2);
+                      }
+                    } else if (mode === "event" && formPage === 0) {
+                      setFormPage(2);
+                    } else {
+                      setFormPage(formPage + 1);
+                    }
+                  }}
+                  className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
+                >
+                  {formPage === totalFormPages - 1 ? "Next: Preview" : "Next"}
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            )}
 
             {step === 2 && (
               <div className="space-y-6 lg:col-span-2">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="inline-flex items-center gap-2 rounded-xl border-2 border-[#d9e2ec] bg-white px-4 py-2.5 text-sm font-bold text-[#0D1B2A] transition-all hover:border-[#E91E8C]/50 hover:bg-[#fff1f8] hover:text-[#E91E8C]"
+                  className="flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 px-6"
+                  style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
