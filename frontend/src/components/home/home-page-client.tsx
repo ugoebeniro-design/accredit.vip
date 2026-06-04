@@ -212,9 +212,9 @@ export function HomePageClient() {
         />
 
         {/* Mobile CTA Section — shown only on small screens */}
-        <div className="sm:hidden relative mx-4 mb-10 flex flex-col items-center justify-end flex-1" style={{ zIndex: 10 }}>
+        <div className="sm:hidden relative mx-4 mb-10 flex flex-col items-center justify-center" style={{ zIndex: 10, minHeight: "auto" }}>
           {/* Main CTA Buttons */}
-          <div className="flex flex-col gap-6 w-full max-w-xs pb-12">
+          <div className="flex flex-col gap-6 w-full max-w-xs pb-6">
             <Link
               href="/create-event"
               className="btn-primary rounded-xl px-10 py-5 text-base font-black text-center transition-all duration-300 hover:scale-105"
@@ -264,8 +264,8 @@ export function HomePageClient() {
           </button>
         </div>
 
-        {/* Desktop hero - shown on desktop or mobile when expanded */}
-        <div className={`relative flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 lg:pt-20 pb-12 flex-col ${!mobileExpanded && 'hidden sm:flex'} ${mobileExpanded && 'sm:flex'}`} style={{ zIndex: 10 }}>
+        {/* Desktop hero - shown on desktop always, shown on mobile only when expanded */}
+        <div className={`relative w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 lg:pt-20 pb-12 flex-col ${!mobileExpanded ? 'hidden sm:flex' : 'flex'} sm:flex-1`} style={{ zIndex: 10 }}>
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-8 lg:items-center lg:min-h-[80vh]">
             {/* LEFT: Text column */}
             <div className="flex flex-col items-start justify-center">

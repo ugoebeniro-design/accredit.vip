@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { PhoneInput } from "@/components/shared/phone-input";
 
@@ -27,8 +28,8 @@ export default function RegisterPage() {
   const [verifyChannel, setVerifyChannel] = useState("email");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [registered, setRegistered] = useState(false);
   const { register } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,51 +37,12 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register({ email, password, first_name: firstName, last_name: lastName, phone: phone || undefined, verification_channel: verifyChannel });
-      setRegistered(true);
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
     }
     setLoading(false);
   };
-
-  if (registered) {
-    return (
-      <div className="min-h-screen bg-hero-gradient flex items-center justify-center px-4">
-        <div
-          className="w-full max-w-md p-10 rounded-3xl text-center"
-          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)" }}
-        >
-          <div className="w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-6 text-4xl"
-            style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)", boxShadow: "0 8px 30px rgba(233,30,140,0.5)" }}>
-            ✉️
-          </div>
-          <h1 className="text-2xl font-extrabold text-white mb-3">Account Created!</h1>
-          <p className="text-white/65 text-sm leading-relaxed mb-2">
-            We&apos;ve sent a verification link via{" "}
-            <strong className="text-white">
-              {verifyChannel === "email" ? "Email" : verifyChannel === "sms" ? "SMS" : "WhatsApp"}
-            </strong>{" "}
-            to <strong className="text-white">{verifyChannel === "email" ? email : phone}</strong>.
-          </p>
-          <p className="text-white/45 text-xs mb-8">
-            Check your {verifyChannel === "email" ? "inbox (and spam)" : "messages"} and click the link to activate.
-          </p>
-          <Link
-            href="/login"
-            className="btn-primary w-full justify-center"
-          >
-            Go to Sign In
-          </Link>
-          <Link href="/" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm font-semibold text-white transition-all hover:border-[#E91E8C]/45 hover:text-[#E91E8C]">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to home
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex">

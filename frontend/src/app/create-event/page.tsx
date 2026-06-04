@@ -2358,12 +2358,12 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
             </div>
             <div className="p-6 border-t border-[#e8edf2] bg-[#f8f9fc]">
               <p className="text-sm text-gray-600 mb-4">Ready to send real invitations? Create an account to set up your guest list and start sending.</p>
-              <button
-                onClick={() => setInviteFlyer(null)}
-                className="w-full px-4 py-3 bg-[#E91E8C] text-white rounded-xl font-bold hover:bg-[#d0147a] transition-colors"
+              <Link
+                href="/register"
+                className="block w-full px-4 py-3 bg-[#E91E8C] text-white rounded-xl font-bold hover:bg-[#d0147a] transition-colors text-center"
               >
                 Create Account
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -2390,12 +2390,12 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
             </div>
             <div className="p-6 border-t border-[#e8edf2] bg-[#f8f9fc]">
               <p className="text-sm text-gray-600 mb-4">Ready to publish this event? Create an account to save your settings and post to Discover Events.</p>
-              <button
-                onClick={() => setEventPreviewUrl(null)}
-                className="w-full px-4 py-3 bg-[#E91E8C] text-white rounded-xl font-bold hover:bg-[#d0147a] transition-colors"
+              <Link
+                href="/register"
+                className="block w-full px-4 py-3 bg-[#E91E8C] text-white rounded-xl font-bold hover:bg-[#d0147a] transition-colors text-center"
               >
                 Create Account
-              </button>
+              </Link>
             </div>
           </div>
         </div>
