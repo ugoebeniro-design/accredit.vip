@@ -662,7 +662,7 @@ export default function CreateEventPage() {
         `}</style>
         <header className="border-b border-[#e8edf2]">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center">
+            <Link href="/" className="flex items-center hover:opacity-75">
               <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
             </Link>
             <div className="flex items-center gap-4">
@@ -671,17 +671,6 @@ export default function CreateEventPage() {
             </div>
           </div>
         </header>
-
-        {/* Header for authenticated dashboard */}
-        <div className="border-b border-[#e8edf2] bg-white">
-          <div className="container mx-auto px-4 h-12 flex items-center justify-between">
-            <div className="text-sm font-semibold text-[#0D1B2A]">Welcome, {user?.full_name || user?.email || "User"}</div>
-            <div className="flex items-center gap-3">
-              <Link href="/dashboard" className="text-xs font-semibold text-[#E91E8C] hover:underline">Dashboard</Link>
-              <Link href="/" className="text-xs font-semibold text-[#64748b] hover:text-[#0D1B2A]">Home</Link>
-            </div>
-          </div>
-        </div>
         <div className="flex-1 container mx-auto px-4 py-2 sm:py-8">
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5 mt-2">
@@ -1168,15 +1157,6 @@ export default function CreateEventPage() {
                       </div>
                     </div>
 
-                    {/* Gate fee (event mode) */}
-                    {mode === "event" && (
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-[#23466f]">Gate fee (₦)</label>
-                        <input type="number" min="0" value={form.gate_fee} onChange={(e) => setForm({ ...form, gate_fee: e.target.value })}
-                          className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]" placeholder="0" />
-                      </div>
-                    )}
-
                     {/* After party (event mode only) */}
                     {mode === "event" && (
                       <details className="rounded-xl border border-[#d9e2ec] group">
@@ -1361,11 +1341,17 @@ export default function CreateEventPage() {
                   </div>
                 )}
 
+                {/* Live Preview Button */}
+                <button type="button" onClick={() => document.querySelector('[data-live-preview]')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="w-full mt-5 h-12 rounded-xl font-black text-sm border-2 border-[#E91E8C] text-[#E91E8C] transition-all hover:bg-[#fff1f8]">
+                  Preview Before {mode === "event" ? "Posting" : "Creating"}
+                </button>
+
                 {/* Submit button */}
                 <button type="submit" disabled={submitting}
-                  className="w-full mt-5 h-12 rounded-xl font-black text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full mt-3 h-12 rounded-xl font-black text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ background: submitting ? "#94a3b8" : "linear-gradient(135deg, #E91E8C, #C4166F)", boxShadow: submitting ? "none" : "0 6px 20px rgba(233,30,140,0.35)" }}>
-                  {submitting ? "Creating…" : mode === "event" ? "Publish Event" : "Create Invite"}
+                  {submitting ? "Creating…" : mode === "event" ? "Post Event" : "Create Invite"}
                 </button>
 
                 {/* Bottom navigation */}
@@ -1389,7 +1375,7 @@ export default function CreateEventPage() {
             </div>
 
             {/* Sidebar - live preview */}
-            <div className="hidden lg:block space-y-6">
+            <div className="hidden lg:block space-y-6" data-live-preview>
               <div className="sticky top-8 self-start rounded-2xl bg-white p-6 text-[#0D1B2A] shadow-[0_18px_48px_rgba(0,0,0,0.08)] border border-[#e8edf2]">
                 {mode === "event" ? (
                   <>
