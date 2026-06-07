@@ -2046,11 +2046,10 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                   <button
                     type="button"
                     onClick={() => {
+                      const form = document.getElementById('create-event-form') as HTMLFormElement;
+                      if (!form?.reportValidity()) return;
                       if (formPage === totalFormPages - 1) {
-                        const form = document.getElementById('create-event-form') as HTMLFormElement;
-                        if (form?.reportValidity()) {
-                          setStep(2);
-                        }
+                        setStep(2);
                       } else if (mode === "event" && formPage === 0) {
                         setFormPage(2);
                       } else {

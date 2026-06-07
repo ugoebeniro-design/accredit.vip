@@ -777,7 +777,7 @@ export default function CreateEventPage() {
                 { index: 2, label: "Lineup, pass & message" },
               ].map((item) => (
                 <button key={item.index} type="button"
-                  onClick={() => setFormPage(item.index)}
+                  onClick={() => { if (item.index <= formPage + 1) { const form = document.getElementById('create-event-form') as HTMLFormElement; if (item.index > formPage && form && !form.reportValidity()) return; setFormPage(item.index); } }}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${formPage >= item.index ? "text-white" : "text-[#94a3b8]"}`}
                   style={{ background: formPage >= item.index ? "linear-gradient(135deg, #E91E8C, #C4166F)" : "transparent" }}>
                   <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
@@ -976,17 +976,17 @@ export default function CreateEventPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-[#23466f]">Event date *</label>
                       <div className="flex gap-2">
-                        <select value={dayPart} onChange={(e) => { const d = e.target.value; setDayPart(d); if (d && monthPart && yearPart) setForm({ ...form, event_date: `${yearPart}-${monthPart}-${d.padStart(2, "0")}` }); }}
+                        <select value={dayPart} onChange={(e) => { const d = e.target.value; setDayPart(d); if (d && monthPart && yearPart) setForm({ ...form, event_date: `${yearPart}-${monthPart}-${d.padStart(2, "0")}` }); }} required={!detailsToBeCommunicated}
                           className="h-11 flex-1 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] appearance-none" style={{ WebkitAppearance: "none" }}>
                           <option value="">Day</option>
                           {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
                         </select>
-                        <select value={monthPart} onChange={(e) => { const m = e.target.value; setMonthPart(m); if (dayPart && m && yearPart) setForm({ ...form, event_date: `${yearPart}-${m}-${dayPart.padStart(2, "0")}` }); }}
+                        <select value={monthPart} onChange={(e) => { const m = e.target.value; setMonthPart(m); if (dayPart && m && yearPart) setForm({ ...form, event_date: `${yearPart}-${m}-${dayPart.padStart(2, "0")}` }); }} required={!detailsToBeCommunicated}
                           className="h-11 flex-1 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] appearance-none" style={{ WebkitAppearance: "none" }}>
                           <option value="">Month</option>
                           {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((name, idx) => <option key={idx + 1} value={String(idx + 1).padStart(2, "0")}>{name}</option>)}
                         </select>
-                        <select value={yearPart} onChange={(e) => { const y = e.target.value; setYearPart(y); if (dayPart && monthPart && y) setForm({ ...form, event_date: `${y}-${monthPart}-${dayPart.padStart(2, "0")}` }); }}
+                        <select value={yearPart} onChange={(e) => { const y = e.target.value; setYearPart(y); if (dayPart && monthPart && y) setForm({ ...form, event_date: `${y}-${monthPart}-${dayPart.padStart(2, "0")}` }); }} required={!detailsToBeCommunicated}
                           className="h-11 flex-1 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] appearance-none" style={{ WebkitAppearance: "none" }}>
                           <option value="">Year</option>
                           {Array.from({ length: 10 }, (_, i) => <option key={2026 + i} value={String(2026 + i)}>{2026 + i}</option>)}
@@ -1002,7 +1002,7 @@ export default function CreateEventPage() {
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-[#23466f]">Timezone</label>
-                        <select value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+                        <select value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })} required
                           className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] appearance-none" style={{ WebkitAppearance: "none" }}>
                           {timezoneOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                         </select>
@@ -1023,7 +1023,7 @@ export default function CreateEventPage() {
                     <div ref={venueRef} className="space-y-1.5 relative">
                       <label className="text-sm font-semibold text-[#23466f]">Venue / Address</label>
                       <div className="relative">
-                        <input value={form.venue} onChange={(e) => { setForm({ ...form, venue: e.target.value }); setVenueSuggestionsOpen(true); }} onFocus={() => setVenueSuggestionsOpen(true)}
+                        <input value={form.venue} onChange={(e) => { setForm({ ...form, venue: e.target.value }); setVenueSuggestionsOpen(true); }} onFocus={() => setVenueSuggestionsOpen(true)} required={!detailsToBeCommunicated}
                           className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]" placeholder="Search or type venue address" disabled={detailsToBeCommunicated} />
                         <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
                       </div>
@@ -1314,7 +1314,7 @@ export default function CreateEventPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-[#23466f]">{mode === "event" ? "Event description" : "Invitation message"}</label>
                       <textarea ref={descriptionRef} onInput={autoResize} value={form.description}
-                        onChange={(e) => setForm({ ...form, description: e.target.value })}
+                        onChange={(e) => setForm({ ...form, description: e.target.value })} required
                         className="w-full rounded-xl border border-[#d9e2ec] px-3 py-3 text-sm outline-none focus:border-[#E91E8C] min-h-[100px] resize-none"
                         placeholder={mode === "event" ? "Describe what makes this event special..." : "Write a warm invitation message..."} />
                       <button type="button" onClick={generateMessage} disabled={aiGenerating}
@@ -1364,7 +1364,7 @@ export default function CreateEventPage() {
                     {formPage === 0 ? "Back to modes" : "Previous"}
                   </button>
                   {formPage < 2 && (
-                    <button type="button" onClick={() => setFormPage(formPage + 1)}
+                    <button type="button" onClick={() => { const form = document.getElementById('create-event-form') as HTMLFormElement; if (form && !form.reportValidity()) return; setFormPage(formPage + 1); }}
                       className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
                       style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}>
                       Next
