@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON, func
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON, func, Boolean, UniqueConstraint, CheckConstraint
 from app.core.database import Base
+import enum
 
 
 SUPPORTED_CURRENCIES = {
@@ -42,3 +43,56 @@ class WalletTransaction(Base):
     description = Column(String, nullable=True)
     status = Column(String, default="completed")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class BankAccount(Base):
+    """Bank accounts linked to user wallets for withdrawals"""
+    __tablename__ = "bank_accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    account_holder_name = Column(String, nullable=False)  # Must match user's full_name exactly
+    account_number = Column(String, nullable=False)
+    bank_name = Column(String, nullable=False)
+    bank_code = Column(String, nullable=True)  # SWIFT/BIC code
+    country_code = Column(String, nullable=False)  # NG, GH, KE, ZA, RW, UG, TZ
+    currency = Column(String, nullable=False)  # Currency this account accepts
+    is_verified = Column(Boolean, default=False)
+    is_primary = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'account_number', 'bank_code', name='user_account_unique'),
+    )
+
+
+class Withdrawal(Base):
+    """Withdrawal requests from wallets to bank accounts"""
+    __tablename__ = "withdrawals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    wallet_id = Column(Integer, ForeignKey("wallets.id"), nullable=False)
+    bank_account_id = Column(Integer, ForeignKey("bank_accounts.id"), nullable=False)
+    amount = Column(Float, nullable=False)
+    currency = Column(String, nullable=False)
+    status = Column(String, default="pending")  # pending, processing, completed, failed, flagged
+    reference = Column(String, unique=True, nullable=False)
+
+    # AML (Anti-Money Laundering) Checks
+    is_aml_flagged = Column(Boolean, default=False)
+    aml_reason = Column(String, nullable=True)  # Reason for AML flag
+    daily_withdrawal_total = Column(Float, default=0.0)  # For daily limit tracking
+    requires_verification = Column(Boolean, default=False)  # High-risk transactions
+
+    # Metadata
+    failure_reason = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    processed_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint('amount > 0', name='positive_withdrawal_amount'),
+    )
