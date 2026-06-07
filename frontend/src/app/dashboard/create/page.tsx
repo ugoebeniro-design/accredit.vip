@@ -14,6 +14,7 @@ import {
   cleanPassPackages,
   parseTimeInputTo24Hour,
 } from "@/lib/event-form-options";
+import { INVITE_EVENT_TYPES, EVENT_EVENT_TYPES } from "@/lib/event-types";
 
 type Mode = "invite" | "event";
 type Channel = "email" | "whatsapp" | "sms";
@@ -927,21 +928,22 @@ export default function CreateEventPage() {
                         placeholder={user?.full_name || "e.g. John Doe"} />
                     </div>
 
-                    {/* Category (event mode) */}
-                    {mode === "event" && (
-                      <div className="space-y-1.5">
-                        <span className="text-sm font-semibold text-[#23466f]">Event type</span>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          {["concert", "conference", "festival", "nightlife", "sports", "corporate", "private", "wedding"].map((cat) => (
-                            <label key={cat} className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 p-3 text-center text-xs font-bold transition-all ${(form.category || form.event_type) === cat ? "border-[#E91E8C] bg-[#fff1f8] text-[#E91E8C]" : "border-[#e2e8f0] bg-white text-[#64748b] hover:border-[#E91E8C]/50"}`}>
-                              <input type="radio" name="category" className="sr-only" checked={(form.category || form.event_type) === cat}
-                                onChange={() => setForm({ ...form, category: cat, event_type: cat })} />
-                              {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* Event type (both modes) */}
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-[#23466f]">Event type</label>
+                      <select value={form.event_type || ""} onChange={(e) => setForm({ ...form, event_type: e.target.value })}
+                        className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] appearance-none" style={{ WebkitAppearance: "none" }}>
+                        <option value="">Select event type</option>
+                        {(mode === "event" ? EVENT_EVENT_TYPES : INVITE_EVENT_TYPES).map((type) => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
+                      </select>
+                      {form.event_type === "others" && (
+                        <input value={form.category || ""} onChange={(e) => setForm({ ...form, category: e.target.value })}
+                          className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
+                          placeholder="Specify your event type..." />
+                      )}
+                    </div>
 
                     {/* Social media handles - POST EVENT only */}
                     {mode === "event" && (
