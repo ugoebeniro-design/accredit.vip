@@ -635,6 +635,10 @@ function EventDetailContent() {
           <Link href={`/dashboard/events/${id}/reminders`} className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:border-pink-300 hover:text-pink-600 transition">Reminders</Link>
           <Link href={`/dashboard/events/${id}/templates`} className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:border-pink-300 hover:text-pink-600 transition">Templates</Link>
           <Link href={`/scan`} className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:border-pink-300 hover:text-pink-600 transition">Scanner</Link>
+          <Link href={`/dashboard/wallet`} className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:border-pink-300 hover:text-pink-600 transition flex items-center gap-1">
+            <span>Wallet</span>
+            {walletBalance !== null && <span className="text-xs text-pink-500">₦{walletBalance.toLocaleString()}</span>}
+          </Link>
         </div>
 
         {event.status === "draft" && (
