@@ -852,7 +852,7 @@ export default function CreateEventPage() {
                               <p className="text-sm font-bold text-emerald-600">Flier parsed - form pre-filled below</p>
                               <p className="text-xs text-[#94a3b8] mt-0.5">Review each field and make any corrections</p>
                             </div>
-                            <label className="text-xs font-bold text-[#E91E8C] cursor-pointer hover:underline">Change<input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} /></label>
+                            <label className="text-xs font-bold text-[#E91E8C] cursor-pointer hover:underline">Change<input type="file" accept="image/*" className="sr-only" onChange={handleUnifiedUpload} /></label>
                           </div>
                         ) : (
                           <div className="flex items-center gap-3">
