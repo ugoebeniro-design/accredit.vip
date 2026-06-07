@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { apiClient } from "@/lib/api-client";
 import { aiChat, generateFlier, parseFlier } from "@/lib/api/ai";
+import { TrialStore } from "@/lib/trial-store";
 
 const DRAFT_KEY = "accredit_event_draft";
 const DRAFT_KEYS: Record<string, string> = { invite: "accredit_draft_invite", event: "accredit_draft_event" };
@@ -501,6 +503,7 @@ const qrStyleConfig: Record<string, { wrapper: string; square: string }> = {
 };
 
 export default function CreateEventPage() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode | null>(null);
   const [step, setStep] = useState(0);
   const [formPage, setFormPage] = useState(0);
@@ -884,6 +887,55 @@ export default function CreateEventPage() {
       const detail = err instanceof Error ? err.message : "You have already tested this feature.";
       setError(detail);
       setUsedTrials((current) => ({ ...current, [mode]: true }));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTestAndSignup = async () => {
+    if (!mode) return;
+
+    // Run the trial first
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const result = await apiClient<{ sent_to?: string; sent_via?: string }>("/trials/use", {
+        method: "POST",
+        body: {
+          trial_type: mode,
+          fingerprint,
+          payload: {
+            ...form,
+            pass_packages: passPackages,
+            lineup,
+            social_handles: socialHandles,
+            estimated_price: selectedPrice,
+            pricing_units: pricingUnits,
+            guest_count: selectedGuestRange.max,
+            test_email: mode === "invite" ? testEmail : undefined,
+            test_phone: mode === "invite" ? testPhone || undefined : undefined,
+          },
+        },
+      });
+
+      // Save to trial store
+      const trialEvent = TrialStore.create(mode as 'invite' | 'event');
+      trialEvent.form = form;
+      trialEvent.passPackages = passPackages;
+      trialEvent.socialHandles = socialHandles;
+      trialEvent.lineup = lineup;
+      trialEvent.uploadedImageData = uploadedImageData;
+      trialEvent.tested = true;
+      trialEvent.testedVia = result.sent_via as 'email' | 'whatsapp' | 'sms';
+      trialEvent.testRecipient = result.sent_to || testEmail;
+      TrialStore.save(trialEvent);
+
+      // Redirect to onboarding
+      router.push('/auth/onboarding');
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : "Failed to test. Please try again.";
+      setError(detail);
     } finally {
       setSubmitting(false);
     }
@@ -2297,12 +2349,14 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     )}
 
                     {hydrated && mode && usedTrials[mode] ? (
-                      <Link
-                        href="/login"
-                        className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-sm font-bold text-white transition-all hover:bg-[#C4166F]"
+                      <button
+                        type="button"
+                        onClick={handleTestAndSignup}
+                        disabled={submitting}
+                        className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-sm font-bold text-white transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed bounce-button"
                       >
-                        Login / Create Account
-                      </Link>
+                        {submitting ? "Setting up..." : "Test This Feature"}
+                      </button>
                     ) : (
                       <button
                         type="submit"
@@ -2420,12 +2474,14 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
             </div>
             <div className="p-6 border-t border-[#e8edf2] bg-[#f8f9fc]">
               <p className="text-sm text-gray-600 mb-4">Ready to send real invitations? Create an account to set up your guest list and start sending.</p>
-              <Link
-                href="/login"
-                className="block w-full px-4 py-3 bg-[#E91E8C] text-white rounded-xl font-bold hover:bg-[#d0147a] transition-colors text-center"
+              <button
+                type="button"
+                onClick={handleTestAndSignup}
+                disabled={submitting}
+                className="block w-full px-4 py-3 bg-[#E91E8C] text-white rounded-xl font-bold hover:bg-[#d0147a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors bounce-button"
               >
-                Login / Create Account
-              </Link>
+                {submitting ? "Setting up..." : "Test This Feature"}
+              </button>
             </div>
           </div>
         </div>
@@ -2452,12 +2508,14 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
             </div>
             <div className="p-6 border-t border-[#e8edf2] bg-[#f8f9fc]">
               <p className="text-sm text-gray-600 mb-4">Ready to publish this event? Create an account to save your settings and post to Discover Events.</p>
-              <Link
-                href="/login"
-                className="block w-full px-4 py-3 bg-[#E91E8C] text-white rounded-xl font-bold hover:bg-[#d0147a] transition-colors text-center"
+              <button
+                type="button"
+                onClick={handleTestAndSignup}
+                disabled={submitting}
+                className="block w-full px-4 py-3 bg-[#E91E8C] text-white rounded-xl font-bold hover:bg-[#d0147a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors bounce-button"
               >
-                Login / Create Account
-              </Link>
+                {submitting ? "Setting up..." : "Test This Feature"}
+              </button>
             </div>
           </div>
         </div>
