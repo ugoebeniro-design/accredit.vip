@@ -14,7 +14,7 @@ from app.core.security import get_current_user, extract_token
 from app.models.user import User
 from app.models.event import Event
 from app.models.ticket_purchase import TicketPurchase
-from app.models.wallet import Wallet, WalletTransaction
+from app.models.wallet import Wallet, WalletTransaction, DEFAULT_BALANCES
 
 router = APIRouter()
 
@@ -74,12 +74,17 @@ async def purchase_ticket(
             raise HTTPException(status_code=401, detail="Login required to pay with wallet")
         wallet_result = await db.execute(select(Wallet).where(Wallet.user_id == user.id))
         wallet = wallet_result.scalar_one_or_none()
-        if not wallet or wallet.balance < total:
+        if not wallet:
+            raise HTTPException(status_code=400, detail="Wallet not found")
+        balances = wallet.balances or dict(DEFAULT_BALANCES)
+        if (balances.get("NGN", 0)) < total:
             raise HTTPException(status_code=400, detail="Insufficient wallet balance")
-        wallet.balance -= total
+        balances["NGN"] = balances.get("NGN", 0) - total
+        wallet.balances = balances
         tx = WalletTransaction(
             wallet_id=wallet.id,
             amount=-total,
+            currency="NGN",
             type="debit",
             reference=reference,
             description=f"Ticket purchase: {event.title} x{req.quantity}",

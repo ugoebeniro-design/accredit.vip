@@ -128,7 +128,7 @@ function EventDetailContent() {
       loadFliers();
       loadCheckinStats();
       loadAccreditationLog();
-      apiClient<any>("/wallet").then((d) => setWalletBalance(d.balance)).catch(() => {});
+      apiClient<any>("/wallet").then((d) => setWalletBalance(d.balances?.NGN ?? d.balance)).catch(() => {});
     }
   }, [user, loading, id, loadGuests]);
 

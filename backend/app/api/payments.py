@@ -13,7 +13,7 @@ from app.models.user import User
 from app.models.event import Event
 from app.models.guest import Guest
 from app.models.payment import Payment
-from app.models.wallet import Wallet, WalletTransaction
+from app.models.wallet import Wallet, WalletTransaction, DEFAULT_BALANCES
 from app.services.notify import notify_subscribers
 
 RESEND_PRICE_PER_GUEST = 500  # NGN
@@ -55,12 +55,17 @@ async def initiate_payment(
     if req.payment_method == "wallet":
         wallet_result = await db.execute(select(Wallet).where(Wallet.user_id == user.id))
         wallet = wallet_result.scalar_one_or_none()
-        if not wallet or wallet.balance < amount:
+        if not wallet:
+            raise HTTPException(status_code=400, detail="Wallet not found")
+        balances = wallet.balances or dict(DEFAULT_BALANCES)
+        if (balances.get("NGN", 0)) < amount:
             raise HTTPException(status_code=400, detail="Insufficient wallet balance")
-        wallet.balance -= amount
+        balances["NGN"] = balances.get("NGN", 0) - amount
+        wallet.balances = balances
         tx = WalletTransaction(
             wallet_id=wallet.id,
             amount=-amount,
+            currency="NGN",
             type="debit",
             reference=reference,
             description=f"Event publication: {event.title}",

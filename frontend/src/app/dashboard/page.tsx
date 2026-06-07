@@ -63,7 +63,7 @@ function DashboardContent() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [walletBalances, setWalletBalances] = useState<Record<string, number> | null>(null);
   const router = useRouter();
 
   const loadEvents = useCallback(async (filters?: EventFilters) => {
@@ -77,7 +77,7 @@ function DashboardContent() {
 
   useEffect(() => {
     if (!loading && !user) { router.push("/login"); return; }
-    if (user) { loadEvents(); apiClient<any>("/wallet").then((d) => setWalletBalance(d.balance)).catch(() => {}); }
+    if (user) { loadEvents(); apiClient<any>("/wallet").then((d) => setWalletBalances(d.balances || { NGN: d.balance })).catch(() => {}); }
   }, [user, loading, router, loadEvents]);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -243,7 +243,7 @@ function DashboardContent() {
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
               </svg>
-              {walletBalance !== null ? `₦${walletBalance.toLocaleString()}` : "Wallet"}
+              {walletBalances ? `₦${(walletBalances.NGN ?? 0).toLocaleString()}` : "Wallet"}
             </Link>
             <Link href="/dashboard/create" className="btn-primary text-xs py-2 px-4">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
