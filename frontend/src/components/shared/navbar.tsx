@@ -24,6 +24,7 @@ export function Navbar({
     { label: "Contact", href: "/contact" },
   ],
 }: NavbarProps) {
+  const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -33,10 +34,13 @@ export function Navbar({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const resolvedAuthLinks = authLinks ?? [
+  const resolvedAuthLinks = authLinks ?? (user ? [
+    { label: "WALLET", href: "/dashboard/wallet" },
+    { label: "DASHBOARD", href: "/dashboard", primary: true },
+  ] : [
     { label: "LOG IN", href: "/login" },
     { label: "CREATE EVENT", href: "/create-event", primary: true },
-  ] as Array<{ label: string; href: string; primary?: boolean; onClick?: () => void }>;
+  ]) as Array<{ label: string; href: string; primary?: boolean; onClick?: () => void }>;
 
   const isDark = variant === "solid" || variant === "transparent";
 
