@@ -40,6 +40,11 @@ uploads/*
 Thumbs.db
 *.log
 
+# Generated test artifacts
+test-create-flow.js
+frontend/test-create-flow.js
+frontend/screenshot-*.png
+
 # Backend specific
 backend/app/__pycache__/
 backend/.venv/
