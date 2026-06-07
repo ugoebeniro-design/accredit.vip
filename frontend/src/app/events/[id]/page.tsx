@@ -91,7 +91,7 @@ function PublicEventContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [event, setEvent] = useState<EventData | null>(null);
+  const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
@@ -181,8 +181,8 @@ function PublicEventContent() {
 
   const imgUrl = coverImageUrl(event.cover_image);
   const isFreeEvent = !event.ticket_price || event.ticket_price === 0;
-  const passPackages = event.pass_packages?.filter((p) => p.name || p.price) || [];
-  const lineup = event.lineup?.filter((p) => p.role || p.name) || [];
+  const passPackages = event.pass_packages?.filter((p: any) => p.name || p.price) || [];
+  const lineup = event.lineup?.filter((p: any) => p.role || p.name) || [];
   const cat = event.category || event.event_type || "";
 
   const catGradients: Record<string, string> = {
@@ -353,7 +353,7 @@ function PublicEventContent() {
             <div>
               <h2 className="text-lg font-black text-[#0D1B2A] mb-3">About this event</h2>
               <div className="text-[#475569] text-sm leading-7 space-y-3">
-                {event.description.split(/\n{2,}/).map((para, i) => (
+                {event.description.split(/\n{2,}/).map((para: string, i: number) => (
                   <p key={i}>{para.replace(/\n/g, " ")}</p>
                 ))}
               </div>
@@ -365,7 +365,7 @@ function PublicEventContent() {
             <div>
               <h2 className="text-lg font-black text-[#0D1B2A] mb-4">Lineup</h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                {lineup.map((person, i) => (
+                {lineup.map((person: any, i: number) => (
                   <div key={i} className="flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] p-4">
                     <div
                       className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm font-black"
@@ -456,7 +456,7 @@ function PublicEventContent() {
               <div className="px-6 py-4 border-b border-[#e8edf2] bg-[#f8f9fc]">
                 <p className="text-xs font-bold uppercase tracking-wider text-[#94a3b8] mb-3">Ticket Types</p>
                 <div className="space-y-2">
-                  {passPackages.map((pkg, i) => (
+                  {passPackages.map((pkg: any, i: number) => (
                     <div key={i} className="flex items-center justify-between rounded-xl bg-white border border-[#e8edf2] px-4 py-3">
                       <span className="text-sm font-semibold text-[#0D1B2A]">{pkg.name || "Pass"}</span>
                       <span className="text-sm font-black" style={{ color: "#E91E8C" }}>
@@ -548,6 +548,17 @@ function PublicEventContent() {
                         <span>Total</span>
                         <span>₦{Math.round(event.ticket_price * quantity * (1 + VAT_PERCENT / 100)).toLocaleString()}</span>
                       </div>
+                    </div>
+                  )}
+                  {event.tickets_available !== null && event.tickets_available <= 0 && (
+                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800 space-y-3">
+                      <p className="font-semibold">Sold out</p>
+                      <form onSubmit={async (e) => { e.preventDefault(); const f = e.currentTarget; try { await apiClient("/waitlist/join", { method: "POST", body: { event_id: event.id, name: (f.elements.namedItem("wl_name") as HTMLInputElement).value, email: (f.elements.namedItem("wl_email") as HTMLInputElement).value, phone: (f.elements.namedItem("wl_phone") as HTMLInputElement).value || undefined, quantity } }); alert("You're on the waitlist!"); } catch (err: any) { alert(err.message); } }} className="space-y-2">
+                        <input name="wl_name" required placeholder="Your name" className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm" />
+                        <input name="wl_email" required type="email" placeholder="Your email" className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm" />
+                        <input name="wl_phone" placeholder="Phone (optional)" className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm" />
+                        <button type="submit" className="w-full rounded-lg bg-amber-600 text-white py-2 font-bold text-sm hover:bg-amber-700">Join Waitlist</button>
+                      </form>
                     </div>
                   )}
                   <button

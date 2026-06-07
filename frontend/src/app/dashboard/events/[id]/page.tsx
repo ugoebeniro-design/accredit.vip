@@ -626,6 +626,15 @@ function EventDetailContent() {
           </div>
         )}
 
+        <div className="flex gap-3 mb-8 flex-wrap">
+          <Link href={`/dashboard/events/${id}/coupons`} className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:border-pink-300 hover:text-pink-600 transition">Coupons</Link>
+          <Link href={`/dashboard/events/${id}/waitlist`} className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:border-pink-300 hover:text-pink-600 transition">Waitlist</Link>
+          <Link href={`/dashboard/events/${id}/questions`} className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:border-pink-300 hover:text-pink-600 transition">RSVP Questions</Link>
+          <Link href={`/dashboard/events/${id}/reminders`} className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:border-pink-300 hover:text-pink-600 transition">Reminders</Link>
+          <Link href={`/dashboard/events/${id}/templates`} className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:border-pink-300 hover:text-pink-600 transition">Templates</Link>
+          <Link href={`/scan`} className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:border-pink-300 hover:text-pink-600 transition">Scanner</Link>
+        </div>
+
         {event.status === "draft" && (
           <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/[0.02] p-6 mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -814,6 +823,17 @@ function EventDetailContent() {
                 </div>
               )}
             </div>
+
+            {/* Embed Widget */}
+            {event.slug && (
+              <div className="mb-8 rounded-xl border bg-white p-4">
+                <h2 className="text-sm font-semibold mb-2">Embed Widget</h2>
+                <p className="text-xs text-gray-500 mb-2">Copy this code to embed this event on your website:</p>
+                <pre className="text-xs bg-gray-50 p-3 rounded-lg border overflow-x-auto">
+                  {`<iframe src="${window.location.origin}/embed/event/${id}" width="100%" height="320" frameborder="0" style="border:none;max-width:400px;margin:0 auto;display:block"></iframe>`}
+                </pre>
+              </div>
+            )}
 
             <h2 className="text-lg font-semibold mb-4">Guests ({totalGuests})</h2>
             <form onSubmit={handleGuestSearch} className="flex gap-2 mb-4 flex-wrap">
