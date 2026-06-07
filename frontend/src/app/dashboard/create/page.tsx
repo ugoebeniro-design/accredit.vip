@@ -921,7 +921,7 @@ export default function CreateEventPage() {
 
                     {/* Host name */}
                     <div className="space-y-1.5">
-                      <label className="text-sm font-semibold text-[#23466f]">Host name</label>
+                      <label className="text-sm font-semibold text-[#23466f]">Host name <span className="text-xs font-normal text-[#94a3b8]">(optional)</span></label>
                       <input value={form.host_name} onChange={(e) => setForm({ ...form, host_name: e.target.value })}
                         className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
                         placeholder={user?.full_name || "e.g. John Doe"} />
@@ -1144,14 +1144,14 @@ export default function CreateEventPage() {
                       <label className="text-sm font-semibold text-[#23466f]">Dress code</label>
                       <div className="grid gap-2 sm:grid-cols-2">
                         <div>
-                          <p className="text-xs text-[#94a3b8] mb-1">Male</p>
-                          <input value={form.male_dress_code} onChange={(e) => setForm({ ...form, male_dress_code: e.target.value })}
-                            className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]" placeholder="e.g. All white / Black tie" disabled={detailsToBeCommunicated} />
-                        </div>
-                        <div>
                           <p className="text-xs text-[#94a3b8] mb-1">Female</p>
                           <input value={form.female_dress_code} onChange={(e) => setForm({ ...form, female_dress_code: e.target.value })}
                             className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]" placeholder="e.g. Evening gown / Casual" disabled={detailsToBeCommunicated} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#94a3b8] mb-1">Male</p>
+                          <input value={form.male_dress_code} onChange={(e) => setForm({ ...form, male_dress_code: e.target.value })}
+                            className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]" placeholder="e.g. All white / Black tie" disabled={detailsToBeCommunicated} />
                         </div>
                       </div>
                     </div>
