@@ -347,7 +347,7 @@ export default function CreateEventPage() {
       const savedInviteDraft = localStorage.getItem("accredit_draft_invite");
       const savedEventDraft = localStorage.getItem("accredit_draft_event");
       if (savedInviteDraft || savedEventDraft) {
-        const draft = savedInviteDraft ? JSON.parse(savedInviteDraft) : JSON.parse(savedEventDraft);
+        const draft = savedInviteDraft ? JSON.parse(savedInviteDraft) : JSON.parse(savedEventDraft!);
         if (draft) {
           setForm(draft.form || DEFAULT_FORM);
           setPassPackages(draft.passPackages || [{ name: "Regular", price: "" }]);
