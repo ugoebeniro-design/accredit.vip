@@ -23,12 +23,17 @@ class Wallet(Base):
     __tablename__ = "wallets"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     balance = Column(Float, default=0.0)
-    currency = Column(String, default="NGN")
+    currency = Column(String, default="NGN", nullable=False)
+    is_primary = Column(Boolean, default=False)
     balances = Column(JSON, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'currency', name='user_currency_unique'),
+    )
 
 
 class WalletTransaction(Base):

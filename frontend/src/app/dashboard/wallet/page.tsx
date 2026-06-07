@@ -1,213 +1,298 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import { apiClient } from "@/lib/api-client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { WalletDashboard } from "@/components/wallet/wallet-dashboard";
+import { BankAccountManager } from "@/components/wallet/bank-account-manager";
+import { AddBankAccountForm } from "@/components/wallet/add-bank-account-form";
+import { WithdrawalForm } from "@/components/wallet/withdrawal-form";
+import { CurrencySelector } from "@/components/wallet/currency-selector";
+import { ChevronLeft } from "lucide-react";
 
-type CurrencyInfo = {
-  name: string;
-  symbol: string;
-  flag: string;
-  country: string;
-  min_fund: number;
-};
-
-type WalletData = {
+interface Wallet {
   id: number;
-  balance: number;
   currency: string;
-  balances: Record<string, number>;
-  transactions: {
-    id: number;
-    amount: number;
-    currency: string;
-    type: string;
-    reference: string;
-    description: string | null;
-    status: string;
-    created_at: string;
-  }[];
-};
+  balance: number;
+  is_primary: boolean;
+}
 
-const QUICK_AMOUNTS: Record<string, number[]> = {
-  NGN: [1000, 5000, 10000, 25000],
-  USD: [10, 25, 50, 100],
-  GBP: [10, 25, 50, 100],
-  EUR: [10, 25, 50, 100],
-  KES: [500, 1000, 5000, 10000],
-  GHS: [20, 50, 100, 500],
-  ZAR: [50, 100, 500, 1000],
-  RWF: [2000, 5000, 10000, 50000],
-  UGX: [5000, 10000, 50000, 100000],
-  TZS: [5000, 10000, 50000, 100000],
-};
-
-function WalletContent() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [wallet, setWallet] = useState<WalletData | null>(null);
-  const [currencies, setCurrencies] = useState<Record<string, CurrencyInfo>>({});
-  const [selectedCurrency, setSelectedCurrency] = useState("NGN");
-  const [fundAmount, setFundAmount] = useState("");
-  const [funding, setFunding] = useState(false);
-
-  const loadCurrencies = useCallback(async () => {
-    try {
-      const data = await apiClient<Record<string, CurrencyInfo>>("/wallet/currencies");
-      setCurrencies(data);
-    } catch {}
-  }, []);
-
-  const loadWallet = useCallback(async () => {
-    try {
-      const data = await apiClient<WalletData>("/wallet");
-      setWallet(data);
-    } catch {}
-  }, []);
-
-  useEffect(() => { if (!loading && !user) router.push("/login"); }, [loading, user, router]);
-
-  useEffect(() => {
-    loadCurrencies();
-    if (user) loadWallet();
-  }, [user, loadWallet, loadCurrencies]);
-
-  useEffect(() => {
-    const ref = searchParams.get("reference");
-    if (ref) loadWallet();
-  }, [searchParams, loadWallet]);
-
-  const currencyInfo = currencies[selectedCurrency] || { symbol: "$", name: selectedCurrency, flag: "", min_fund: 1 };
-
-  const handleFund = async () => {
-    const amount = Number(fundAmount);
-    if (!amount || amount < currencyInfo.min_fund) {
-      alert(`Minimum top-up is ${currencyInfo.symbol}${currencyInfo.min_fund}`);
-      return;
-    }
-    setFunding(true);
-    try {
-      const res = await apiClient<{ authorization_url: string | null }>("/wallet/fund", {
-        method: "POST",
-        body: { amount, currency: selectedCurrency },
-      });
-      if (res.authorization_url) window.location.href = res.authorization_url;
-      else alert("Payment gateway unavailable for this currency");
-    } catch (err: any) { alert(err.message); }
-    setFunding(false);
-  };
-
-  if (loading || !user) return null;
-
-  const balances = wallet?.balances ?? {};
-
-  return (
-    <div className="min-h-screen bg-[#f8f9fc] flex">
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-[#e8edf2]">
-          <h1 className="text-lg font-bold text-[#0D1B2A]">Wallet</h1>
-          <button onClick={() => router.push("/dashboard")} className="text-sm text-pink-600 hover:underline">&larr; Dashboard</button>
-        </header>
-        <main className="flex-1 p-6 overflow-auto max-w-2xl mx-auto w-full">
-          {/* Currency Cards */}
-          <h2 className="font-bold text-sm text-[#0D1B2A] mb-3">Currency Balances</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
-            {Object.entries(currencies).map(([code, info]) => {
-              const bal = balances[code] ?? 0;
-              const isSelected = selectedCurrency === code;
-              return (
-                <button
-                  key={code}
-                  onClick={() => { setSelectedCurrency(code); setFundAmount(""); }}
-                  className={`rounded-xl border-2 p-4 text-left transition-all ${
-                    isSelected
-                      ? "border-pink-500 bg-pink-50 shadow-sm"
-                      : "border-[#e8edf2] bg-white hover:border-pink-200"
-                  }`}
-                >
-                  <span className="text-2xl block mb-1">{info.flag}</span>
-                  <p className="text-sm font-bold text-[#0D1B2A]">{code}</p>
-                  <p className="text-xs text-gray-500">{info.symbol}{bal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Fund Card */}
-          <div className="rounded-2xl bg-white border border-[#e8edf2] p-5 mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl">{currencyInfo.flag}</span>
-              <div>
-                <h2 className="font-bold text-sm">Top Up {selectedCurrency} Wallet</h2>
-                <p className="text-xs text-gray-400">{currencyInfo.name}</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                placeholder={`Amount (${currencyInfo.symbol})`}
-                min={currencyInfo.min_fund}
-                value={fundAmount}
-                onChange={(e) => setFundAmount(e.target.value)}
-                className="flex-1 rounded-xl border border-[#e8edf2] px-4 py-3 text-sm"
-              />
-              <button
-                onClick={handleFund}
-                disabled={funding}
-                className="rounded-xl bg-pink-600 text-white px-6 py-3 font-bold text-sm hover:bg-pink-700 disabled:opacity-50"
-              >
-                {funding ? "..." : "Fund"}
-              </button>
-            </div>
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {(QUICK_AMOUNTS[selectedCurrency] || [100, 500, 1000]).map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setFundAmount(String(n))}
-                  className="rounded-lg border border-[#e8edf2] px-3 py-1.5 text-xs font-medium text-gray-500 hover:border-pink-300 hover:text-pink-600 transition"
-                >
-                  {currencyInfo.symbol}{n.toLocaleString()}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Transaction History */}
-          <h2 className="font-bold text-sm mb-3">Transaction History</h2>
-          {(wallet?.transactions ?? []).length === 0 ? (
-            <div className="rounded-2xl bg-white border border-[#e8edf2] p-8 text-center">
-              <p className="text-sm text-gray-400">No transactions yet</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {(wallet?.transactions ?? []).map((tx) => {
-                const txCur = currencies[tx.currency] || { symbol: tx.currency, flag: "" };
-                return (
-                  <div key={tx.id} className="rounded-xl bg-white border border-[#e8edf2] p-4 flex items-center justify-between">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold">{tx.description || tx.type}</p>
-                      <p className="text-xs text-gray-400">{new Date(tx.created_at).toLocaleDateString()} · {tx.reference} · {tx.currency}</p>
-                    </div>
-                    <span className={`text-sm font-bold flex-shrink-0 ml-3 ${tx.amount > 0 ? "text-green-600" : "text-red-500"}`}>
-                      {tx.amount > 0 ? "+" : ""}{txCur.symbol}{Math.abs(tx.amount).toLocaleString()}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </main>
-      </div>
-    </div>
-  );
+interface BankAccount {
+  id: number;
+  bank_name: string;
+  country_code: string;
+  currency: string;
+  masked_account: string;
+  is_verified: boolean;
+  is_primary: boolean;
+  created_at: string;
 }
 
 export default function WalletPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "deposit" | "withdraw" | "accounts">("overview");
+  const [selectedCurrency, setSelectedCurrency] = useState("");
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch("/api/v1/auth/me");
+        if (!res.ok) {
+          router.push("/auth/login");
+          return;
+        }
+        const data = await res.json();
+        setUser(data);
+      } catch {
+        router.push("/auth/login");
+      }
+    };
+
+    checkAuth();
+    fetchWallets();
+    fetchBankAccounts();
+  }, [router]);
+
+  const fetchWallets = async () => {
+    try {
+      const res = await fetch("/api/v1/wallets");
+      if (res.ok) {
+        const data = await res.json();
+        setWallets(Array.isArray(data) ? data : data.wallets || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch wallets:", err);
+    }
+  };
+
+  const fetchBankAccounts = async () => {
+    try {
+      const res = await fetch("/api/v1/bank-accounts");
+      if (res.ok) {
+        const data = await res.json();
+        setBankAccounts(Array.isArray(data) ? data : data.accounts || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch bank accounts:", err);
+    }
+  };
+
+  const handleAddBankAccount = async (accountData: any) => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/v1/bank-accounts/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(accountData),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Failed to add bank account");
+      }
+
+      await fetchBankAccounts();
+      setActiveTab("overview");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteBankAccount = async (id: number) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/v1/bank-accounts/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete bank account");
+      }
+
+      await fetchBankAccounts();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDepositCurrency = async (currency: string) => {
+    if (!currency) {
+      setActiveTab("deposit");
+      setSelectedCurrency("");
+    } else {
+      setSelectedCurrency(currency);
+      setActiveTab("deposit");
+    }
+  };
+
+  const handleWithdrawCurrency = async (currency: string) => {
+    setSelectedCurrency(currency);
+    setActiveTab("withdraw");
+  };
+
+  const handleCurrencySelect = async (currency: string) => {
+    setSelectedCurrency(currency);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/v1/wallets/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currency }),
+      });
+
+      if (res.ok) {
+        await fetchWallets();
+        setActiveTab("overview");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWithdrawalSubmit = async (accountId: number, amount: number) => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/v1/withdrawals/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bank_account_id: accountId,
+          amount,
+          currency: selectedCurrency,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Failed to process withdrawal");
+      }
+
+      await fetchWallets();
+      setActiveTab("overview");
+      setSelectedCurrency("");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E91E8C]"></div>
+      </div>
+    );
+  }
+
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#f8f9fc] flex items-center justify-center text-sm text-gray-400">Loading wallet...</div>}>
-      <WalletContent />
-    </Suspense>
+    <div className="min-h-screen bg-[#f8f9fc] pt-20 pb-12">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-[#E91E8C] hover:underline mb-4"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </button>
+          <h1 className="text-3xl font-bold text-[#0D1B2A]">Wallet</h1>
+          <p className="text-[#64748b] mt-2">Manage your funds and bank accounts</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-8 border-b border-[#e8edf2]">
+          {["overview", "deposit", "withdraw", "accounts"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => {
+                setActiveTab(tab as any);
+                setSelectedCurrency("");
+              }}
+              className={`px-4 py-3 font-semibold text-sm transition-all border-b-2 ${
+                activeTab === tab
+                  ? "border-[#E91E8C] text-[#E91E8C]"
+                  : "border-transparent text-[#64748b] hover:text-[#0D1B2A]"
+              }`}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="space-y-6">
+          {/* Overview Tab */}
+          {activeTab === "overview" && (
+            <>
+              <WalletDashboard
+                wallets={wallets}
+                onDeposit={handleDepositCurrency}
+                onWithdraw={handleWithdrawCurrency}
+                loading={loading}
+              />
+              <BankAccountManager
+                accounts={bankAccounts}
+                onAdd={() => setActiveTab("accounts")}
+                onDelete={handleDeleteBankAccount}
+                loading={loading}
+              />
+            </>
+          )}
+
+          {/* Deposit Tab */}
+          {activeTab === "deposit" && (
+            <div className="bg-white rounded-xl border border-[#e8edf2] p-6">
+              <h2 className="text-xl font-bold text-[#0D1B2A] mb-4">Add Funds</h2>
+              <CurrencySelector
+                onSelect={handleCurrencySelect}
+                selectedCurrency={selectedCurrency}
+              />
+            </div>
+          )}
+
+          {/* Withdraw Tab */}
+          {activeTab === "withdraw" && (
+            <div className="bg-white rounded-xl border border-[#e8edf2] p-6">
+              <h2 className="text-xl font-bold text-[#0D1B2A] mb-6">Request Withdrawal</h2>
+              {bankAccounts.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-[#64748b] mb-4">Add a bank account first to withdraw funds</p>
+                  <button
+                    onClick={() => setActiveTab("accounts")}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#E91E8C] px-4 py-2 text-sm font-bold text-white hover:bg-[#C4166F] transition-colors"
+                  >
+                    Add Bank Account
+                  </button>
+                </div>
+              ) : (
+                <WithdrawalForm
+                  wallets={wallets}
+                  bankAccounts={bankAccounts}
+                  onSubmit={handleWithdrawalSubmit}
+                  loading={loading}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Bank Accounts Tab */}
+          {activeTab === "accounts" && (
+            <div className="bg-white rounded-xl border border-[#e8edf2] p-6">
+              <h2 className="text-xl font-bold text-[#0D1B2A] mb-6">Add Bank Account</h2>
+              {user && (
+                <AddBankAccountForm
+                  userFullName={user.full_name}
+                  onSubmit={handleAddBankAccount}
+                  loading={loading}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

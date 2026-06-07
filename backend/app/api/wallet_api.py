@@ -286,3 +286,81 @@ async def wallet_webhook(
                 await db.commit()
 
     return {"status": "ok"}
+
+
+# ─── New Multi-Currency Wallet Endpoints ───
+
+@router.get("/wallets")
+async def list_wallets(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all wallets for a user (one per currency)"""
+    result = await db.execute(
+        select(Wallet)
+        .where(Wallet.user_id == user.id)
+        .order_by(Wallet.is_primary.desc(), Wallet.created_at.asc())
+    )
+    wallets = result.scalars().all()
+
+    return [
+        {
+            "id": w.id,
+            "currency": w.currency,
+            "balance": w.balance,
+            "is_primary": w.is_primary,
+            "created_at": w.created_at,
+        }
+        for w in wallets
+    ]
+
+
+@router.post("/wallets/create")
+async def create_wallet(
+    req: FundRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new wallet for a specific currency"""
+    currency = req.currency.upper()
+
+    if currency not in SUPPORTED_CURRENCIES:
+        raise HTTPException(status_code=400, detail="Unsupported currency")
+
+    # Check if wallet already exists
+    existing = await db.execute(
+        select(Wallet).where(
+            Wallet.user_id == user.id,
+            Wallet.currency == currency,
+        )
+    )
+
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail=f"You already have a {currency} wallet")
+
+    # Determine if this should be primary
+    existing_wallets = await db.execute(
+        select(Wallet).where(Wallet.user_id == user.id)
+    )
+    is_primary = len(existing_wallets.scalars().all()) == 0
+
+    # Create wallet
+    wallet = Wallet(
+        user_id=user.id,
+        currency=currency,
+        balance=0.0,
+        is_primary=is_primary,
+        balances=dict(DEFAULT_BALANCES),
+    )
+
+    db.add(wallet)
+    await db.commit()
+    await db.refresh(wallet)
+
+    return {
+        "id": wallet.id,
+        "currency": wallet.currency,
+        "balance": wallet.balance,
+        "is_primary": wallet.is_primary,
+        "message": f"{currency} wallet created successfully",
+    }

@@ -1,9 +1,10 @@
 // Supported currencies with metadata and AML limits
+// Flag is a country code (2-letter ISO code) to be displayed as an icon
 export const SUPPORTED_CURRENCIES = [
   {
     code: "NGN",
     name: "Nigerian Naira",
-    flag: "🇳🇬",
+    flag: "NG",
     symbol: "₦",
     country: "Nigeria",
     min_fund: 100,
@@ -13,7 +14,7 @@ export const SUPPORTED_CURRENCIES = [
   {
     code: "USD",
     name: "US Dollar",
-    flag: "🇺🇸",
+    flag: "US",
     symbol: "$",
     country: "United States",
     min_fund: 1,
@@ -23,7 +24,7 @@ export const SUPPORTED_CURRENCIES = [
   {
     code: "GBP",
     name: "British Pound",
-    flag: "🇬🇧",
+    flag: "GB",
     symbol: "£",
     country: "United Kingdom",
     min_fund: 1,
@@ -33,7 +34,7 @@ export const SUPPORTED_CURRENCIES = [
   {
     code: "EUR",
     name: "Euro",
-    flag: "🇪🇺",
+    flag: "EU",
     symbol: "€",
     country: "European Union",
     min_fund: 1,
@@ -43,7 +44,7 @@ export const SUPPORTED_CURRENCIES = [
   {
     code: "KES",
     name: "Kenyan Shilling",
-    flag: "🇰🇪",
+    flag: "KE",
     symbol: "KSh",
     country: "Kenya",
     min_fund: 100,
@@ -53,7 +54,7 @@ export const SUPPORTED_CURRENCIES = [
   {
     code: "GHS",
     name: "Ghanaian Cedi",
-    flag: "🇬🇭",
+    flag: "GH",
     symbol: "GH₵",
     country: "Ghana",
     min_fund: 5,
@@ -63,7 +64,7 @@ export const SUPPORTED_CURRENCIES = [
   {
     code: "ZAR",
     name: "South African Rand",
-    flag: "🇿🇦",
+    flag: "ZA",
     symbol: "R",
     country: "South Africa",
     min_fund: 10,
@@ -73,7 +74,7 @@ export const SUPPORTED_CURRENCIES = [
   {
     code: "RWF",
     name: "Rwandan Franc",
-    flag: "🇷🇼",
+    flag: "RW",
     symbol: "FRw",
     country: "Rwanda",
     min_fund: 500,
@@ -83,7 +84,7 @@ export const SUPPORTED_CURRENCIES = [
   {
     code: "UGX",
     name: "Ugandan Shilling",
-    flag: "🇺🇬",
+    flag: "UG",
     symbol: "USh",
     country: "Uganda",
     min_fund: 2000,
@@ -93,7 +94,7 @@ export const SUPPORTED_CURRENCIES = [
   {
     code: "TZS",
     name: "Tanzanian Shilling",
-    flag: "🇹🇿",
+    flag: "TZ",
     symbol: "TSh",
     country: "Tanzania",
     min_fund: 1000,
