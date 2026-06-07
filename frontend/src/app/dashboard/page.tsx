@@ -223,7 +223,7 @@ function DashboardContent() {
             <div>
               <p className="text-xs text-gray-400 font-medium">Welcome back,</p>
               <p className="flex items-center gap-1.5 text-sm font-bold text-[#0D1B2A]">
-                {firstName}
+                {user.full_name || firstName}
                 <ShieldCheck className="h-4 w-4 text-[#E91E8C]" aria-hidden="true" />
               </p>
             </div>

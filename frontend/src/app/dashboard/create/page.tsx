@@ -341,26 +341,24 @@ export default function CreateEventPage() {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
 
-  // Load saved draft on mount
+  // Load saved draft when mode is selected
   useEffect(() => {
-    if (!mode) {
-      const savedInviteDraft = localStorage.getItem("accredit_draft_invite");
-      const savedEventDraft = localStorage.getItem("accredit_draft_event");
-      if (savedInviteDraft || savedEventDraft) {
-        const draft = savedInviteDraft ? JSON.parse(savedInviteDraft) : JSON.parse(savedEventDraft!);
+    if (mode) {
+      const savedDraft = localStorage.getItem(`accredit_draft_${mode}`);
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
         if (draft) {
           setForm(draft.form || DEFAULT_FORM);
           setPassPackages(draft.passPackages || [{ name: "Regular", price: "" }]);
           setSocialHandles(draft.socialHandles || [{ platform: "instagram", handle: "" }]);
           setLineup(draft.lineup || [{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
           setUploadedImageData(draft.uploadedImageData || null);
-          setMode(savedInviteDraft ? "invite" : "event");
           setStep(1);
           setFormPage(0);
         }
       }
     }
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -762,7 +760,6 @@ export default function CreateEventPage() {
             <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
           </button>
           <div className="flex items-center gap-4">
-            <button type="button" onClick={() => setMode(null)} className="rounded-lg border border-[#d9e2ec] bg-white px-4 py-2 text-xs font-bold text-[#0D1B2A] shadow-sm transition-all hover:border-[#E91E8C] hover:text-[#E91E8C]">Back</button>
             <Link href="/dashboard" className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[#0D1B2A] px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C]">Dashboard</Link>
             <Link href="/" className="rounded-lg border border-[#d9e2ec] bg-white px-4 py-2 text-xs font-bold text-[#0D1B2A] shadow-sm transition-all hover:border-[#E91E8C] hover:text-[#E91E8C]">Home</Link>
           </div>
@@ -1341,18 +1338,22 @@ export default function CreateEventPage() {
                   </div>
                 )}
 
-                {/* Live Preview Button */}
-                <button type="button" onClick={() => document.querySelector('[data-live-preview]')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="w-full mt-5 h-12 rounded-xl font-black text-sm border-2 border-[#E91E8C] text-[#E91E8C] transition-all hover:bg-[#fff1f8]">
-                  Preview Before {mode === "event" ? "Posting" : "Creating"}
-                </button>
+                {/* Live Preview Button - only on final page */}
+                {formPage === 2 && (
+                  <button type="button" onClick={() => document.querySelector('[data-live-preview]')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="w-full mt-5 h-12 rounded-xl font-black text-sm border-2 border-[#E91E8C] text-[#E91E8C] transition-all hover:bg-[#fff1f8]">
+                    Preview Before {mode === "event" ? "Posting" : "Creating"}
+                  </button>
+                )}
 
-                {/* Submit button */}
-                <button type="submit" disabled={submitting}
-                  className="w-full mt-3 h-12 rounded-xl font-black text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: submitting ? "#94a3b8" : "linear-gradient(135deg, #E91E8C, #C4166F)", boxShadow: submitting ? "none" : "0 6px 20px rgba(233,30,140,0.35)" }}>
-                  {submitting ? "Creating…" : mode === "event" ? "Post Event" : "Create Invite"}
-                </button>
+                {/* Submit button - only on final page */}
+                {formPage === 2 && (
+                  <button type="submit" disabled={submitting}
+                    className="w-full mt-3 h-12 rounded-xl font-black text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: submitting ? "#94a3b8" : "linear-gradient(135deg, #E91E8C, #C4166F)", boxShadow: submitting ? "none" : "0 6px 20px rgba(233,30,140,0.35)" }}>
+                    {submitting ? "Creating…" : mode === "event" ? "Post Event" : "Create Invite"}
+                  </button>
+                )}
 
                 {/* Bottom navigation */}
                 <div className="mt-6 sticky bottom-4 z-30 flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-white px-4 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
