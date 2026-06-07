@@ -642,14 +642,24 @@ export default function CreateEventPage() {
     }
   };
 
-  const showFlierUpload = mode === "event";
+  const showFlierUpload = mode === "event" || mode === "invite";
 
   if (loading || !user) return null;
 
   if (!mode) {
     return (
       <div className="flex min-h-screen flex-col bg-white">
-        <style>{`@keyframes dance { 0%,100%{transform:translateY(0)scale(1)} 25%{transform:translateY(-8px)scale(1.02)} 50%{transform:translateY(0)scale(1)} 75%{transform:translateY(-4px)scale(1.01)} }`}</style>
+        <style>{`
+          @keyframes gentleBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-6px) scale(1.01); }
+          }
+          .bounce-button {
+            animation: gentleBounce 0.8s ease-in-out infinite;
+            will-change: transform;
+            transform: translateZ(0);
+          }
+        `}</style>
         <header className="border-b border-[#e8edf2]">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
             <Link href="/" className="flex items-center">
@@ -661,18 +671,28 @@ export default function CreateEventPage() {
             </div>
           </div>
         </header>
+
+        {/* Header for authenticated dashboard */}
+        <div className="border-b border-[#e8edf2] bg-white">
+          <div className="container mx-auto px-4 h-12 flex items-center justify-between">
+            <div className="text-sm font-semibold text-[#0D1B2A]">Welcome, {user?.full_name || user?.email || "User"}</div>
+            <div className="flex items-center gap-3">
+              <Link href="/dashboard" className="text-xs font-semibold text-[#E91E8C] hover:underline">Dashboard</Link>
+              <Link href="/" className="text-xs font-semibold text-[#64748b] hover:text-[#0D1B2A]">Home</Link>
+            </div>
+          </div>
+        </div>
         <div className="flex-1 container mx-auto px-4 py-2 sm:py-8">
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5 mt-2">
               <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-600">Choose one to get started</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <button type="button" onClick={() => { setMode("invite"); setFormPage(0); }}
-                  className={`rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${
+                  className={`rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${!mode ? "bounce-button" : ""} ${
                     mode === "invite"
                       ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
                       : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
-                  }`}
-                  style={!mode ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite" } : {}}>
+                  }`}>
                   <div className="mb-4 flex items-center justify-between">
                     <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">CREATE INVITE</span>
                     <span
@@ -700,12 +720,11 @@ export default function CreateEventPage() {
                   </span>
                 </button>
                 <button type="button" onClick={() => { setMode("event"); setFormPage(0); }}
-                  className={`rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${
+                  className={`rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${!mode ? "bounce-button" : ""} ${
                     mode === "event"
                       ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
                       : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
-                  }`}
-                  style={!mode ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite 0.1s" } : {}}>
+                  }`}>
                   <div className="mb-4 flex items-center justify-between">
                     <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">POST EVENT</span>
                     <span
@@ -750,10 +769,11 @@ export default function CreateEventPage() {
       {/* Header */}
       <header className="border-b border-[#e8edf2]">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center">
+          <button type="button" onClick={() => setMode(null)} className="flex items-center hover:opacity-75 transition-opacity">
             <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
-          </Link>
+          </button>
           <div className="flex items-center gap-4">
+            <button type="button" onClick={() => setMode(null)} className="rounded-lg border border-[#d9e2ec] bg-white px-4 py-2 text-xs font-bold text-[#0D1B2A] shadow-sm transition-all hover:border-[#E91E8C] hover:text-[#E91E8C]">Back</button>
             <Link href="/dashboard" className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[#0D1B2A] px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C]">Dashboard</Link>
             <Link href="/" className="rounded-lg border border-[#d9e2ec] bg-white px-4 py-2 text-xs font-bold text-[#0D1B2A] shadow-sm transition-all hover:border-[#E91E8C] hover:text-[#E91E8C]">Home</Link>
           </div>
@@ -913,8 +933,8 @@ export default function CreateEventPage() {
 
                     {/* Host name */}
                     <div className="space-y-1.5">
-                      <label className="text-sm font-semibold text-[#23466f]">Host name *</label>
-                      <input value={form.host_name} onChange={(e) => setForm({ ...form, host_name: e.target.value })} required
+                      <label className="text-sm font-semibold text-[#23466f]">Host name</label>
+                      <input value={form.host_name} onChange={(e) => setForm({ ...form, host_name: e.target.value })}
                         className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
                         placeholder={user?.full_name || "e.g. John Doe"} />
                     </div>
@@ -1061,7 +1081,7 @@ export default function CreateEventPage() {
                               <label key={channel} className={`flex cursor-pointer items-center justify-between rounded-xl border-2 p-3 transition-all ${selected ? "border-[#E91E8C] bg-[#fff1f8]" : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50"}`}>
                                 <div className="flex items-center gap-3">
                                   <input type="checkbox" checked={selected} onChange={() => setForm({ ...form, delivery_channels: toggleChannel(form.delivery_channels, channel) })} className="w-4 h-4 rounded border-gray-300 text-[#E91E8C] focus:ring-[#E91E8C]" />
-                                  <span className="text-sm font-bold text-[#23466f]">{channelLabels[channel]}</span>
+                                  <span className="text-sm font-bold text-[#23466f]">{channelLabels[channel]}{channel !== "email" && <span className="ml-2 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Not available</span>}</span>
                                 </div>
                                 <span className="text-xs text-[#94a3b8]">{formatNaira(pricing[channel])}/100</span>
                               </label>

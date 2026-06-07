@@ -273,6 +273,7 @@ export default function SendInvitesPage() {
                           : "text-[#b0b8c1]"
                       }`}>
                         {channel.charAt(0).toUpperCase() + channel.slice(1)}
+                        {channel !== "email" && <span className="ml-2 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Not available</span>}
                       </span>
                       {!event.delivery_channels.includes(channel) && (
                         <span className="text-xs text-[#94a3b8]">(not selected)</span>

@@ -1495,7 +1495,7 @@ export default function CreateEventPage() {
                             onChange={() => setForm({ ...form, delivery_channels: toggleChannel(form.delivery_channels, channel) })}
                             className="h-4 w-4 accent-[#E91E8C]"
                           />
-                          <span>{channelLabels[channel]}</span>
+                          <span>{channelLabels[channel]}{channel !== "email" && <span className="ml-2 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Not available</span>}</span>
                           <span className="ml-auto text-xs text-[#94a3b8]">{formatNaira(pricing[channel])}/100</span>
                         </label>
                       ))}

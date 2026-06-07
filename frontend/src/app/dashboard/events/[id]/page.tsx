@@ -642,8 +642,8 @@ function EventDetailContent() {
                   className="flex h-10 rounded-lg border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="email">Email</option>
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="sms">SMS</option>
+                  <option value="whatsapp">WhatsApp (Not available)</option>
+                  <option value="sms">SMS (Not available)</option>
                 </select>
                 <span className="text-lg font-bold text-primary whitespace-nowrap">
                   ₦{calculatePrice(event.guest_count_range, publishChannel).toLocaleString()}
@@ -736,11 +736,11 @@ function EventDetailContent() {
             <div className="space-y-3">
               <select value={channel} onChange={(e) => setChannel(e.target.value)} className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
                 <option value="email">Email</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="sms">SMS</option>
+                <option value="whatsapp">WhatsApp (Not available)</option>
+                <option value="sms">SMS (Not available)</option>
               </select>
               <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-                Sends only to guests who haven't been invited yet. Use the per-guest "Invite" button to send individually. WhatsApp and SMS sends require valid international-style phone numbers.
+                Sends only to guests who haven't been invited yet. Use the per-guest "Invite" button to send individually.
               </div>
               {invalidPhoneGuests.length > 0 && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
