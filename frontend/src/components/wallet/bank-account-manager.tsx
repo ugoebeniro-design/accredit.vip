@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, CheckCircle, AlertCircle, Bank } from "lucide-react";
+import { Plus, Trash2, CheckCircle, AlertCircle, Landmark } from "lucide-react";
 import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
 
 interface BankAccount {
@@ -65,7 +65,7 @@ export function BankAccountManager({
 
       {accounts.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-[#e8edf2] bg-[#f8f9fc] p-6 text-center">
-          <Bank className="mx-auto h-12 w-12 text-[#94a3b8] mb-3" />
+          <Landmark className="mx-auto h-12 w-12 text-[#94a3b8] mb-3" />
           <p className="text-sm font-semibold text-[#0D1B2A]">No bank accounts added</p>
           <p className="text-xs text-[#64748b] mt-1">Add a bank account to start making withdrawals</p>
           <button
@@ -85,7 +85,7 @@ export function BankAccountManager({
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f0f4f8]">
-                  <Bank className="h-5 w-5 text-[#0D1B2A]" />
+                  <Landmark className="h-5 w-5 text-[#0D1B2A]" />
                 </div>
                 <div>
                   <p className="font-bold text-[#0D1B2A]">{account.bank_name}</p>
