@@ -108,7 +108,7 @@ function DashboardContent() {
         {/* Logo */}
         <div className="flex items-center h-20 px-5 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center">
-            <Image src="/logo-white.png" alt="accredit.vip" width={4071} height={761} className="h-16 w-auto max-w-[200px] object-contain drop-shadow-[0_0_12px_rgba(233,30,140,0.15)]" />
+            <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4086} height={801} className="h-10 w-auto object-contain drop-shadow-[0_0_12px_rgba(233,30,140,0.15)]" />
           </Link>
         </div>
 

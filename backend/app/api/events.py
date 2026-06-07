@@ -48,6 +48,8 @@ class EventCreateRequest(BaseModel):
     longitude: float | None = None
     map_link: str | None = None
     dress_code: str | None = None
+    male_dress_code: str | None = None
+    female_dress_code: str | None = None
     description: str | None = None
     cover_image: str | None = None
     timezone: str = "WAT"
@@ -81,6 +83,8 @@ class EventPublicResponse(BaseModel):
     longitude: float | None
     map_link: str | None
     dress_code: str | None
+    male_dress_code: str | None
+    female_dress_code: str | None
     description: str | None
     cover_image: str | None
     guest_count_range: str

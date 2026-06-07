@@ -341,6 +341,27 @@ export default function CreateEventPage() {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
 
+  // Load saved draft on mount
+  useEffect(() => {
+    if (!mode) {
+      const savedInviteDraft = localStorage.getItem("accredit_draft_invite");
+      const savedEventDraft = localStorage.getItem("accredit_draft_event");
+      if (savedInviteDraft || savedEventDraft) {
+        const draft = savedInviteDraft ? JSON.parse(savedInviteDraft) : JSON.parse(savedEventDraft);
+        if (draft) {
+          setForm(draft.form || DEFAULT_FORM);
+          setPassPackages(draft.passPackages || [{ name: "Regular", price: "" }]);
+          setSocialHandles(draft.socialHandles || [{ platform: "instagram", handle: "" }]);
+          setLineup(draft.lineup || [{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
+          setUploadedImageData(draft.uploadedImageData || null);
+          setMode(savedInviteDraft ? "invite" : "event");
+          setStep(1);
+          setFormPage(0);
+        }
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       localStorage.setItem("accredit_draft_" + mode, JSON.stringify({ form, passPackages, socialHandles, lineup, uploadedImageData }));
@@ -508,20 +529,13 @@ export default function CreateEventPage() {
     } finally { setAiImageGenerating(false); }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mode) return;
-    if (mode === "invite" && form.delivery_channels.length === 0) {
-      setError("Select at least one delivery channel.");
-      return;
-    }
-    setError("");
-    setSubmitting(true);
+  const handleCreateEvent = async () => {
+    if (!mode || !user) return;
     try {
       if (form.venue.trim()) saveVenue(form.venue.trim());
       const allDay = [dayPart, monthPart, yearPart].filter(Boolean).join("-");
       const finalDate = allDay.length === 10 ? allDay : form.event_date;
-      await createEvent({
+      const event = await createEvent({
         title: form.title,
         host_name: form.host_name,
         event_date: finalDate,
@@ -543,10 +557,89 @@ export default function CreateEventPage() {
         country: "Nigeria",
       });
       localStorage.removeItem("accredit_draft_" + mode);
-      router.push("/dashboard/events");
+
+      if (mode === "invite") {
+        router.push(`/dashboard/invites/${event.id}/manage`);
+      } else {
+        router.push("/dashboard/events");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create event");
-    } finally { setSubmitting(false); }
+    }
+  };
+
+  const handlePaymentRedirect = async () => {
+    if (!mode || mode !== "invite" || form.delivery_channels.length === 0) return;
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      if (form.venue.trim()) saveVenue(form.venue.trim());
+      const allDay = [dayPart, monthPart, yearPart].filter(Boolean).join("-");
+      const finalDate = allDay.length === 10 ? allDay : form.event_date;
+
+      // Create temporary event for payment
+      const tempEvent = await createEvent({
+        title: form.title,
+        host_name: form.host_name,
+        event_date: finalDate,
+        event_time: parseTimeInputTo24Hour(form.event_time),
+        timezone: selectedTimezone.value,
+        venue: form.venue,
+        guest_count_range: form.guest_range,
+        description: form.description,
+        is_public: false,
+        event_type: "private",
+        country: "Nigeria",
+      });
+
+      // Initiate payment
+      const paymentRes = await apiClient<{
+        authorization_url: string;
+        payment_id: number;
+        reference: string;
+        amount: number;
+      }>("/payments/initiate", {
+        method: "POST",
+        body: JSON.stringify({
+          event_id: tempEvent.id,
+          channel: form.delivery_channels[0],
+          provider: "paystack",
+        }),
+      });
+
+      if (paymentRes.authorization_url) {
+        // Redirect to Paystack
+        window.location.href = paymentRes.authorization_url;
+      } else {
+        setError("Failed to initiate payment. Please try again.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to process payment");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mode) return;
+    if (mode === "invite" && form.delivery_channels.length === 0) {
+      setError("Select at least one delivery channel.");
+      return;
+    }
+    setError("");
+
+    // For CREATE INVITE, initiate payment first
+    if (mode === "invite") {
+      await handlePaymentRedirect();
+    } else {
+      // For POST EVENT, create event directly
+      setSubmitting(true);
+      await handleCreateEvent();
+      setSubmitting(false);
+    }
   };
 
   const showFlierUpload = mode === "event";
@@ -574,26 +667,70 @@ export default function CreateEventPage() {
               <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-600">Choose one to get started</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <button type="button" onClick={() => { setMode("invite"); setFormPage(0); }}
-                  className="rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
-                  style={{ animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1" }}>
+                  className={`rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${
+                    mode === "invite"
+                      ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
+                      : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
+                  }`}
+                  style={!mode ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite" } : {}}>
                   <div className="mb-4 flex items-center justify-between">
                     <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">CREATE INVITE</span>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#d1d5db] bg-white">&nbsp;</span>
+                    <span
+                      className="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all"
+                      style={{
+                        borderColor: mode === "invite" ? "#E91E8C" : "#d1d5db",
+                        background: mode === "invite" ? "#E91E8C" : "white",
+                      }}
+                    >
+                      {mode === "invite" && (
+                        <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </span>
                   </div>
                   <strong className="block text-xl font-black text-[#07182f]">Private invitation</strong>
                   <span className="mt-2 block text-sm text-gray-500">Guest upload, RSVP, reminders, WhatsApp/SMS/Email, QR access.</span>
-                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#9ca3af]">Select<svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
+                  <span
+                    className="mt-4 inline-flex items-center gap-1 text-xs font-bold"
+                    style={{ color: mode === "invite" ? "#E91E8C" : "#9ca3af" }}
+                  >
+                    {mode === "invite" ? "Selected" : "Select"}
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                  </span>
                 </button>
                 <button type="button" onClick={() => { setMode("event"); setFormPage(0); }}
-                  className="rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
-                  style={{ animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1 0.1s both" }}>
+                  className={`rounded-xl border-2 p-6 text-left transition-all duration-200 cursor-pointer ${
+                    mode === "event"
+                      ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
+                      : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
+                  }`}
+                  style={!mode ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite 0.1s" } : {}}>
                   <div className="mb-4 flex items-center justify-between">
                     <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">POST EVENT</span>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#d1d5db] bg-white">&nbsp;</span>
+                    <span
+                      className="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all"
+                      style={{
+                        borderColor: mode === "event" ? "#E91E8C" : "#d1d5db",
+                        background: mode === "event" ? "#E91E8C" : "white",
+                      }}
+                    >
+                      {mode === "event" && (
+                        <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </span>
                   </div>
                   <strong className="block text-xl font-black text-[#07182f]">POST EVENT</strong>
                   <span className="mt-2 block text-sm text-gray-500">Public listing on Discover Events, ticket sales, flyer/banner, lineup, gate fee.</span>
-                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#9ca3af]">Select<svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
+                  <span
+                    className="mt-4 inline-flex items-center gap-1 text-xs font-bold"
+                    style={{ color: mode === "event" ? "#E91E8C" : "#9ca3af" }}
+                  >
+                    {mode === "event" ? "Selected" : "Select"}
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                  </span>
                 </button>
               </div>
             </div>
@@ -798,7 +935,8 @@ export default function CreateEventPage() {
                       </div>
                     )}
 
-                    {/* Social media handles */}
+                    {/* Social media handles - POST EVENT only */}
+                    {mode === "event" && (
                     <details className="rounded-xl border border-[#d9e2ec] group">
                       <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
                         <span>Social media handles</span>
@@ -826,6 +964,7 @@ export default function CreateEventPage() {
                           className="text-xs font-bold text-[#E91E8C] hover:underline">+ Add social handle</button>
                       </div>
                     </details>
+                    )}
 
                     {/* Date & Time section */}
                     <div className="space-y-1.5">
@@ -1229,57 +1368,214 @@ export default function CreateEventPage() {
               </form>
             </div>
 
-            {/* Sidebar - preview & pricing */}
+            {/* Sidebar - live preview */}
             <div className="hidden lg:block space-y-6">
-              <div className="rounded-2xl border border-[#e8edf2] bg-white p-5 shadow-sm">
-                <h3 className="text-sm font-bold text-[#0D1B2A] mb-4">Form Preview</h3>
-                <div className="space-y-4 text-sm">
-                  {form.title && <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Title</p><p className="font-semibold text-[#0D1B2A]">{form.title}</p></div>}
-                  {form.host_name && <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Host</p><p className="font-semibold text-[#0D1B2A]">{form.host_name}</p></div>}
-                  <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Date</p><p className="font-semibold text-[#0D1B2A]">{formatDisplayDate(form.event_date) || "—"}</p></div>
-                  <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Time</p><p className="font-semibold text-[#0D1B2A]">{form.event_time || "—"}</p></div>
-                  {form.venue && <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Venue</p><p className="font-semibold text-[#0D1B2A]">{form.venue}</p></div>}
-                  {form.male_dress_code && <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Dress code</p><p className="font-semibold text-[#0D1B2A]">{form.male_dress_code}{form.female_dress_code ? ` / ${form.female_dress_code}` : ""}</p></div>}
-                  {visibleSocialHandles.length > 0 && <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Social</p><p className="font-semibold text-[#0D1B2A] truncate">{visibleSocialHandles[0].handle}</p></div>}
-                  {form.guest_range && <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Guests</p><p className="font-semibold text-[#0D1B2A]">{form.guest_range}</p></div>}
-                  {visiblePassPackages.length > 0 && <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Packages</p><p className="font-semibold text-[#0D1B2A]">{visiblePassPackages.length} package(s)</p></div>}
-                  {visibleLineup.length > 0 && <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Lineup</p><p className="font-semibold text-[#0D1B2A]">{visibleLineup.length} member(s)</p></div>}
-                  {form.description && <div><p className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">Description</p><p className="text-xs text-[#64748b] line-clamp-3">{form.description}</p></div>}
-                </div>
-              </div>
+              <div className="sticky top-8 self-start rounded-2xl bg-white p-6 text-[#0D1B2A] shadow-[0_18px_48px_rgba(0,0,0,0.08)] border border-[#e8edf2]">
+                {mode === "event" ? (
+                  <>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Flyer builder</p>
+                    <h3 className="mt-3 text-3xl font-black">Live Preview</h3>
+                    <p className="mt-2 text-sm text-gray-500">
+                      See exactly how your event flyer will appear on Discover Events.
+                    </p>
+                  </>
+                ) : (
+                  <div className="rounded-xl bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 border border-[#fce4f0]">
+                    <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
+                    </div>
+                    <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
+                    <p className="mt-2 text-sm text-gray-500">
+                      {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
+                    </p>
+                    <div className="mt-5 space-y-2">
+                      {form.delivery_channels.length === 0 ? (
+                        <p className="rounded-xl bg-white/80 p-3 text-sm text-gray-500 border border-[#e8edf2]">Select at least one channel.</p>
+                      ) : (
+                        form.delivery_channels.map((channel) => (
+                          <div key={channel} className="flex items-center justify-between rounded-xl bg-white/80 p-3 text-sm border border-[#e8edf2]">
+                            <span className="text-gray-700">{channelLabels[channel]}</span>
+                            <strong className="text-[#0D1B2A]">{formatNaira(pricing[channel] * pricingUnits)}</strong>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
 
-              {/* Pricing estimate (invite mode) */}
-              {mode === "invite" && (
-                <div className="rounded-2xl border border-[#e8edf2] bg-white p-5 shadow-sm">
-                  <h3 className="text-sm font-bold text-[#0D1B2A] mb-1">Estimated price</h3>
-                  <p className="text-xs text-[#94a3b8] mb-3">Based on {form.guest_range} guests</p>
-                  <p className="text-3xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</p>
-                  {form.delivery_channels.length === 0 && (
-                    <p className="mt-2 rounded-xl bg-[#f8f9fc] p-3 text-sm text-gray-500 border border-[#e8edf2]">Select at least one delivery channel to see pricing.</p>
+                <div className="mt-8 space-y-5">
+                  {form.generated_image_url && (
+                    <div className="overflow-hidden rounded-xl bg-white">
+                      <img
+                        src={form.generated_image_url}
+                        alt="Event image"
+                        className="w-full object-cover"
+                      />
+                    </div>
                   )}
-                  {form.delivery_channels.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      {form.delivery_channels.map((channel) => (
-                        <div key={channel} className="flex items-center justify-between text-sm">
-                          <span className="text-[#64748b]">{channelLabels[channel]}</span>
-                          <strong className="text-[#0D1B2A]">{formatNaira(pricing[channel] * pricingUnits)}</strong>
-                        </div>
-                      ))}
+                  <div className="overflow-hidden rounded-xl bg-white text-[#07182f]">
+                    {(() => {
+                      const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
+                      const styles = activeTemplate ? templateStyles[activeTemplate] : null;
+                      const headerText = styles ? styles.textColor : "white";
+                      return (
+                        <>
+                          <div
+                            className="flex min-h-36 flex-col justify-end p-5"
+                            style={{
+                              background: styles ? styles.headerBg : (
+                                mode === "invite"
+                                  ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
+                                  : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)"
+                              ),
+                              color: headerText,
+                            }}
+                          >
+                            <p className="text-xs font-black uppercase tracking-[0.22em] opacity-75">
+                              {mode === "event" ? "Event flyer" : "Invite flyer"}
+                            </p>
+                            <h4 className="mt-3 text-3xl font-black leading-tight">{form.title || (mode === "event" ? "Your Event Title" : "Your Invitation")}</h4>
+                            <p className="mt-2 text-sm opacity-85">
+                              {form.venue || (mode === "event" ? "Event venue" : "Venue TBD")}
+                            </p>
+                          </div>
+                          <div className="p-4">
+                            <h4 className="text-xl font-black">{form.title || (mode === "event" ? "Your Event Title" : "Your Invitation")}</h4>
+                            <p className="mt-1 text-sm text-[#64748b]">{form.host_name || "Host name"}</p>
+                            {mode === "event" ? (
+                              <>
+                                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                                  <div className="rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
+                                    <dd className="mt-1 font-semibold">{formatDisplayDate(form.event_date) || "Event date"}</dd>
+                                  </div>
+                                  <div className="rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
+                                    <dd className="mt-1 font-semibold">{form.event_time || "Event time"}</dd>
+                                  </div>
+                                  <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
+                                    <dd className="mt-1 font-semibold">{form.venue || "Event venue"}</dd>
+                                  </div>
+                                  <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">
+                                      {visiblePassPackages.length > 0 ? "Tickets / Gate fee" : "Gate fee"}
+                                    </dt>
+                                    {visiblePassPackages.length > 0 ? (
+                                      visiblePassPackages.map((pkg, i) => (
+                                        <dd key={i} className="mt-1 font-semibold">
+                                          {pkg.name}{pkg.price ? ` - ${pkg.price}` : ""}
+                                        </dd>
+                                      ))
+                                    ) : (
+                                      <dd className="mt-1 font-semibold">Free entry</dd>
+                                    )}
+                                  </div>
+                                  <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
+                                  </div>
+                                  <div className="rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
+                                    <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
+                                  </div>
+                                  <div className="rounded-lg bg-[#f8fafc] p-2">
+                                    <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
+                                    <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
+                                  </div>
+                                  {visibleSocialHandles.length > 0 && (
+                                    <div className="rounded-lg bg-[#f8fafc] p-2">
+                                      <dt className="font-bold uppercase tracking-widest text-[#475569]">Social</dt>
+                                      <dd className="mt-1 font-semibold truncate">{visibleSocialHandles[0].handle}</dd>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                                  {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
+                                    ? (form.description || "").split(/\n{2,}/).map((para, i) => (
+                                        <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                                      ))
+                                    : <p>Your event description will appear here in the preview.</p>}
+                                </div>
+                                {visibleLineup.length > 0 && (
+                                  <p className="mt-3 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
+                                    Featuring: {visibleLineup.map((p) => p.name).filter(Boolean).join(" · ")}
+                                  </p>
+                                )}
+                                {form.after_party_enabled && (
+                                  <p className="mt-2 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
+                                    After party at {form.after_party_location || "TBD"}{form.after_party_time ? ` by ${form.after_party_time}` : ""}
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                                  <p className="font-semibold">Dear <span className="text-[#E91E8C]">[Guest Name]</span>,</p>
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div className="rounded-lg bg-[#f8fafc] p-2">
+                                      <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
+                                      <dd className="mt-1 font-semibold">{formatDisplayDate(form.event_date) || "Event date"}</dd>
+                                    </div>
+                                    <div className="rounded-lg bg-[#f8fafc] p-2">
+                                      <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
+                                      <dd className="mt-1 font-semibold">{form.event_time || "Event time"}</dd>
+                                    </div>
+                                    <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                      <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
+                                      <dd className="mt-1 font-semibold">{form.venue || "Event venue"}</dd>
+                                    </div>
+                                    <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                      <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
+                                    </div>
+                                    <div className="rounded-lg bg-[#f8fafc] p-2">
+                                      <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
+                                      <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
+                                    </div>
+                                    <div className="rounded-lg bg-[#f8fafc] p-2">
+                                      <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
+                                      <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
+                                    </div>
+                                  </div>
+                                  {(() => {
+                                    const desc = form.description || "";
+                                    const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
+                                    if (paragraphs.length === 0) {
+                                      return <p className="mt-3">Your message will appear here in the preview.</p>;
+                                    }
+                                    return paragraphs.map((para, i) => (
+                                      <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                                    ));
+                                  })()}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  {mode === "invite" && form.qr_delivery !== "without_qr" && (
+                    <div className="rounded-xl bg-white p-4 text-[#07182f]">
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR code</p>
+                      {(form.qr_message || form.qr_delivery === "with_qr") && (
+                        <p className="mt-2 text-sm text-[#23466f]">{form.qr_message || "Attached to this invite is your QR code. Kindly present it at the event for entry."}</p>
+                      )}
+                      <div className={`mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)] ${qrStyleConfig[form.qr_style]?.wrapper || "animate-pulse"}`}>
+                        {form.qr_style === "custom" ? (
+                          <div className="col-span-5 flex items-center justify-center text-[10px] text-gray-400 text-center">Your custom QR design</div>
+                        ) : (
+                          Array.from({ length: 25 }).map((_, index) => (
+                            <span
+                              key={index}
+                              className={`rounded-sm ${qrStyleConfig[form.qr_style]?.square || ""} ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
+                            />
+                          ))
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* QR style preview (invite mode) */}
-              {mode === "invite" && form.qr_delivery !== "without_qr" && (
-                <div className="rounded-2xl border border-[#e8edf2] bg-white p-5 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR code</p>
-                  <p className="mt-2 text-sm text-[#23466f]">{form.qr_message || "Attached to this invite is your QR code. Kindly present it at the event for entry."}</p>
-                  <div className={`mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)] ${qrStyleConfig[form.qr_style]?.wrapper || "animate-pulse"}`}>
-                    <div className="col-span-5 flex items-center justify-center text-[10px] text-gray-400 text-center">{form.qr_style} QR preview</div>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </div>
         </div>

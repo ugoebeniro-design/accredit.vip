@@ -22,6 +22,8 @@ class Event(Base):
     longitude = Column(Float, nullable=True)
     map_link = Column(String, nullable=True)
     dress_code = Column(String, nullable=True)
+    male_dress_code = Column(String, nullable=True)
+    female_dress_code = Column(String, nullable=True)
     description = Column(Text, nullable=True)
     cover_image = Column(String, nullable=True)
     guest_count_range = Column(String, nullable=False)

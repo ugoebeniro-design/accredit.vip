@@ -958,7 +958,7 @@ export default function CreateEventPage() {
                         ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
                         : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
                     }`}
-                    style={step === 0 && !mode ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1" } : {}}
+                    style={step === 0 && !mode ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite" } : {}}
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">
@@ -1019,7 +1019,7 @@ export default function CreateEventPage() {
                         ? "border-[#E91E8C] bg-white shadow-[0_4px_20px_rgba(233,30,140,0.14)] ring-2 ring-[#E91E8C]/15"
                         : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50 hover:shadow-md"
                     }`}
-                    style={step === 0 && !mode ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1 0.1s both" } : {}}
+                    style={step === 0 && !mode ? { animation: "dance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite 0.1s" } : {}}
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <span className="text-base font-black uppercase tracking-[0.12em] text-[#E91E8C]">
@@ -1078,11 +1078,25 @@ export default function CreateEventPage() {
                     {mode ? "Try it once, then continue securely" : "Choose a flow above"}
                   </h2>
                 </div>
-                {mode && usedTrials[mode] && (
-                  <span className="rounded-full bg-[#fff1f8] px-3 py-1 text-xs font-bold text-[#C4166F]">
-                    Trial already used
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {mode && (
+                    <button
+                      type="button"
+                      onClick={() => setStep(0)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:text-[#0D1B2A] hover:bg-gray-100 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Back
+                    </button>
+                  )}
+                  {mode && usedTrials[mode] && (
+                    <span className="rounded-full bg-[#fff1f8] px-3 py-1 text-xs font-bold text-[#C4166F]">
+                      Trial already used
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Flier upload - INVITE only */}
