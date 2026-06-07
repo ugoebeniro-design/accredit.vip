@@ -2,7 +2,7 @@
 
 import re
 from typing import Optional, Tuple
-from phonenumbers import parse as parse_phone, is_valid_number, get_country_code_for_region
+from phonenumbers import parse as parse_phone, is_valid_number, country_code_for_region
 from phonenumbers.geocoder import description_for_number
 from phonenumbers import phonenumberutil
 import pycountry
@@ -99,7 +99,7 @@ class PhoneValidator:
                 
                 # Get country code
                 for region_code in PhoneValidator.COUNTRY_PREFIXES.values():
-                    if get_country_code_for_region(region_code) == parsed.country_code:
+                    if country_code_for_region(region_code) == parsed.country_code:
                         country_code = region_code
                         break
                 
