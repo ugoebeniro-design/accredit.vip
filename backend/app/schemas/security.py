@@ -35,6 +35,8 @@ class RegisterRequest(BaseModel):
     first_name: str
     last_name: str
     phone: str | None = None
+    verification_channel: str = "email"
+    device_fingerprint: str | None = None
 
     model_config = ConfigDict(extra="forbid")
 
