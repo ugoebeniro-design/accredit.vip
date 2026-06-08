@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
     try {
       const res = await apiClient<{ access_token: string; user: any }>("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: { email, password },
       });
 
       // Check if user is admin

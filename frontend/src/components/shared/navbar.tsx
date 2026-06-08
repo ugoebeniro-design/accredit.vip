@@ -75,14 +75,14 @@ export function Navbar({
           <Link
             href="/"
             aria-label="accredit.vip home"
-            className="flex h-14 w-44 flex-shrink-0 items-center transition-transform duration-200 hover:scale-[1.02] sm:w-72"
+            className="flex h-14 flex-shrink-0 items-center transition-transform duration-200 hover:scale-[1.02]"
           >
             <Image
               src={isDark ? "/logo-dark-trim.png" : "/logo-trim.png"}
               alt="accredit.vip"
               width={4086}
               height={801}
-              className="h-10 w-auto object-contain sm:h-16"
+              className="h-12 sm:h-14 w-auto object-contain"
               priority
             />
           </Link>
