@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/contexts/auth-context";
 import { ChevronLeft, Search, CheckCircle2, XCircle, AlertCircle, Clock, Eye, Trash2, Menu, X, BarChart3, Calendar, Users, Settings, LogOut } from "lucide-react";
 
@@ -30,7 +31,7 @@ export default function AdminEventsPage() {
     <div className="min-h-screen bg-[#f8f9fc]">
       <aside className={`fixed left-0 top-0 h-screen bg-white border-r border-[#e8edf2] transition-all duration-300 z-40 ${sidebarOpen ? "w-64" : "w-20"}`}>
         <div className="h-20 flex items-center justify-between px-4 border-b border-[#e8edf2]">
-          {sidebarOpen && <Link href="/admin" className="font-bold text-[#0D1B2A] text-sm">Admin Panel</Link>}
+          {sidebarOpen && <Link href="/admin"><Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" /></Link>}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-[#f0f1f7] rounded-lg transition-colors">
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
