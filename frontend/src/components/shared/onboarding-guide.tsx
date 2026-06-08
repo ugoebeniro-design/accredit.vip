@@ -204,8 +204,8 @@ const steps = [
       "The event detail page shows: total guests, RSVP breakdown, checked-in count, and pending invites.",
       "Ticket buyers section shows who purchased, how much they paid, and their check-in status.",
       "Delivery logs show invite delivery success/failure per channel.",
-      "Admin users get access to the admin dashboard with: total users, total events, total revenue.",
-      "The admin panel also provides user management and role control.",
+      "Revenue tracking shows total sales from ticket purchases.",
+      "Export your event data anytime for records or analysis.",
     ],
   },
   {
@@ -248,16 +248,16 @@ const steps = [
   },
   {
     icon: "lock",
-    title: "15. Security & Account",
+    title: "15. Keeping Your Account Safe",
     description:
-      "Your account security matters. Here's how we keep things safe.",
+      "Best practices to protect your account and data.",
     detail: [
-      "Passwords are hashed using bcrypt before storage — never stored in plain text.",
-      "JWT tokens last 30 days and persist across browser sessions (stored in localStorage).",
-      "Rate limiting protects auth endpoints (5 req/min per IP) and purchase endpoints (10 req/min per IP).",
-      "Account verification via email, SMS, or WhatsApp ensures real users.",
-      "Password reset is token-based with a 1-hour expiry — single use only.",
-      "Admin roles are manually assigned — no self-promotion to admin privileges.",
+      "<strong>Choose a strong password:</strong> Use a mix of uppercase, lowercase, numbers, and symbols.",
+      "<strong>Verify your account:</strong> Confirm your email, SMS, or WhatsApp when you sign up.",
+      "<strong>Forgot your password?</strong> Use the 'Forgot Password' link to reset securely.",
+      "<strong>Keep your details updated:</strong> Update your profile information in the Profile section anytime.",
+      "<strong>Logout when done:</strong> Always logout when using public or shared computers.",
+      "<strong>Need help?</strong> Contact support via the Contact page if you notice any suspicious activity.",
     ],
   },
   {

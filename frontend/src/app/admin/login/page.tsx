@@ -1,0 +1,148 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { apiClient } from "@/lib/api-client";
+
+export default function AdminLoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await apiClient<{ access_token: string; user: any }>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+
+      // Check if user is admin
+      if (res.user.role !== "admin") {
+        setError("Access denied. Admin credentials required.");
+        setLoading(false);
+        return;
+      }
+
+      // Store token and redirect to admin dashboard
+      localStorage.setItem("access_token", res.access_token);
+      router.push("/admin");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#f8f9fc] to-[#f0f1f7] px-4">
+      {/* Logo */}
+      <Link href="/" className="mb-8 hover:opacity-80 transition-opacity">
+        <Image
+          src="/logo-dark-trim.png"
+          alt="accredit.vip"
+          width={4071}
+          height={761}
+          className="h-12 w-auto object-contain"
+        />
+      </Link>
+
+      {/* Login Card */}
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl border border-[#e8edf2] shadow-[0_16px_42px_rgba(15,23,42,0.08)] p-8">
+          {/* Header */}
+          <div className="mb-8 text-center">
+            <div className="inline-block px-4 py-2 rounded-lg bg-[#E91E8C]/10 mb-4">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Admin Access</p>
+            </div>
+            <h1 className="text-3xl font-black text-[#0D1B2A] mt-3">Admin Login</h1>
+            <p className="text-sm text-[#64748b] mt-2">
+              Restricted access for authorized administrators only
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200">
+              <p className="text-sm text-red-700 font-medium">{error}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-bold text-[#23466f] mb-2">
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@example.com"
+                required
+                disabled={loading}
+                className="w-full px-4 py-3 rounded-xl border border-[#d9e2ec] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-bold text-[#23466f] mb-2">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                disabled={loading}
+                className="w-full px-4 py-3 rounded-xl border border-[#d9e2ec] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: loading ? "#94a3b8" : "linear-gradient(135deg, #E91E8C, #C4166F)",
+                boxShadow: loading ? "none" : "0 6px 20px rgba(233,30,140,0.35)",
+              }}
+            >
+              {loading ? "Logging in..." : "Admin Login"}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-6 pt-6 border-t border-[#e8edf2] text-center">
+            <p className="text-xs text-[#94a3b8]">
+              Not an admin?{" "}
+              <Link href="/auth/login" className="font-bold text-[#E91E8C] hover:underline">
+                User Login
+              </Link>
+            </p>
+          </div>
+        </div>
+
+        {/* Security Notice */}
+        <div className="mt-6 p-4 rounded-lg bg-[#E91E8C]/5 border border-[#E91E8C]/20">
+          <p className="text-xs text-[#23466f]">
+            <strong>🔒 Secure Access:</strong> This page is for administrators only. Unauthorized access attempts are logged.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
