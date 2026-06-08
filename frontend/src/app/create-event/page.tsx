@@ -2034,105 +2034,38 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
               </>
               )}
 
-              {/* Mobile - Live Preview (only on final form page) */}
-              {formPage === 2 && (
-              <div className="lg:hidden mt-8 rounded-2xl bg-white p-6 text-[#0D1B2A] border border-[#e8edf2]" data-live-preview-mobile>
-                {mode === "event" ? (
-                  <>
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Flyer builder</p>
-                    <h3 className="mt-3 text-2xl font-black">Live Preview</h3>
-                    <p className="mt-2 text-sm text-gray-500">
-                      See exactly how your event flyer will appear on Discover Events.
-                    </p>
-                  </>
-                ) : (
-                  <div className="rounded-xl bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 border border-[#fce4f0]">
-                    <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
+              {/* Mobile error + success message - shown after trial */}
+              {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
+              {message && (
+                <div className="mt-6 rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 text-sm text-[#23466f]">
+                  <p className="text-base font-bold text-[#07182f]">{message}</p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl bg-white p-3 shadow-sm">
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">Preview</p>
+                      <p className="mt-1 font-bold text-[#07182f]">{mode === "event" ? "Flyer ready" : "Invite ready"}</p>
                     </div>
-                    <h3 className="mt-3 text-2xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
-                    <p className="mt-2 text-sm text-gray-500">
-                      {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
-                    </p>
+                    <div className="rounded-xl bg-white p-3 shadow-sm">
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR</p>
+                      <p className="mt-1 font-bold text-[#07182f]">Ready</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-3 shadow-sm">
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
+                        {mode === "event" ? "Discover" : "Channels"}
+                      </p>
+                      <p className="mt-1 font-bold text-[#07182f]">
+                        {mode === "event" ? "Publish after signup" : selectedChannelNames.join(" + ")}
+                      </p>
+                    </div>
                   </div>
-                )}
-
-                {(uploadedImagePreviewUrl || form.generated_image_url) && (
-                  <div className="mt-4 overflow-hidden rounded-xl bg-white">
-                    <img
-                      src={uploadedImagePreviewUrl || form.generated_image_url}
-                      alt="Event image"
-                      className="w-full object-cover"
-                    />
-                  </div>
-                )}
-                <div className="mt-4 overflow-hidden rounded-xl bg-white text-[#07182f] border border-[#e8edf2]">
-                  {(() => {
-                    const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
-                    const styles = activeTemplate ? templateStyles[activeTemplate] : null;
-                    const headerText = styles ? styles.textColor : "white";
-                    return (
-                      <>
-                        <div
-                          className="flex min-h-28 flex-col justify-end p-4"
-                          style={{
-                            background: styles ? styles.headerBg : (
-                              mode === "invite"
-                                ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
-                                : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)"
-                            ),
-                            color: headerText,
-                          }}
-                        >
-                          <p className="text-xs font-black uppercase tracking-[0.22em] opacity-75">
-                            {mode === "event" ? "Event flyer" : "Invite flyer"}
-                          </p>
-                          <h4 className="mt-2 text-2xl font-black leading-tight">{form.title || (mode === "event" ? "Your Event Title" : "Your Invitation")}</h4>
-                        </div>
-                        <div className="p-3">
-                          <h4 className="text-lg font-black">{form.title || (mode === "event" ? "Your Event Title" : "Your Invitation")}</h4>
-                          <p className="mt-1 text-xs text-[#64748b]">{form.host_name || "Host name"}</p>
-                          <p className="mt-2 text-xs text-[#23466f]">{form.venue || "Event venue"}</p>
-                        </div>
-                      </>
-                    );
-                  })()}
+                  <button
+                    type="button"
+                    onClick={handleTestAndSignup}
+                    disabled={submitting}
+                    className="mt-5 flex h-14 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-base font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed bounce-button"
+                  >
+                    {submitting ? "Setting up..." : "Would you like to continue with your invite?"}
+                  </button>
                 </div>
-
-                {/* Mobile error + success message - shown after trial */}
-                {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
-                {message && (
-                  <div className="mt-6 rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 text-sm text-[#23466f]">
-                    <p className="text-base font-bold text-[#07182f]">{message}</p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-xl bg-white p-3 shadow-sm">
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">Preview</p>
-                        <p className="mt-1 font-bold text-[#07182f]">{mode === "event" ? "Flyer ready" : "Invite ready"}</p>
-                      </div>
-                      <div className="rounded-xl bg-white p-3 shadow-sm">
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR</p>
-                        <p className="mt-1 font-bold text-[#07182f]">Ready</p>
-                      </div>
-                      <div className="rounded-xl bg-white p-3 shadow-sm">
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
-                          {mode === "event" ? "Discover" : "Channels"}
-                        </p>
-                        <p className="mt-1 font-bold text-[#07182f]">
-                          {mode === "event" ? "Publish after signup" : selectedChannelNames.join(" + ")}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleTestAndSignup}
-                      disabled={submitting}
-                      className="mt-5 flex h-14 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-base font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed bounce-button"
-                    >
-                      {submitting ? "Setting up..." : "Would you like to continue with your invite?"}
-                    </button>
-                  </div>
-                )}
-              </div>
               )}
 
               {/* Sticky Bottom Navigation Bar for Form Pages */}
