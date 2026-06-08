@@ -103,7 +103,8 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
 
     # Remove server header
-    response.headers.pop("Server", None)
+    if "server" in response.headers:
+        del response.headers["server"]
 
     return response
 
