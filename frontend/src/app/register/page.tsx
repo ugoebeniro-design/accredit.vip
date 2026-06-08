@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Check, Mail, Smartphone } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { PhoneInput } from "@/components/shared/phone-input";
+import { TrialStore } from "@/lib/trial-store";
 
 const QR_PATTERN = [
   1,1,1,0,1,0,1,1,
@@ -36,13 +37,69 @@ export default function RegisterPage() {
     window.location.href = url;
   };
 
+  const migrateTrialEvents = async () => {
+    const events = TrialStore.getAll();
+    const postEventTrialData = sessionStorage.getItem("post_event_trial_data");
+
+    if (events.length > 0) {
+      try {
+        const response = await fetch("/api/v1/trial/migrate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(events),
+        });
+        if (response.ok) {
+          TrialStore.clearAll();
+        }
+      } catch (err) {
+        console.error("Trial migration failed:", err);
+      }
+    }
+
+    if (postEventTrialData) {
+      try {
+        const trialEvent = JSON.parse(postEventTrialData);
+        const response = await fetch("/api/v1/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: trialEvent.title,
+            event_type: trialEvent.event_type,
+            host_name: trialEvent.host_name,
+            event_date: trialEvent.event_date,
+            event_time: trialEvent.event_time,
+            venue: trialEvent.venue,
+            city: "",
+            state: "",
+            country: "Nigeria",
+            dress_code: "",
+            description: trialEvent.description,
+            is_public: false,
+            category: trialEvent.category,
+            guest_count_range: trialEvent.guest_count_range,
+            ticket_price: trialEvent.ticket_price,
+            pass_packages: trialEvent.pass_packages,
+            lineup: trialEvent.lineup,
+            status: "pending",
+          }),
+        });
+        if (response.ok) {
+          sessionStorage.removeItem("post_event_trial_data");
+        }
+      } catch (err) {
+        console.error("POST EVENT migration failed:", err);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
       await register({ email, password, first_name: firstName, last_name: lastName, phone: phone || undefined, verification_channel: verifyChannel });
-      router.push("/dashboard");
+      await migrateTrialEvents();
+      router.push("/dashboard?migrated=true");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
     }

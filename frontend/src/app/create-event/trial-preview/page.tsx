@@ -51,12 +51,12 @@ export default function TrialPreviewPage() {
   const handleCreateAccount = () => {
     // Store the trial event in sessionStorage for post-signup migration
     sessionStorage.setItem("post_event_trial_data", JSON.stringify(trialEvent));
-    router.push("/auth/signup?source=post_event_trial");
+    router.push("/register?source=post_event_trial");
   };
 
   const handleLogin = () => {
     sessionStorage.setItem("post_event_trial_data", JSON.stringify(trialEvent));
-    router.push("/auth/login?source=post_event_trial");
+    router.push("/login?source=post_event_trial");
   };
 
   const handleEditEvent = () => {

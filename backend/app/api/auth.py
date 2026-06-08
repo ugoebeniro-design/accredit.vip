@@ -305,11 +305,11 @@ async def social_login(req: SocialLoginRequest, response: Response, db: AsyncSes
     if not email:
         email = f"{req.provider}_{provider_id[:16]}@social.accredit.vip"
 
-    # Find existing user by oauth link or email
+    # Find existing user by oauth_id or email (NOT by provider alone)
     result = await db.execute(
         select(User).where(
             or_(
-                User.oauth_provider == req.provider,
+                User.oauth_id == provider_id,
                 User.email == email,
             )
         )
@@ -317,13 +317,13 @@ async def social_login(req: SocialLoginRequest, response: Response, db: AsyncSes
     user = result.scalar_one_or_none()
 
     if user:
-        if user.oauth_provider and user.oauth_provider != req.provider:
+        if user.oauth_id and user.oauth_id != provider_id:
             raise HTTPException(status_code=409, detail=f"Account linked to {user.oauth_provider}")
         user.oauth_provider = req.provider
         user.oauth_id = provider_id
-        if full_name and not user.full_name:
+        if full_name:
             user.full_name = full_name
-        if email and not user.email:
+        if email:
             user.email = email
         user.is_verified = True
     else:
