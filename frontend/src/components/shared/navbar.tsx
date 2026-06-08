@@ -150,13 +150,13 @@ export function Navbar({
                 }
                 // Use Link for regular navigation
                 return link.primary ? (
-                  <Link key={link.href} href={link.href} className="btn-primary text-sm py-2 px-5 rounded-lg">
+                  <Link key={link.href} href={link.href!} className="btn-primary text-sm py-2 px-5 rounded-lg">
                     {link.label}
                   </Link>
                 ) : (
                   <Link
                     key={link.href}
-                    href={link.href}
+                    href={link.href!}
                     className="rounded-lg border px-4 py-2 text-sm font-bold transition-all duration-150"
                     style={{
                       color: isDark ? "white" : "#0D1B2A",
@@ -259,7 +259,7 @@ export function Navbar({
                   return link.primary ? (
                     <Link
                       key={link.href}
-                      href={link.href}
+                      href={link.href!}
                       className="btn-primary w-full justify-center text-sm py-3 rounded-xl"
                       onClick={() => setMobileOpen(false)}
                     >
@@ -268,7 +268,7 @@ export function Navbar({
                   ) : (
                     <Link
                       key={link.href}
-                      href={link.href}
+                      href={link.href!}
                       className="block rounded-xl border px-4 py-3 text-center text-sm font-bold transition-all duration-150"
                       style={{
                         color: isDark ? "white" : "#0D1B2A",
