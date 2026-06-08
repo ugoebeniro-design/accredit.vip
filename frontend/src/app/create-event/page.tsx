@@ -972,7 +972,7 @@ export default function CreateEventPage() {
       <Navbar variant="light" />
 
       <main className="flex-1">
-        <section className="px-4 py-2 sm:py-16 sm:px-6 lg:px-8 bg-white border-b border-[#e8edf2]">
+        <section className="px-4 py-3 sm:py-6 sm:px-6 lg:px-8 bg-white border-b border-[#e8edf2]">
           <div className="mx-auto grid max-w-6xl gap-6 lg:gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             {step === 0 && (
             <div>
@@ -1120,7 +1120,7 @@ export default function CreateEventPage() {
           </div>
         </section>
 
-        <section className={`px-4 sm:px-6 lg:px-8 ${step > 0 ? 'pt-0 pb-0' : 'py-14'}`}>
+        <section className={`px-4 sm:px-6 lg:px-8 ${step > 0 ? 'pt-0 pb-0' : 'py-4 sm:py-8'}`}>
           <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-[1fr_390px]">
             <form id="create-event-form" onSubmit={showEmailModal} className={`rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-4 ${step === 1 ? '' : 'hidden'}`}>
               {step === 1 && (
@@ -1973,82 +1973,6 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                 <div className="mt-4"></div>
               )}
 
-              <fieldset className="mt-5 rounded-xl border border-[#d9e2ec] p-4">
-                <legend className="px-2 text-sm font-semibold text-[#23466f]">
-                  {mode === "event" ? "Flyer or banner image" : "Invite picture"}
-                </legend>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-[#edf2f7] p-3 text-sm font-semibold text-[#23466f]">
-                    <input
-                      type="radio"
-                      checked={form.media_source === "upload"}
-                      onChange={() => setForm({ ...form, media_source: "upload" })}
-                      className="h-4 w-4 accent-[#E91E8C]"
-                    />
-                    Upload my own image
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-[#edf2f7] p-3 text-sm font-semibold text-[#23466f]">
-                    <input
-                      type="radio"
-                      checked={form.media_source === "ai"}
-                      onChange={() => setForm({ ...form, media_source: "ai" })}
-                      className="h-4 w-4 accent-[#E91E8C]"
-                    />
-                    Generate image with AI
-                  </label>
-                </div>
-                {form.media_source === "upload" ? (
-                  <label className="mt-4 block space-y-2">
-                    <span className="text-sm font-semibold text-[#23466f]">Upload image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        setForm({ ...form, uploaded_image_name: file?.name || "" });
-                        if (uploadedImagePreviewUrl) URL.revokeObjectURL(uploadedImagePreviewUrl);
-                        if (file) {
-                          const resized = await resizeImage(file, 1920, 1080);
-                          setUploadedImagePreviewUrl(URL.createObjectURL(resized));
-                          const reader = new FileReader();
-                          reader.onload = () => setUploadedImageData(reader.result as string);
-                          reader.readAsDataURL(resized);
-                        } else {
-                          setUploadedImagePreviewUrl(null);
-                          setUploadedImageData(null);
-                        }
-                      }}
-                      className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] px-3 py-2 text-sm file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#E91E8C] file:px-4 file:py-2 file:font-bold file:text-white file:hover:bg-[#C4166F]"
-                    />
-                    {form.uploaded_image_name && (
-                      <p className="text-xs font-medium text-[#23466f]">Selected: {form.uploaded_image_name}</p>
-                    )}
-                    <p className="text-xs text-[#94a3b8]">Recommended: 1920×1080px, max 10MB</p>
-                  </label>
-                ) : (
-                  <div className="mt-4 space-y-3">
-                    <textarea
-                      value={form.image_prompt}
-                      onChange={(e) => setForm({ ...form, image_prompt: e.target.value })}
-                      className="min-h-24 w-full resize-none rounded-xl border border-[#d9e2ec] px-3 py-3 text-sm outline-none focus:border-[#E91E8C]"
-                      placeholder="Describe the image style, colors, couple, stage, crowd, venue, or mood you want AI to create."
-                    />
-                    <button
-                      type="button"
-                      onClick={generateImage}
-                      disabled={aiImageGenerating}
-                      className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-[#E91E8C] px-5 py-3 text-sm font-black uppercase tracking-widest text-white shadow-[0_12px_28px_rgba(233,30,140,0.28)] transition hover:bg-[#C4166F] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {aiImageGenerating ? "Generating image..." : "Generate image with AI"}
-                    </button>
-                    {aiImageError && (
-                      <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-red-700">
-                        {aiImageError}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </fieldset>
 
               <div className="mt-4 space-y-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

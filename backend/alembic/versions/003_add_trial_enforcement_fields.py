@@ -1,7 +1,7 @@
 """Add trial enforcement fields to users table
 
 Revision ID: 003_add_trial_enforcement
-Revises: 002_create_audit_log_table
+Revises: 002
 Create Date: 2026-06-08 00:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '003_add_trial_enforcement'
-down_revision = '002_create_audit_log_table'
+down_revision = '002'
 branch_labels = None
 depends_on = None
 

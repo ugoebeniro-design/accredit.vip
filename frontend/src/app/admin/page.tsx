@@ -18,6 +18,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 export default function AdminPage() {
@@ -27,6 +29,8 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Admin Dashboard Stats (Mock data - replace with real API calls)
   const stats = [
@@ -91,9 +95,7 @@ export default function AdminPage() {
           {/* Logout */}
           <div className="absolute bottom-4 left-4 right-4">
             <button
-              onClick={() => {
-                logout();
-              }}
+              onClick={() => setShowLogoutConfirm(true)}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 border-2 border-red-200 text-red-600 hover:bg-red-100 hover:border-red-400 font-bold text-sm transition-all hover:shadow-lg active:scale-95"
             >
               <LogOut className="w-5 h-5 flex-shrink-0" />
@@ -273,6 +275,32 @@ export default function AdminPage() {
             </div>
           </main>
         </div>
+
+        {/* Logout Confirmation Dialog */}
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full">
+              <h2 className="text-2xl font-black text-[#0D1B2A] mb-3">Sign Out?</h2>
+              <p className="text-sm text-[#64748b] mb-6">
+                Are you sure you want to sign out? You'll need to log in again to access the admin panel.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="flex-1 px-4 py-3 rounded-xl border-2 border-[#e8edf2] bg-white text-[#0D1B2A] font-bold hover:bg-[#f0f1f7] transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => logout()}
+                  className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-all"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -366,16 +394,26 @@ export default function AdminPage() {
               <label htmlFor="password" className="block text-sm font-bold text-[#0D1B2A] mb-2.5">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                disabled={loading}
-                className="w-full px-4 py-3.5 rounded-xl border-2 border-[#e8edf2] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-3.5 pr-12 rounded-xl border-2 border-[#e8edf2] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#0D1B2A] transition-colors"
+                  disabled={loading}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             {/* Submit Button */}

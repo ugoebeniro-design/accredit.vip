@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
-import { ChevronLeft, Search, CheckCircle2, XCircle, AlertCircle, Clock, Eye, Trash2, Menu, X } from "lucide-react";
+import { ChevronLeft, Search, CheckCircle2, XCircle, AlertCircle, Clock, Eye, Trash2, Menu, X, BarChart3, Calendar, Users, Settings, LogOut } from "lucide-react";
 
 export default function AdminEventsPage() {
   const { user, logout } = useAuth();
@@ -37,19 +37,20 @@ export default function AdminEventsPage() {
         </div>
         <nav className="p-4 space-y-2">
           {[
-            { label: "Dashboard", href: "/admin", icon: "📊" },
-            { label: "Events", href: "/admin/events", icon: "📅" },
-            { label: "Users", href: "/admin/users", icon: "👥" },
+            { label: "Dashboard", href: "/admin", Icon: BarChart3 },
+            { label: "Events", href: "/admin/events", Icon: Calendar },
+            { label: "Users", href: "/admin/users", Icon: Users },
+            { label: "Settings", href: "/admin/settings", Icon: Settings },
           ].map((item) => (
             <Link key={item.href} href={item.href} className="flex items-center gap-3 px-4 py-3 rounded-lg text-[#64748b] hover:bg-[#f0f1f7] hover:text-[#E91E8C] transition-all">
-              <span className="text-lg">{item.icon}</span>
+              <item.Icon className="w-5 h-5" />
               {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
             </Link>
           ))}
         </nav>
         <div className="absolute bottom-4 left-4 right-4">
           <button onClick={() => logout()} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 border-2 border-red-200 text-red-600 hover:bg-red-100 hover:border-red-400 font-bold text-sm transition-all hover:shadow-lg active:scale-95">
-            <span className="text-lg">🚪</span>
+            <LogOut className="w-5 h-5" />
             {sidebarOpen && <span className="text-sm font-medium">Logout</span>}
           </button>
         </div>
