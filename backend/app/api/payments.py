@@ -323,4 +323,7 @@ def calculate_price(guest_range: str, channel: str) -> float:
         "201-400": {"email": 350000, "whatsapp": 500000, "sms": 750000},
         "400+": {"email": 500000, "whatsapp": 750000, "sms": 1000000},
     }
-    return prices.get(guest_range, prices["1-100"]).get(channel, 100000)
+    channels = [c.strip() for c in channel.split(",") if c.strip()]
+    guest_prices = prices.get(guest_range, prices["1-100"])
+    total = sum(guest_prices.get(c, 100000) for c in channels)
+    return total or 100000

@@ -2,7 +2,7 @@
  * POST EVENT Trial Mode - allows users to test creating public events before signing up
  */
 
-const TRIAL_KEY = "accredit_post_event_trial";
+const TRIAL_KEY = "post_event_trial_data";
 
 export interface PostEventTrialData {
   title: string;
@@ -21,7 +21,7 @@ export interface PostEventTrialData {
 }
 
 /**
- * Save trial event data to localStorage
+ * Save trial event data to sessionStorage
  */
 export function saveTrialEvent(eventData: Partial<PostEventTrialData>): void {
   const trialData: PostEventTrialData = {
@@ -40,14 +40,14 @@ export function saveTrialEvent(eventData: Partial<PostEventTrialData>): void {
     created_at: new Date().toISOString(),
   };
 
-  localStorage.setItem(TRIAL_KEY, JSON.stringify(trialData));
+  sessionStorage.setItem(TRIAL_KEY, JSON.stringify(trialData));
 }
 
 /**
- * Get saved trial event data
+ * Get saved trial event data (sessionStorage first, fallback to localStorage for backwards compat)
  */
 export function getTrialEvent(): PostEventTrialData | null {
-  const saved = localStorage.getItem(TRIAL_KEY);
+  const saved = sessionStorage.getItem(TRIAL_KEY) || localStorage.getItem("accredit_post_event_trial");
   if (!saved) return null;
 
   try {
@@ -61,12 +61,13 @@ export function getTrialEvent(): PostEventTrialData | null {
  * Clear trial event data
  */
 export function clearTrialEvent(): void {
-  localStorage.removeItem(TRIAL_KEY);
+  sessionStorage.removeItem(TRIAL_KEY);
+  localStorage.removeItem("accredit_post_event_trial");
 }
 
 /**
  * Check if trial event exists
  */
 export function hasTrialEvent(): boolean {
-  return localStorage.getItem(TRIAL_KEY) !== null;
+  return sessionStorage.getItem(TRIAL_KEY) !== null || localStorage.getItem("accredit_post_event_trial") !== null;
 }

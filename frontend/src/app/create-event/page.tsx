@@ -918,31 +918,11 @@ export default function CreateEventPage() {
   const handleTestAndSignup = async () => {
     if (!mode) return;
 
-    // Run the trial first
     setSubmitting(true);
     setError("");
 
     try {
-      const result = await apiClient<{ sent_to?: string; sent_via?: string }>("/trials/use", {
-        method: "POST",
-        body: {
-          trial_type: mode,
-          fingerprint,
-          payload: {
-            ...form,
-            pass_packages: passPackages,
-            lineup,
-            social_handles: socialHandles,
-            estimated_price: selectedPrice,
-            pricing_units: pricingUnits,
-            guest_count: selectedGuestRange.max,
-            test_email: mode === "invite" ? testEmail : undefined,
-            test_phone: mode === "invite" ? testPhone || undefined : undefined,
-          },
-        },
-      });
-
-      // Save to trial store
+      // Save to trial store (runTrial already called /trials/use)
       const trialEvent = TrialStore.create(mode as 'invite' | 'event');
       trialEvent.form = form;
       trialEvent.passPackages = passPackages;
@@ -950,9 +930,30 @@ export default function CreateEventPage() {
       trialEvent.lineup = lineup;
       trialEvent.uploadedImageData = uploadedImageData;
       trialEvent.tested = true;
-      trialEvent.testedVia = result.sent_via as 'email' | 'whatsapp' | 'sms';
-      trialEvent.testRecipient = result.sent_to || testEmail;
+      trialEvent.testedVia = mode === "invite"
+        ? (form.delivery_channels.includes("email") ? "email" : form.delivery_channels[0] || "email") as 'email' | 'whatsapp' | 'sms'
+        : 'email';
+      trialEvent.testRecipient = mode === "invite" ? testEmail || "test@example.com" : undefined;
       TrialStore.save(trialEvent);
+
+      // For POST EVENT mode, also save to sessionStorage so onboarding can create a real event
+      if (mode === "event") {
+        const eventData = {
+          title: form.title,
+          host_name: form.host_name,
+          event_date: form.event_date,
+          event_time: form.event_time,
+          venue: form.venue,
+          description: form.description,
+          guest_count_range: form.guest_range,
+          event_type: form.event_type || "concert",
+          category: form.category,
+          ticket_price: form.gate_fee ? Number(form.gate_fee) : undefined,
+          pass_packages: passPackages,
+          lineup,
+        };
+        sessionStorage.setItem("post_event_trial_data", JSON.stringify(eventData));
+      }
 
       // Redirect to onboarding
       router.push('/auth/onboarding');
@@ -2084,6 +2085,40 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     );
                   })()}
                 </div>
+
+                {/* Mobile error + success message - shown after trial */}
+                {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
+                {message && (
+                  <div className="mt-6 rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 text-sm text-[#23466f]">
+                    <p className="text-base font-bold text-[#07182f]">{message}</p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl bg-white p-3 shadow-sm">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">Preview</p>
+                        <p className="mt-1 font-bold text-[#07182f]">{mode === "event" ? "Flyer ready" : "Invite ready"}</p>
+                      </div>
+                      <div className="rounded-xl bg-white p-3 shadow-sm">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR</p>
+                        <p className="mt-1 font-bold text-[#07182f]">Ready</p>
+                      </div>
+                      <div className="rounded-xl bg-white p-3 shadow-sm">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
+                          {mode === "event" ? "Discover" : "Channels"}
+                        </p>
+                        <p className="mt-1 font-bold text-[#07182f]">
+                          {mode === "event" ? "Publish after signup" : selectedChannelNames.join(" + ")}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleTestAndSignup}
+                      disabled={submitting}
+                      className="mt-5 flex h-14 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-base font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed bounce-button"
+                    >
+                      {submitting ? "Setting up..." : "Would you like to continue with your invite?"}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Live Preview Button - only on final page */}
@@ -2529,15 +2564,38 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                       </div>
                     )}
 
-                    {hydrated && mode && usedTrials[mode] ? (
-                      <button
-                        type="button"
-                        onClick={handleTestAndSignup}
-                        disabled={submitting}
-                        className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-sm font-bold text-white transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed bounce-button"
-                      >
-                        {submitting ? "Setting up..." : "Test This Feature"}
-                      </button>
+                    {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
+
+                    {message ? (
+                      <div className="mt-6 rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 text-sm text-[#23466f]">
+                        <p className="text-base font-bold text-[#07182f]">{message}</p>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                          <div className="rounded-xl bg-white p-3 shadow-sm">
+                            <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">Preview</p>
+                            <p className="mt-1 font-bold text-[#07182f]">{mode === "event" ? "Flyer ready" : "Invite ready"}</p>
+                          </div>
+                          <div className="rounded-xl bg-white p-3 shadow-sm">
+                            <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR</p>
+                            <p className="mt-1 font-bold text-[#07182f]">Ready</p>
+                          </div>
+                          <div className="rounded-xl bg-white p-3 shadow-sm">
+                            <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
+                              {mode === "event" ? "Discover" : "Channels"}
+                            </p>
+                            <p className="mt-1 font-bold text-[#07182f]">
+                              {mode === "event" ? "Publish after signup" : selectedChannelNames.join(" + ")}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleTestAndSignup}
+                          disabled={submitting}
+                          className="mt-5 flex h-14 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-base font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed bounce-button"
+                        >
+                          {submitting ? "Setting up..." : "Would you like to continue with your invite?"}
+                        </button>
+                      </div>
                     ) : (
                       <button
                         type="submit"
@@ -2551,39 +2609,6 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     )}
                   </div>
                 </aside>
-
-                {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
-                {message && (
-                  <div className="rounded-xl bg-[#f7fbff] px-4 py-4 text-sm text-[#23466f]">
-                    <p className="font-semibold text-[#07182f]">{message}</p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-xl bg-white p-3">
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">Preview</p>
-                        <p className="mt-1 font-bold text-[#07182f]">{mode === "event" ? "Flyer ready" : "Invite ready"}</p>
-                      </div>
-                      <div className="rounded-xl bg-white p-3">
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR</p>
-                        <p className="mt-1 font-bold text-[#07182f]">Ready</p>
-                      </div>
-                      <div className="rounded-xl bg-white p-3">
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
-                          {mode === "event" ? "Discover" : "Channels"}
-                        </p>
-                        <p className="mt-1 font-bold text-[#07182f]">
-                          {mode === "event" ? "Publish after signup" : selectedChannelNames.join(" + ")}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                      <Link href="/login?redirect=/dashboard" className="btn-primary justify-center rounded-xl px-6 py-3">
-                        Continue with account
-                      </Link>
-                      <Link href="/contact" className="justify-center rounded-xl border border-[#d9e2ec] px-6 py-3 text-center font-semibold text-[#07182f]">
-                        Talk to sales
-                      </Link>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>

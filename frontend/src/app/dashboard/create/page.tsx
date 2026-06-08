@@ -620,6 +620,8 @@ export default function CreateEventPage() {
     }
   };
 
+  const [paymentMethod, setPaymentMethod] = useState<"paystack" | "wallet">("paystack");
+
   const handlePaymentRedirect = async () => {
     if (!mode || mode !== "invite" || form.delivery_channels.length === 0) return;
 
@@ -646,22 +648,27 @@ export default function CreateEventPage() {
         country: "Nigeria",
       });
 
-      // Initiate payment
+      // Initiate payment with all selected channels and chosen payment method
       const paymentRes = await apiClient<{
-        authorization_url: string;
+        authorization_url?: string;
         payment_id: number;
         reference: string;
         amount: number;
+        method?: string;
       }>("/payments/initiate", {
         method: "POST",
         body: JSON.stringify({
           event_id: tempEvent.id,
-          channel: form.delivery_channels[0],
+          channel: form.delivery_channels.join(","),
           provider: "paystack",
+          payment_method: paymentMethod,
         }),
       });
 
-      if (paymentRes.authorization_url) {
+      if (paymentMethod === "wallet") {
+        // Wallet payment was processed directly — redirect to event manage page
+        router.push(`/dashboard/invites/${tempEvent.id}/manage?paid=wallet`);
+      } else if (paymentRes.authorization_url) {
         // Redirect to Paystack
         window.location.href = paymentRes.authorization_url;
       } else {
@@ -1492,12 +1499,40 @@ export default function CreateEventPage() {
                   </button>
                 )}
 
+                {/* Payment method toggle - invite mode only */}
+                {formPage === 2 && mode === "invite" && (
+                  <div className="mt-4 flex gap-2 rounded-xl border border-[#e8edf2] p-1">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("paystack")}
+                      className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all ${
+                        paymentMethod === "paystack"
+                          ? "bg-[#E91E8C] text-white shadow-sm"
+                          : "text-[#64748b] hover:text-[#0D1B2A]"
+                      }`}
+                    >
+                      Pay with Card
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("wallet")}
+                      className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all ${
+                        paymentMethod === "wallet"
+                          ? "bg-[#E91E8C] text-white shadow-sm"
+                          : "text-[#64748b] hover:text-[#0D1B2A]"
+                      }`}
+                    >
+                      Pay with Wallet
+                    </button>
+                  </div>
+                )}
+
                 {/* Submit button - only on final page */}
                 {formPage === 2 && (
                   <button type="submit" disabled={submitting}
                     className="w-full mt-3 h-12 rounded-xl font-black text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed bounce-button"
                     style={{ background: submitting ? "#94a3b8" : "linear-gradient(135deg, #E91E8C, #C4166F)", boxShadow: submitting ? "none" : "0 6px 20px rgba(233,30,140,0.35)" }}>
-                    {submitting ? "Creating…" : mode === "event" ? "Post Event" : "Create Invite"}
+                    {submitting ? "Creating…" : mode === "event" ? "Post Event" : paymentMethod === "wallet" ? "Pay with Wallet" : "Pay with Card"}
                   </button>
                 )}
 

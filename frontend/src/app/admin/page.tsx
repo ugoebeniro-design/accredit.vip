@@ -373,7 +373,7 @@ export default function AdminPage() {
       {/* Logo */}
       <Link href="/" className="mb-12 hover:opacity-80 transition-opacity">
         <Image
-          src="/logo-white.png"
+          src="/logo-dark-trim.png"
           alt="accredit.vip"
           width={4071}
           height={761}
