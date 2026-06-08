@@ -24,7 +24,7 @@ export function Navbar({
     { label: "Contact", href: "/contact" },
   ],
 }: NavbarProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -34,20 +34,10 @@ export function Navbar({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const resolvedAuthLinks: Array<{ label: string; href?: string; primary?: boolean; onClick?: () => void }> = authLinks ?? [];
-  if (resolvedAuthLinks.length === 0) {
-    if (user) {
-      resolvedAuthLinks.push(
-        { label: "LOGOUT", onClick: () => logout() },
-        { label: "CREATE EVENT", href: "/create-event", primary: true },
-      );
-    } else {
-      resolvedAuthLinks.push(
-        { label: "LOGIN", href: "/login", primary: false },
-        { label: "CREATE EVENT", href: "/create-event", primary: true },
-      );
-    }
-  }
+  const resolvedAuthLinks = authLinks ?? [
+    { label: "LOGIN", href: "/login", primary: false },
+    { label: "CREATE EVENT", href: "/create-event", primary: true },
+  ];
 
   const isDark = variant === "solid" || variant === "transparent";
 
@@ -150,13 +140,13 @@ export function Navbar({
                 }
                 // Use Link for regular navigation
                 return link.primary ? (
-                  <Link key={link.href} href={link.href!} className="btn-primary text-sm py-2 px-5 rounded-lg">
+                  <Link key={link.href} href={link.href} className="btn-primary text-sm py-2 px-5 rounded-lg">
                     {link.label}
                   </Link>
                 ) : (
                   <Link
                     key={link.href}
-                    href={link.href!}
+                    href={link.href}
                     className="rounded-lg border px-4 py-2 text-sm font-bold transition-all duration-150"
                     style={{
                       color: isDark ? "white" : "#0D1B2A",
@@ -259,7 +249,7 @@ export function Navbar({
                   return link.primary ? (
                     <Link
                       key={link.href}
-                      href={link.href!}
+                      href={link.href}
                       className="btn-primary w-full justify-center text-sm py-3 rounded-xl"
                       onClick={() => setMobileOpen(false)}
                     >
@@ -268,7 +258,7 @@ export function Navbar({
                   ) : (
                     <Link
                       key={link.href}
-                      href={link.href!}
+                      href={link.href}
                       className="block rounded-xl border px-4 py-3 text-center text-sm font-bold transition-all duration-150"
                       style={{
                         color: isDark ? "white" : "#0D1B2A",
