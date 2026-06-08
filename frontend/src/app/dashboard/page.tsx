@@ -76,6 +76,22 @@ function DashboardContent() {
     setEventsLoading(false);
   }, []);
 
+  // Auto-logout on exit (tab close, navigate away, back button)
+  useEffect(() => {
+    if (!user) return;
+
+    const handleBeforeUnload = () => {
+      navigator.sendBeacon("/api/v1/auth/logout");
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // User navigated away from dashboard — log them out
+      logout();
+    };
+  }, [user, logout]);
+
   useEffect(() => {
     if (!loading && !user) { router.push("/login"); return; }
     if (user) { loadEvents(); apiClient<any>("/wallet").then((d) => setWalletBalances(d.balances || { NGN: d.balance })).catch(() => {}); }
