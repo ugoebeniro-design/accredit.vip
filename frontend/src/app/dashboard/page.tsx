@@ -148,13 +148,7 @@ function DashboardContent() {
                 </svg>
               )
             },
-            ...(user.role === "admin" || user.role === "super_admin" ? [{
-              href: "/admin", label: "Admin", icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              )
-            }] : []),
+
           ].map((item) => (
             <Link
               key={item.href}
@@ -203,11 +197,11 @@ function DashboardContent() {
             </svg>
             Change Password
           </Link>
-          <button onClick={() => setShowLogoutConfirm(true)} className="mt-2 w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:text-white hover:bg-red-500/20 transition-all border border-transparent hover:border-red-500/30">
+          <button onClick={() => setShowLogoutConfirm(true)} className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-red-500 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 font-bold text-sm transition-all">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            Log Out
+            Sign Out
           </button>
         </div>
       </aside>
