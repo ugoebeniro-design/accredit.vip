@@ -17,6 +17,7 @@ import {
   EyeOff,
   Lock,
   Loader,
+  ShieldCheck,
 } from "lucide-react";
 
 interface DashboardOverview {
@@ -469,7 +470,7 @@ export default function AdminPage() {
 
         {/* Security Notice */}
         <div className="mt-6 p-4 rounded-lg bg-[#E91E8C]/5 border border-[#E91E8C]/20 flex gap-3">
-          <Shield className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5" />
+          <ShieldCheck className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5" />
           <p className="text-xs text-[#23466f]">
             <strong>Secure Access:</strong> This page is for administrators only. Unauthorized access attempts are logged.
           </p>
