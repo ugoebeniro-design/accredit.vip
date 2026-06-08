@@ -348,20 +348,19 @@ export default function CreateEventPage() {
   useEffect(() => {
     if (loading) return;
     initialRestoreDone.current = true;
+    // Restore draft and navigation state if there's a saved mode
     const lastMode = localStorage.getItem("accredit_last_dashboard_mode") as Mode | null;
-    if (lastMode && ["invite", "event"].includes(lastMode)) {
+    const savedDraft = lastMode ? localStorage.getItem(`accredit_draft_${lastMode}`) : null;
+    if (lastMode && savedDraft && ["invite", "event"].includes(lastMode)) {
       setMode(lastMode);
-      const savedDraft = localStorage.getItem(`accredit_draft_${lastMode}`);
-      if (savedDraft) {
-        try {
-          const draft = JSON.parse(savedDraft);
-          setForm(draft.form || DEFAULT_FORM);
-          setPassPackages(draft.passPackages || [{ name: "Regular", price: "" }]);
-          setSocialHandles(draft.socialHandles || [{ platform: "instagram", handle: "" }]);
-          setLineup(draft.lineup || [{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
-          setUploadedImageData(draft.uploadedImageData || null);
-        } catch {}
-      }
+      try {
+        const draft = JSON.parse(savedDraft);
+        setForm(draft.form || DEFAULT_FORM);
+        setPassPackages(draft.passPackages || [{ name: "Regular", price: "" }]);
+        setSocialHandles(draft.socialHandles || [{ platform: "instagram", handle: "" }]);
+        setLineup(draft.lineup || [{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
+        setUploadedImageData(draft.uploadedImageData || null);
+      } catch {}
       const lastStep = localStorage.getItem("accredit_dashboard_step");
       if (lastStep) setStep(parseInt(lastStep, 10));
       const lastFormPage = localStorage.getItem("accredit_dashboard_formPage");
