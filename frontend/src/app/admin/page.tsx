@@ -10,17 +10,33 @@ import {
   Users,
   Calendar,
   TrendingUp,
-  Settings,
   LogOut,
   Menu,
   X,
-  ChevronRight,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
   Eye,
   EyeOff,
+  Lock,
+  Loader,
 } from "lucide-react";
+
+interface DashboardOverview {
+  total_users: number;
+  total_events: number;
+  total_guests: number;
+  active_events: number;
+  total_revenue: number;
+  new_users_7days: number;
+}
+
+interface Event {
+  id: number;
+  title: string;
+  organizer_email: string;
+  event_date: string;
+  guest_count: number;
+  status: string;
+  created_at: string;
+}
 
 export default function AdminPage() {
   const { user, logout } = useAuth();
@@ -31,14 +47,58 @@ export default function AdminPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [dashboardData, setDashboardData] = useState<DashboardOverview | null>(null);
+  const [recentEvents, setRecentEvents] = useState<Event[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // Admin Dashboard Stats (Mock data - replace with real API calls)
-  const stats = [
-    { label: "Total Events", value: "234", change: "+12%", icon: Calendar, color: "#E91E8C" },
-    { label: "Total Users", value: "1,847", change: "+8%", icon: Users, color: "#0D1B2A" },
-    { label: "Pending Review", value: "23", change: "-3%", icon: AlertCircle, color: "#F5A623" },
-    { label: "Revenue", value: "₦2.4M", change: "+24%", icon: TrendingUp, color: "#00D98E" },
-  ];
+  // Fetch admin dashboard data
+  useEffect(() => {
+    if (user?.role === "admin") {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setDataLoading(true);
+      const [overview, events] = await Promise.all([
+        apiClient<DashboardOverview>("/admin/dashboard/overview"),
+        apiClient<Event[]>("/admin/dashboard/events?limit=10"),
+      ]);
+      setDashboardData(overview);
+      setRecentEvents(events);
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await apiClient<{ access_token: string; user: any }>("/auth/login", {
+        method: "POST",
+        body: { email, password },
+      });
+
+      if (res.user.role !== "admin") {
+        setError("Access denied. Admin credentials required.");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("access_token", res.access_token);
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Show admin dashboard if user is logged in as admin
   if (user?.role === "admin") {
@@ -50,16 +110,11 @@ export default function AdminPage() {
             sidebarOpen ? "w-64" : "w-20"
           }`}
         >
-          {/* Logo */}
           <div className="h-20 flex items-center justify-between px-4 border-b border-[#e8edf2]">
             {sidebarOpen && (
-              <Image
-                src="/logo-dark-trim.png"
-                alt="accredit.vip"
-                width={4071}
-                height={761}
-                className="h-8 w-auto object-contain"
-              />
+              <Link href="/">
+                <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
+              </Link>
             )}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -74,9 +129,6 @@ export default function AdminPage() {
             {[
               { label: "Dashboard", href: "/admin", icon: BarChart3 },
               { label: "Event Moderation", href: "/admin/events", icon: Calendar },
-              { label: "User Management", href: "/admin/users", icon: Users },
-              { label: "Analytics", href: "/admin/analytics", icon: TrendingUp },
-              { label: "Settings", href: "/admin/settings", icon: Settings },
             ].map((item) => {
               const Icon = item.icon;
               return (
@@ -121,158 +173,133 @@ export default function AdminPage() {
 
           {/* Page Content */}
           <main className="p-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {stats.map((stat) => {
-                const Icon = stat.icon;
-                return (
-                  <div
-                    key={stat.label}
-                    className="bg-white rounded-2xl border border-[#e8edf2] p-6 hover:shadow-lg transition-all"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div
-                        className="p-3 rounded-lg"
-                        style={{ background: `${stat.color}15` }}
-                      >
-                        <Icon className="w-6 h-6" style={{ color: stat.color }} />
-                      </div>
-                      <span className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-lg">
-                        {stat.change}
-                      </span>
-                    </div>
-                    <p className="text-[#94a3b8] text-sm font-medium">{stat.label}</p>
-                    <p className="text-3xl font-black text-[#0D1B2A] mt-2">{stat.value}</p>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Quick Actions & Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Quick Actions */}
-              <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e8edf2] p-6">
-                <h2 className="text-lg font-black text-[#0D1B2A] mb-6">Quick Actions</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    {
-                      label: "Review Events",
-                      desc: "23 pending",
-                      href: "/admin/events",
-                      icon: Calendar,
-                      color: "#E91E8C",
-                    },
-                    {
-                      label: "Manage Users",
-                      desc: "1,847 total",
-                      href: "/admin/users",
-                      icon: Users,
-                      color: "#0D1B2A",
-                    },
-                    {
-                      label: "View Analytics",
-                      desc: "Performance",
-                      href: "/admin/analytics",
-                      icon: TrendingUp,
-                      color: "#00D98E",
-                    },
-                    {
-                      label: "Settings",
-                      desc: "Configure",
-                      href: "/admin/settings",
-                      icon: Settings,
-                      color: "#F5A623",
-                    },
-                  ].map((action) => {
-                    const Icon = action.icon;
-                    return (
-                      <Link
-                        key={action.label}
-                        href={action.href}
-                        className="group p-4 rounded-xl border border-[#e8edf2] hover:border-[#E91E8C] hover:bg-[#fff1f8] transition-all"
-                      >
+            {dataLoading ? (
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <Loader className="w-8 h-8 animate-spin text-[#E91E8C] mx-auto mb-3" />
+                  <p className="text-[#64748b]">Loading dashboard...</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Stats Grid */}
+                {dashboardData && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    {[
+                      {
+                        label: "Total Users",
+                        value: dashboardData.total_users.toLocaleString(),
+                        icon: Users,
+                        color: "#E91E8C",
+                        subtext: `${dashboardData.new_users_7days} new this week`,
+                      },
+                      {
+                        label: "Total Events",
+                        value: dashboardData.total_events.toLocaleString(),
+                        icon: Calendar,
+                        color: "#00D98E",
+                        subtext: `${dashboardData.active_events} active`,
+                      },
+                      {
+                        label: "Total Guests",
+                        value: dashboardData.total_guests.toLocaleString(),
+                        icon: Users,
+                        color: "#FFB84D",
+                        subtext: "Across all events",
+                      },
+                      {
+                        label: "Total Revenue",
+                        value: `₦${(dashboardData.total_revenue / 1000000).toFixed(1)}M`,
+                        icon: TrendingUp,
+                        color: "#3B82F6",
+                        subtext: "All time",
+                      },
+                    ].map((stat) => {
+                      const Icon = stat.icon;
+                      return (
                         <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-                          style={{ background: `${action.color}15` }}
+                          key={stat.label}
+                          className="bg-white rounded-2xl border border-[#e8edf2] p-6 hover:shadow-lg transition-all"
                         >
-                          <Icon className="w-5 h-5" style={{ color: action.color }} />
+                          <div className="flex items-start justify-between mb-4">
+                            <div
+                              className="p-3 rounded-lg"
+                              style={{ background: `${stat.color}15` }}
+                            >
+                              <Icon className="w-6 h-6" style={{ color: stat.color }} />
+                            </div>
+                          </div>
+                          <p className="text-[#94a3b8] text-sm font-medium">{stat.label}</p>
+                          <p className="text-3xl font-black text-[#0D1B2A] mt-2">{stat.value}</p>
+                          <p className="text-xs text-[#94a3b8] mt-2">{stat.subtext}</p>
                         </div>
-                        <p className="font-bold text-[#0D1B2A] text-sm group-hover:text-[#E91E8C] transition-colors">
-                          {action.label}
-                        </p>
-                        <p className="text-xs text-[#94a3b8] mt-1">{action.desc}</p>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* System Status */}
-              <div className="bg-white rounded-2xl border border-[#e8edf2] p-6">
-                <h2 className="text-lg font-black text-[#0D1B2A] mb-6">System Status</h2>
-                <div className="space-y-4">
-                  {[
-                    { label: "Database", status: "healthy", color: "#00D98E" },
-                    { label: "API Server", status: "healthy", color: "#00D98E" },
-                    { label: "Payment Gateway", status: "healthy", color: "#00D98E" },
-                    { label: "Email Service", status: "healthy", color: "#00D98E" },
-                  ].map((service) => (
-                    <div key={service.label} className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-[#64748b]">{service.label}</p>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ background: service.color }}
-                        />
-                        <span className="text-xs font-bold text-[#94a3b8] capitalize">{service.status}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Events */}
-            <div className="mt-6 bg-white rounded-2xl border border-[#e8edf2] p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-black text-[#0D1B2A]">Recent Events</h2>
-                <Link href="/admin/events" className="text-sm font-bold text-[#E91E8C] hover:underline flex items-center gap-1">
-                  View all <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
-              <div className="space-y-3">
-                {[
-                  { title: "Tech Conference 2026", status: "approved", date: "Today" },
-                  { title: "Summer Music Festival", status: "pending", date: "Yesterday" },
-                  { title: "Wedding Reception", status: "approved", date: "2 days ago" },
-                  { title: "Corporate Retreat", status: "flagged", date: "3 days ago" },
-                ].map((event, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-[#e8edf2] hover:border-[#E91E8C] transition-all">
-                    <div>
-                      <p className="font-bold text-[#0D1B2A] text-sm">{event.title}</p>
-                      <p className="text-xs text-[#94a3b8]">{event.date}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {event.status === "approved" && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Approved
-                        </span>
-                      )}
-                      {event.status === "pending" && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
-                          <Clock className="w-3.5 h-3.5" /> Pending
-                        </span>
-                      )}
-                      {event.status === "flagged" && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">
-                          <AlertCircle className="w-3.5 h-3.5" /> Flagged
-                        </span>
-                      )}
-                    </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            </div>
+                )}
+
+                {/* Recent Activity */}
+                <div className="bg-white rounded-2xl border border-[#e8edf2] p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-black text-[#0D1B2A]">Recent Events</h2>
+                    <Link
+                      href="/admin/events"
+                      className="text-sm font-bold text-[#E91E8C] hover:text-[#C4166F] transition-colors"
+                    >
+                      View All →
+                    </Link>
+                  </div>
+
+                  {recentEvents.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="border-b border-[#e8edf2]">
+                          <tr className="text-[#94a3b8] font-semibold">
+                            <th className="text-left py-3 px-4">Event Title</th>
+                            <th className="text-left py-3 px-4">Organizer</th>
+                            <th className="text-left py-3 px-4">Date</th>
+                            <th className="text-left py-3 px-4">Guests</th>
+                            <th className="text-left py-3 px-4">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentEvents.map((event) => (
+                            <tr
+                              key={event.id}
+                              className="border-b border-[#e8edf2] hover:bg-[#f8f9fc] transition-colors"
+                            >
+                              <td className="py-3 px-4">
+                                <p className="font-semibold text-[#0D1B2A]">{event.title}</p>
+                              </td>
+                              <td className="py-3 px-4 text-[#64748b]">{event.organizer_email}</td>
+                              <td className="py-3 px-4 text-[#64748b]">
+                                {new Date(event.event_date).toLocaleDateString()}
+                              </td>
+                              <td className="py-3 px-4 font-semibold text-[#0D1B2A]">{event.guest_count}</td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                                    event.status === "published"
+                                      ? "bg-green-50 text-green-600"
+                                      : event.status === "draft"
+                                      ? "bg-blue-50 text-blue-600"
+                                      : "bg-amber-50 text-amber-600"
+                                  }`}
+                                >
+                                  {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-center text-[#94a3b8] py-8">No recent events</p>
+                  )}
+                </div>
+              </>
+            )}
           </main>
         </div>
 
@@ -305,8 +332,8 @@ export default function AdminPage() {
     );
   }
 
-  // Admin Login Page
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Admin Login Form
+  const handleAdminLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -318,7 +345,7 @@ export default function AdminPage() {
       });
 
       if (res.user.role !== "admin") {
-        setError("❌ Access denied. Admin credentials required.");
+        setError("Access denied. Admin credentials required.");
         setLoading(false);
         return;
       }
@@ -333,7 +360,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0D1B2A] via-[#1a2a3a] to-[#E91E8C]/20 flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#0D1B2A] via-[#1a2a3a] to-[#E91E8C]/20 flex-col items-center justify-center px-4 py-12">
       {/* Decorative Elements */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-[#E91E8C]/10 rounded-full blur-3xl -z-10" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#00D98E]/10 rounded-full blur-3xl -z-10" />
@@ -351,30 +378,29 @@ export default function AdminPage() {
 
       {/* Login Card */}
       <div className="w-full max-w-md">
-        <div className="bg-white/95 backdrop-blur-md rounded-3xl border border-white/20 shadow-2xl p-8 md:p-10">
+        <div className="bg-white rounded-2xl border border-[#e8edf2] shadow-[0_16px_42px_rgba(15,23,42,0.08)] p-8">
           {/* Header */}
           <div className="mb-8 text-center">
-            <div className="inline-block px-4 py-2 rounded-lg bg-[#E91E8C] text-white mb-4">
-              <p className="text-xs font-black uppercase tracking-[0.18em]">🔐 Secure Access</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#E91E8C] text-white mb-4">
+              <Lock className="w-4 h-4" />
+              <p className="text-xs font-black uppercase tracking-[0.18em]">Secure Access</p>
             </div>
-            <h1 className="text-4xl font-black text-[#0D1B2A] mt-4">Admin Portal</h1>
-            <p className="text-sm text-[#64748b] mt-3">
-              Restricted access for authorized administrators
-            </p>
+            <h1 className="text-3xl font-black text-[#0D1B2A] mt-3">Admin Login</h1>
+            <p className="text-sm text-[#64748b] mt-2">Restricted access for authorized administrators</p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200">
-              <p className="text-sm text-red-700 font-bold">{error}</p>
+            <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200">
+              <p className="text-sm text-red-700 font-medium">{error}</p>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleAdminLoginSubmit} className="space-y-5">
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-bold text-[#0D1B2A] mb-2.5">
+              <label htmlFor="email" className="block text-sm font-bold text-[#23466f] mb-2">
                 Email Address
               </label>
               <input
@@ -382,16 +408,16 @@ export default function AdminPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@accredit.vip"
+                placeholder="admin@example.com"
                 required
                 disabled={loading}
-                className="w-full px-4 py-3.5 rounded-xl border-2 border-[#e8edf2] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+                className="w-full px-4 py-3 rounded-xl border border-[#d9e2ec] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               />
             </div>
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-bold text-[#0D1B2A] mb-2.5">
+              <label htmlFor="password" className="block text-sm font-bold text-[#23466f] mb-2">
                 Password
               </label>
               <div className="relative">
@@ -403,7 +429,7 @@ export default function AdminPage() {
                   placeholder="••••••••"
                   required
                   disabled={loading}
-                  className="w-full px-4 py-3.5 pr-12 rounded-xl border-2 border-[#e8edf2] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/30 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+                  className="w-full px-4 py-3 pr-12 rounded-xl border border-[#d9e2ec] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 />
                 <button
                   type="button"
@@ -420,37 +446,39 @@ export default function AdminPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 rounded-xl font-black text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6 relative overflow-hidden group"
+              className="w-full h-12 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 background: loading ? "#94a3b8" : "linear-gradient(135deg, #E91E8C, #C4166F)",
-                boxShadow: loading ? "none" : "0 10px 30px rgba(233,30,140,0.4)",
+                boxShadow: loading ? "none" : "0 6px 20px rgba(233,30,140,0.35)",
               }}
             >
-              <span className="relative z-10">
-                {loading ? "Logging in..." : "Access Admin Portal"}
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full transition-transform duration-500" />
+              {loading ? "Logging in..." : "Admin Login"}
             </button>
           </form>
 
           {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-[#e8edf2] text-center">
+          <div className="mt-6 pt-6 border-t border-[#e8edf2] text-center">
             <p className="text-xs text-[#94a3b8]">
               Not an admin?{" "}
-              <Link href="/" className="font-bold text-[#E91E8C] hover:underline">
-                Back to Home
+              <Link href="/auth/login" className="font-bold text-[#E91E8C] hover:underline">
+                User Login
               </Link>
             </p>
           </div>
         </div>
 
-        {/* Security Badge */}
-        <div className="mt-8 text-center">
-          <p className="text-xs text-white/70 flex items-center justify-center gap-2">
-            <CheckCircle2 className="w-4 h-4" /> Enterprise-grade security
+        {/* Security Notice */}
+        <div className="mt-6 p-4 rounded-lg bg-[#E91E8C]/5 border border-[#E91E8C]/20 flex gap-3">
+          <Shield className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-[#23466f]">
+            <strong>Secure Access:</strong> This page is for administrators only. Unauthorized access attempts are logged.
           </p>
         </div>
       </div>
     </div>
   );
+}
+
+interface Shield {
+  className: string;
 }

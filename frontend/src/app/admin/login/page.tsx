@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Eye, EyeOff, Shield } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
 export default function AdminLoginPage() {
@@ -12,6 +13,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,16 +101,26 @@ export default function AdminLoginPage() {
               <label htmlFor="password" className="block text-sm font-bold text-[#23466f] mb-2">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                disabled={loading}
-                className="w-full px-4 py-3 rounded-xl border border-[#d9e2ec] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-3 pr-12 rounded-xl border border-[#d9e2ec] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#0D1B2A] transition-colors"
+                  disabled={loading}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             {/* Submit Button */}
@@ -137,9 +149,10 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Security Notice */}
-        <div className="mt-6 p-4 rounded-lg bg-[#E91E8C]/5 border border-[#E91E8C]/20">
+        <div className="mt-6 p-4 rounded-lg bg-[#E91E8C]/5 border border-[#E91E8C]/20 flex gap-3">
+          <Shield className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5" />
           <p className="text-xs text-[#23466f]">
-            <strong>🔒 Secure Access:</strong> This page is for administrators only. Unauthorized access attempts are logged.
+            <strong>Secure Access:</strong> This page is for administrators only. Unauthorized access attempts are logged.
           </p>
         </div>
       </div>

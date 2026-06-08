@@ -1,4 +1,5 @@
 import React from "react";
+import { Globe } from "lucide-react";
 
 interface Guest {
   id: number;
@@ -89,9 +90,11 @@ export default function GuestList({
                 </td>
                 <td className="px-6 py-4 text-sm text-[#64748b]">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">
-                      {guest.phone_country_flag || "🌍"}
-                    </span>
+                    {guest.phone_country_flag ? (
+                      <span className="text-lg">{guest.phone_country_flag}</span>
+                    ) : (
+                      <Globe className="w-5 h-5 text-[#94a3b8]" />
+                    )}
                     <div>
                       <div className="font-semibold">
                         {guest.phone_normalized || guest.phone || "-"}

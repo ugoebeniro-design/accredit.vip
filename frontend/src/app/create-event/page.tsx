@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MapPin, Calendar } from "lucide-react";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { apiClient } from "@/lib/api-client";
@@ -2075,10 +2075,16 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     <h4 className="font-black text-sm text-[#0D1B2A]">{form.title || "Event title"}</h4>
                     <p className="mt-1 text-xs text-[#64748b]">{form.host_name || "Host name"}</p>
                     {form.venue && (
-                      <p className="mt-2 text-xs text-[#94a3b8]">📍 {form.venue}</p>
+                      <div className="mt-2 flex items-center gap-2 text-xs text-[#94a3b8]">
+                        <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-[#E91E8C]" />
+                        <span>{form.venue}</span>
+                      </div>
                     )}
                     {form.event_date && (
-                      <p className="mt-1 text-xs text-[#94a3b8]">📅 {formatDisplayDate(form.event_date)}</p>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-[#94a3b8]">
+                        <Calendar className="w-3.5 h-3.5 flex-shrink-0 text-[#E91E8C]" />
+                        <span>{formatDisplayDate(form.event_date)}</span>
+                      </div>
                     )}
                   </div>
                 </div>

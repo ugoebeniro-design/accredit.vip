@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Calendar, Clock, MapPin, Check, X } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
 interface RSVPData {
@@ -135,16 +136,25 @@ export default function RSVPPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-[#64748b] mb-1">📅 Date</p>
+              <div className="flex items-center gap-1.5 text-sm text-[#64748b] mb-1">
+                <Calendar className="w-4 h-4" />
+                <span>Date</span>
+              </div>
               <p className="font-semibold text-[#0D1B2A]">{rsvpData.event_date}</p>
             </div>
             <div>
-              <p className="text-sm text-[#64748b] mb-1">⏰ Time</p>
+              <div className="flex items-center gap-1.5 text-sm text-[#64748b] mb-1">
+                <Clock className="w-4 h-4" />
+                <span>Time</span>
+              </div>
               <p className="font-semibold text-[#0D1B2A]">{rsvpData.event_time}</p>
             </div>
           </div>
           <div>
-            <p className="text-sm text-[#64748b] mb-1">📍 Venue</p>
+            <div className="flex items-center gap-1.5 text-sm text-[#64748b] mb-1">
+              <MapPin className="w-4 h-4" />
+              <span>Venue</span>
+            </div>
             <p className="font-semibold text-[#0D1B2A]">{rsvpData.venue}</p>
           </div>
         </div>
@@ -161,24 +171,26 @@ export default function RSVPPage() {
           <div className="space-y-3">
             <button
               onClick={() => setResponse("yes")}
-              className={`w-full px-6 py-3 rounded-xl font-bold transition-all ${
+              className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
                 response === "yes"
                   ? "bg-[#E91E8C] text-white"
                   : "bg-[#f0fdf4] text-[#166534] border border-[#dcfce7] hover:bg-[#dcfce7]"
               }`}
             >
-              ✓ Yes, I'll Attend
+              <Check className="w-4 h-4" />
+              Yes, I'll Attend
             </button>
 
             <button
               onClick={() => setResponse("no")}
-              className={`w-full px-6 py-3 rounded-xl font-bold transition-all ${
+              className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
                 response === "no"
                   ? "bg-[#ef4444] text-white"
                   : "bg-[#fef2f2] text-[#991b1b] border border-[#fecdd3] hover:bg-[#fecdd3]"
               }`}
             >
-              ✗ Sorry, Can't Attend
+              <X className="w-4 h-4" />
+              Sorry, Can't Attend
             </button>
           </div>
         </div>

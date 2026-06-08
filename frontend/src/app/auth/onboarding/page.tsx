@@ -119,7 +119,7 @@ function OnboardingContent() {
       <header className="border-b border-[#e8edf2]/10 bg-[#0D1B2A]/50 backdrop-blur">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center hover:opacity-75 transition-opacity">
-            <Image src="/logo-light.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
+            <Image src="/logo-white.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
           </Link>
           <p className="text-sm text-[#94a3b8]">Welcome back!</p>
         </div>

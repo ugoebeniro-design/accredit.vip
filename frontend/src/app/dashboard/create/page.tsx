@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { createEvent } from "@/lib/api/events";
 import { apiClient } from "@/lib/api-client";
@@ -836,7 +836,7 @@ export default function CreateEventPage() {
                   style={{ background: formPage >= item.index ? "linear-gradient(135deg, #E91E8C, #C4166F)" : "transparent" }}>
                   <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
                     style={{ background: formPage >= item.index ? "rgba(255,255,255,0.2)" : "#e8edf2", color: formPage >= item.index ? "white" : "#94a3b8" }}>
-                    {formPage > item.index ? "✓" : item.index + 1}
+                    {formPage > item.index ? <Check className="w-4 h-4" /> : item.index + 1}
                   </span>
                   <span className="hidden sm:inline">{item.label}</span>
                 </button>

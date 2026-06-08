@@ -124,7 +124,7 @@ export default function SendInvitesPage() {
         }),
       });
 
-      setSuccess(`✓ Invites sent to ${response.invites_sent} guest(s)! You have ${response.send_attempts_remaining} send attempt(s) remaining.`);
+      setSuccess(`Invites sent to ${response.invites_sent} guest(s)! You have ${response.send_attempts_remaining} send attempt(s) remaining.`);
       setTimeout(() => {
         router.push(`/dashboard/invites/${eventId}/manage`);
       }, 2000);

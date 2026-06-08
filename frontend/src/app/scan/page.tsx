@@ -155,7 +155,7 @@ function ScannerPage() {
 
         {result && (
           <div className={`rounded-xl p-4 ${result.status === "approved" ? "bg-green-900/50 border border-green-500" : result.status === "found" ? "bg-blue-900/50 border border-blue-500" : "bg-red-900/50 border border-red-500"}`}>
-            <p className="font-bold">{result.status === "approved" ? "✓ Checked In" : result.status === "found" ? "Guest Found" : result.status === "error" ? "Error" : result.message}</p>
+            <p className="font-bold">{result.status === "approved" ? "Checked In" : result.status === "found" ? "Guest Found" : result.status === "error" ? "Error" : result.message}</p>
             <p className="text-sm text-white/70">{result.message}</p>
             {result.guest && <p className="text-sm mt-1">{result.guest.name} &middot; {result.guest.phone}</p>}
             {result.status === "found" && <button onClick={confirmCheckin} className="mt-3 w-full rounded-xl bg-green-600 py-3 font-bold text-sm hover:bg-green-700 transition">Confirm Check-in</button>}

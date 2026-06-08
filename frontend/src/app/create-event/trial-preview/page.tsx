@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getTrialEvent, clearTrialEvent } from "@/lib/post-event-trial";
-import { CalendarDays, MapPin, Users, ChevronLeft, Play } from "lucide-react";
+import { CalendarDays, MapPin, Users, ChevronLeft, Play, Check, Ticket, Beaker, Pencil, PartyPopper } from "lucide-react";
 
 interface TrialEventData {
   title: string;
@@ -90,7 +90,7 @@ export default function TrialPreviewPage() {
           {/* Success Message */}
           <div className="bg-white rounded-2xl border border-[#e8edf2] shadow-lg overflow-hidden mb-8">
             <div className="h-32 bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-              <div className="text-white text-6xl">✓</div>
+              <Check className="w-24 h-24 text-white" />
             </div>
 
             <div className="p-8">
@@ -217,7 +217,7 @@ export default function TrialPreviewPage() {
           {/* Event Header */}
           <div className="h-64 bg-gradient-to-br from-[#E91E8C] to-[#C4166F] relative flex items-center justify-center">
             <div className="text-center text-white">
-              <div className="text-6xl mb-4">🎉</div>
+              <PartyPopper className="w-20 h-20 mx-auto mb-4" />
               <p className="text-sm font-semibold uppercase tracking-widest opacity-90">
                 {trialEvent.category || trialEvent.event_type}
               </p>
@@ -277,15 +277,17 @@ export default function TrialPreviewPage() {
                 </p>
               </div>
             ) : (
-              <div className="mb-8 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-                <p className="text-sm font-bold text-emerald-700">🎟️ Free Event</p>
+              <div className="mb-8 p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                <p className="text-sm font-bold text-emerald-700">Free Event</p>
               </div>
             )}
 
             {/* Trial Badge */}
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <p className="text-sm text-amber-800">
-                <span className="font-bold">🧪 This is a preview</span> — Your event will look
+              <p className="text-sm text-amber-800 flex items-center gap-2">
+                <Beaker className="w-4 h-4 flex-shrink-0" />
+                <span className="font-bold">This is a preview</span> — Your event will look
                 exactly like this once it's live. No payment required to test.
               </p>
             </div>
@@ -296,9 +298,10 @@ export default function TrialPreviewPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={handleEditEvent}
-            className="flex-1 rounded-lg border border-[#d9e2ec] bg-white px-6 py-3 text-sm font-bold text-[#0D1B2A] transition-all hover:border-[#E91E8C] hover:text-[#E91E8C]"
+            className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-[#d9e2ec] bg-white px-6 py-3 text-sm font-bold text-[#0D1B2A] transition-all hover:border-[#E91E8C] hover:text-[#E91E8C]"
           >
-            ✏️ Edit Event
+            <Pencil className="w-4 h-4" />
+            Edit Event
           </button>
 
           <button

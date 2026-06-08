@@ -47,7 +47,7 @@ export default function EventsPage() {
       <aside className={`fixed inset-y-0 left-0 z-40 w-64 flex-col flex-shrink-0 transition-transform duration-300 ${mobileNavOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:flex`} style={{ background: "#0D1B2A" }}>
         <div className="flex items-center h-16 px-6" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <Link href="/" onClick={() => setMobileNavOpen(false)}>
-            <Image src="/logo-white.png" alt="accredit.vip" width={120} height={32} className="h-6 w-auto object-contain" />
+            <Image src="/logo-white.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
           </Link>
         </div>
         <nav className="flex-1 px-3 py-6 space-y-1">

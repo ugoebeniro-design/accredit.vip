@@ -41,8 +41,8 @@ export function Navbar({
     // Always show CREATE EVENT
     // Hide DASHBOARD and WALLET from navbar (they're only in dashboard sidebar)
     if (link.label === "DASHBOARD" || link.label === "WALLET") return false;
-    // Hide LOGIN button if user is already logged in
-    if (link.label === "LOGIN" && user) return false;
+    // Hide LOGIN button only if user is logged in
+    if (link.label === "LOGIN" && user !== null) return false;
     return true;
   }) as Array<{ label: string; href: string; primary?: boolean; onClick?: () => void }>;
 
