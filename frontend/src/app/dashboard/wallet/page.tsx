@@ -129,22 +129,11 @@ export default function WalletPage() {
   };
 
   const handleCurrencySelect = async (currency: string) => {
-    setSelectedCurrency(currency);
-    setLoading(true);
-    try {
-      const res = await fetch("/api/v1/wallets/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency }),
-      });
-
-      if (res.ok) {
-        await fetchWallets();
-        setActiveTab("overview");
-      }
-    } finally {
-      setLoading(false);
+    if (selectedCurrency === currency) {
+      setSelectedCurrency("");
+      return;
     }
+    setSelectedCurrency(currency);
   };
 
   const handleWithdrawalSubmit = async (accountId: number, amount: number) => {
@@ -224,13 +213,14 @@ export default function WalletPage() {
         {/* Logo */}
         <div className="flex items-center justify-between h-20 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center flex-1 min-w-0">
-            <Image src="/logo-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
+            <Image src="/logo-white.png" alt="accredit.vip" width={180} height={180} className="h-8 w-auto object-contain" />
           </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0 hidden lg:block"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0 hidden lg:block ml-2"
+            title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
-            {sidebarOpen ? <X className="w-4 h-4 text-white/60" /> : <Menu className="w-4 h-4 text-white/60" />}
+            {sidebarOpen ? <X className="w-5 h-5 text-white/80" /> : <Menu className="w-5 h-5 text-white/80" />}
           </button>
         </div>
 
@@ -296,7 +286,7 @@ export default function WalletPage() {
           {sidebarOpen && (
             <>
               <Link
-                href="/change-password"
+                href="/dashboard/change-password"
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white hover:bg-white/08 transition-all"
               >
                 <Lock className="w-4 h-4" />
