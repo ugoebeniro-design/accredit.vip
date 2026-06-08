@@ -9,6 +9,8 @@ import { BankAccountManager } from "@/components/wallet/bank-account-manager";
 import { AddBankAccountForm } from "@/components/wallet/add-bank-account-form";
 import { WithdrawalForm } from "@/components/wallet/withdrawal-form";
 import { CurrencySelector } from "@/components/wallet/currency-selector";
+import { TransactionHistory } from "@/components/wallet/transaction-history";
+import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { Menu, X, LayoutGrid, Calendar, Plus, Wallet as WalletIcon, Compass, LogOut, Lock } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -36,11 +38,13 @@ export default function WalletPage() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "deposit" | "withdraw" | "accounts">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "deposit" | "withdraw" | "accounts" | "history">("overview");
   const [selectedCurrency, setSelectedCurrency] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositError, setDepositError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -129,23 +133,43 @@ export default function WalletPage() {
   };
 
   const handleCurrencySelect = async (currency: string) => {
-    if (selectedCurrency === currency) {
-      setSelectedCurrency("");
-      return;
+    if (activeTab === "deposit") {
+      setSelectedCurrency(currency);
+      setDepositAmount("");
+      setDepositError(null);
+    } else {
+      // If on overview/other tabs, just create wallet
+      setSelectedCurrency(currency);
+      setLoading(true);
+      try {
+        const res = await fetch("/api/v1/wallets/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currency }),
+        });
+
+        if (res.ok) {
+          await fetchWallets();
+          setActiveTab("overview");
+        }
+      } finally {
+        setLoading(false);
+      }
     }
-    setSelectedCurrency(currency);
   };
 
   const handleWithdrawalSubmit = async (accountId: number, amount: number) => {
     setLoading(true);
     try {
+      const account = bankAccounts.find((a) => a.id === accountId);
+      const currency = account?.currency || selectedCurrency;
       const res = await fetch("/api/v1/withdrawals/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bank_account_id: accountId,
           amount,
-          currency: selectedCurrency,
+          currency,
         }),
       });
 
@@ -213,7 +237,7 @@ export default function WalletPage() {
         {/* Logo */}
         <div className="flex items-center justify-between h-20 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center flex-1 min-w-0">
-            <Image src="/logo-white.png" alt="accredit.vip" width={180} height={180} className="h-8 w-auto object-contain" />
+            <Image src="/logo-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
           </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -287,7 +311,7 @@ export default function WalletPage() {
             <>
               <Link
                 href="/dashboard/change-password"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white hover:bg-white/08 transition-all"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#E91E8C] bg-[#E91E8C]/10 hover:bg-[#E91E8C]/20 transition-all w-full"
               >
                 <Lock className="w-4 h-4" />
                 Change Password
@@ -321,12 +345,12 @@ export default function WalletPage() {
         <main className="flex-1 px-6 py-8">
           {/* Tabs */}
           <div className="flex gap-2 mb-8 border-b border-[#e8edf2]">
-            {["overview", "deposit", "withdraw", "accounts"].map((tab) => (
+            {["overview", "deposit", "withdraw", "accounts", "history"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => {
                   setActiveTab(tab as any);
-                  setSelectedCurrency("");
+                  if (tab !== "deposit" && tab !== "withdraw") setSelectedCurrency("");
                 }}
                 className={`px-4 py-3 font-semibold text-sm transition-all border-b-2 ${
                   activeTab === tab
@@ -367,6 +391,100 @@ export default function WalletPage() {
                   onSelect={handleCurrencySelect}
                   selectedCurrency={selectedCurrency}
                 />
+                {selectedCurrency && (
+                  <div className="mt-8 p-6 bg-gradient-to-br from-[#E91E8C]/5 to-[#E91E8C]/10 rounded-xl border border-[#E91E8C]/20">
+                    <h3 className="text-lg font-bold text-[#0D1B2A] mb-1">Deposit {selectedCurrency}</h3>
+
+                    {(() => {
+                      const cur = SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency);
+                      return cur ? (
+                        <p className="text-sm text-[#64748b] mb-4">
+                          Min deposit: {cur.symbol}{cur.min_fund.toLocaleString()}
+                        </p>
+                      ) : null;
+                    })()}
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-semibold text-[#0D1B2A] mb-2">Amount</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[#0D1B2A]">
+                          {SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol}
+                        </span>
+                        <input
+                          type="number"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          placeholder="0"
+                          min={SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency)?.min_fund || 0}
+                          className="w-full h-11 rounded-xl border border-[#d9e2ec] px-3 pl-8 text-sm outline-none focus:border-[#E91E8C]"
+                        />
+                      </div>
+                    </div>
+
+                    {depositError && (
+                      <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-600 font-medium mb-2">Error</p>
+                        <p className="text-sm text-red-500 mb-3">{depositError}</p>
+                        <button
+                          onClick={() => setDepositError(null)}
+                          className="text-sm text-red-600 hover:text-red-700 font-semibold underline"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={async () => {
+                          setDepositError(null);
+                          const amount = parseFloat(depositAmount);
+                          const cur = SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency);
+                          if (!amount || amount <= 0) { setDepositError("Enter a valid amount"); return; }
+                          if (cur && amount < cur.min_fund) { setDepositError(`Minimum deposit is ${cur.symbol}${cur.min_fund.toLocaleString()}`); return; }
+                          setLoading(true);
+                          try {
+                            const res = await fetch("/api/v1/wallet/fund", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ currency: selectedCurrency, amount }),
+                            });
+                            if (!res.ok) {
+                              const err = await res.json();
+                              throw new Error(err.detail || "Failed to initiate deposit");
+                            }
+                            const data = await res.json();
+                            if (data.authorization_url) {
+                              window.location.href = data.authorization_url;
+                            } else {
+                              throw new Error("No payment URL returned");
+                            }
+                          } catch (err) {
+                            setDepositError(
+                              err instanceof Error ? err.message : "Network error. Check your connection and try again."
+                            );
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0}
+                        className="flex-1 bg-[#E91E8C] text-white font-bold py-3 px-4 rounded-lg hover:bg-[#C4166F] disabled:opacity-50 transition-colors"
+                      >
+                        {loading ? "Processing..." : `Deposit ${selectedCurrency}`}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedCurrency("");
+                          setDepositAmount("");
+                          setDepositError(null);
+                        }}
+                        className="px-4 py-3 border-2 border-[#e8edf2] text-[#64748b] font-semibold rounded-lg hover:bg-[#f8f9fc] transition-colors"
+                      >
+                        Back
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -406,6 +524,14 @@ export default function WalletPage() {
                     loading={loading}
                   />
                 )}
+              </div>
+            )}
+
+            {/* Transaction History Tab */}
+            {activeTab === "history" && (
+              <div className="bg-white rounded-xl border border-[#e8edf2] p-6">
+                <h2 className="text-xl font-bold text-[#0D1B2A] mb-6">Transaction History</h2>
+                <TransactionHistory loading={loading} />
               </div>
             )}
           </div>

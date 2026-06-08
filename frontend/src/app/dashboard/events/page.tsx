@@ -87,7 +87,7 @@ export default function EventsPage() {
         {/* Logo */}
         <div className="flex items-center justify-between h-20 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center flex-1 min-w-0">
-            <Image src="/logo-white.png" alt="accredit.vip" width={180} height={180} className="h-8 w-auto object-contain" />
+            <Image src="/logo-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
           </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -159,10 +159,10 @@ export default function EventsPage() {
           {sidebarOpen && (
             <>
               <Link
-                href="/change-password"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white hover:bg-white/08 transition-all"
+                href="/dashboard/change-password"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#E91E8C] bg-[#E91E8C]/10 hover:bg-[#E91E8C]/20 transition-all w-full"
               >
-                <Eye className="w-4 h-4" />
+                <Lock className="w-4 h-4" />
                 Change Password
               </Link>
               <button

@@ -117,7 +117,7 @@ function DashboardContent() {
         {/* Logo */}
         <div className="flex items-center justify-between h-20 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center flex-1 min-w-0">
-            <Image src="/logo-white.png" alt="accredit.vip" width={180} height={180} className="h-8 w-auto object-contain drop-shadow-[0_0_12px_rgba(233,30,140,0.15)]" />
+            <Image src="/logo-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain drop-shadow-[0_0_12px_rgba(233,30,140,0.15)]" />
           </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -207,10 +207,8 @@ function DashboardContent() {
               <p className="text-white/55 text-[11px] leading-tight" title={maskEmail(user.email)}>{maskEmail(user.email)}</p>
             </div>
           </div>
-          <Link href="/dashboard/change-password" onClick={() => setMobileNavOpen(false)} className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-red-400 border-2 border-red-800/40 hover:bg-red-500/10 hover:border-red-500/50 font-bold text-sm transition-all">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
+          <Link href="/dashboard/change-password" onClick={() => setMobileNavOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#E91E8C] bg-[#E91E8C]/10 hover:bg-[#E91E8C]/20 transition-all w-full">
+            <Lock className="w-4 h-4" />
             Change Password
           </Link>
           <button onClick={() => setShowLogoutConfirm(true)} className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-red-500 border-2 border-red-800/40 hover:bg-red-500/10 hover:border-red-500/50 font-bold text-sm transition-all">

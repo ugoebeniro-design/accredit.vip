@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, Send, Info } from "lucide-react";
+import { AlertCircle, Send, Info, CheckCircle2, Clock, DollarSign, Shield } from "lucide-react";
 import { SUPPORTED_CURRENCIES, formatCurrencyAmount } from "@/lib/currencies";
 import { getCountryFlag } from "@/lib/country-flag";
 
@@ -23,6 +23,8 @@ export function WithdrawalForm({
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const selectedAccount = bankAccounts.find((a) => a.id === selectedAccountId);
   const selectedWallet = selectedAccount
@@ -56,14 +58,28 @@ export function WithdrawalForm({
       return;
     }
 
+    if (!agreedToTerms) {
+      setError("Please agree to the terms and conditions");
+      return;
+    }
+
+    // Show confirmation dialog
+    setShowConfirm(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
     try {
-      await onSubmit(selectedAccountId, numAmount);
+      const numAmount = parseFloat(amount);
+      await onSubmit(selectedAccountId!, numAmount);
       setSuccess("Withdrawal request submitted successfully!");
       setAmount("");
       setDescription("");
       setSelectedAccountId(null);
+      setShowConfirm(false);
+      setAgreedToTerms(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process withdrawal");
+      setShowConfirm(false);
     }
   };
 
@@ -85,7 +101,7 @@ export function WithdrawalForm({
       {success && (
         <div className="rounded-xl border border-[#dcfce7] bg-[#f0fdf4] p-4">
           <div className="flex gap-3">
-            <div className="h-5 w-5 rounded-full bg-emerald-500 flex-shrink-0 mt-0.5" />
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm font-semibold text-[#166534]">{success}</p>
           </div>
         </div>
@@ -163,6 +179,39 @@ export function WithdrawalForm({
         />
       </div>
 
+      {/* Withdrawal Fee & Net Amount */}
+      {selectedCurrency && amount && selectedWallet && (
+        <div className="space-y-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-[#64748b]">Withdrawal Amount</p>
+            <p className="font-semibold text-[#0D1B2A]">{selectedCurrency.symbol}{parseFloat(amount).toLocaleString()}</p>
+          </div>
+
+          <div className="flex items-center justify-between pb-3 border-b border-[#e8edf2]">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-[#0D1B2A]" />
+              <p className="text-sm text-[#64748b]">Withdrawal Fee</p>
+            </div>
+            <p className="font-semibold text-[#E91E8C]">{selectedCurrency.symbol}50</p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-[#0D1B2A]">You'll Receive</p>
+            <p className="text-lg font-bold text-emerald-600">{selectedCurrency.symbol}{(parseFloat(amount) - 50).toLocaleString()}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Account Verification Status */}
+      {selectedAccount && (
+        <div className="rounded-lg border border-[#e8edf2] bg-[#f8f9fc] p-3 flex gap-2">
+          <Shield className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-[#64748b]">
+            <span className="font-semibold text-green-600">Account verified</span> - You can withdraw to this account
+          </p>
+        </div>
+      )}
+
       {/* Warnings & Info */}
       {selectedCurrency && amount && (
         <div className="space-y-2">
@@ -177,6 +226,13 @@ export function WithdrawalForm({
           )}
 
           <div className="rounded-lg border border-[#e8edf2] bg-[#f8f9fc] p-3 flex gap-2">
+            <Clock className="h-4 w-4 text-[#0D1B2A] flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-[#64748b]">
+              <span className="font-semibold">Processing time:</span> 1-3 business days
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-[#e8edf2] bg-[#f8f9fc] p-3 flex gap-2">
             <Info className="h-4 w-4 text-[#0D1B2A] flex-shrink-0 mt-0.5" />
             <p className="text-xs text-[#64748b]">
               <span className="font-semibold">Daily limit:</span> {selectedCurrency.symbol}
@@ -186,19 +242,83 @@ export function WithdrawalForm({
         </div>
       )}
 
+      {/* Terms & Conditions */}
+      <div className="flex gap-3 items-start border-t border-[#e8edf2] pt-4">
+        <input
+          type="checkbox"
+          id="agree-terms"
+          checked={agreedToTerms}
+          onChange={(e) => setAgreedToTerms(e.target.checked)}
+          className="w-4 h-4 mt-0.5 rounded border-[#d9e2ec] cursor-pointer"
+        />
+        <label htmlFor="agree-terms" className="text-xs text-[#64748b] cursor-pointer">
+          I understand that withdrawal fees apply and processing takes 1-3 business days. I also confirm the bank account details are correct.
+        </label>
+      </div>
+
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading || !selectedAccountId || !selectedWallet || parseFloat(amount) <= 0}
+        disabled={loading || !selectedAccountId || !selectedWallet || parseFloat(amount) <= 0 || !agreedToTerms}
         className="w-full flex items-center justify-center gap-2 h-12 rounded-xl bg-[#E91E8C] px-6 text-sm font-bold text-white hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <Send className="h-4 w-4" />
         {loading ? "Processing..." : "Request Withdrawal"}
       </button>
 
-      <p className="text-xs text-[#64748b] text-center">
-        Withdrawals are processed within 1-3 business days
-      </p>
+      {/* Confirmation Dialog */}
+      {showConfirm && selectedAccount && selectedCurrency && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl p-6 max-w-md mx-4">
+            <h2 className="text-xl font-bold text-[#0D1B2A] mb-4">Confirm Withdrawal</h2>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex justify-between items-center pb-3 border-b border-[#e8edf2]">
+                <p className="text-sm text-[#64748b]">Bank Account</p>
+                <p className="font-semibold text-[#0D1B2A]">{selectedAccount.bank_name}</p>
+              </div>
+
+              <div className="flex justify-between items-center pb-3 border-b border-[#e8edf2]">
+                <p className="text-sm text-[#64748b]">Amount</p>
+                <p className="font-bold text-[#0D1B2A]">{selectedCurrency.symbol}{parseFloat(amount).toLocaleString()}</p>
+              </div>
+
+              <div className="flex justify-between items-center pb-3 border-b border-[#e8edf2]">
+                <p className="text-sm text-[#64748b]">Fee</p>
+                <p className="font-semibold text-[#E91E8C]">{selectedCurrency.symbol}50</p>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <p className="text-sm font-semibold text-[#0D1B2A]">You'll Receive</p>
+                <p className="text-lg font-bold text-emerald-600">{selectedCurrency.symbol}{(parseFloat(amount) - 50).toLocaleString()}</p>
+              </div>
+
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex gap-2">
+                <Clock className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800">
+                  This withdrawal will arrive in 1-3 business days
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-[#e8edf2] text-[#0D1B2A] font-semibold hover:bg-[#f8f9fc] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmedSubmit}
+                disabled={loading}
+                className="flex-1 px-4 py-2 rounded-lg bg-[#E91E8C] text-white font-semibold hover:bg-[#C4166F] disabled:opacity-50 transition-colors"
+              >
+                {loading ? "Processing..." : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
