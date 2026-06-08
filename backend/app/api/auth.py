@@ -1,6 +1,6 @@
-import secrets, random
+import secrets, random, logging
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from pydantic import BaseModel, EmailStr
@@ -15,6 +15,12 @@ from app.models.password_reset import PasswordResetToken
 from app.services.email_service import send_email
 from app.services.sms_service import send_sms
 from app.services.whatsapp_service import send_whatsapp
+from app.services.secure_auth import SecureAuthService
+from app.services.audit import AuditService
+from app.services.trial_enforcement import TrialEnforcementService
+from app.schemas.security import RegisterRequest as SecureRegisterRequest, StrongPassword
+
+logger = logging.getLogger(__name__)
 
 VERIFICATION_EXPIRY_MINUTES = 20
 
@@ -28,6 +34,7 @@ class RegisterRequest(BaseModel):
     last_name: str
     phone: str | None = None
     verification_channel: str = "email"
+    device_fingerprint: str | None = None  # Captured from device to link trial history
 
 
 class LoginRequest(BaseModel):
@@ -53,33 +60,53 @@ def generate_numeric_code(length: int = 6) -> str:
 
 
 def set_auth_cookie(response: Response, token: str):
+    """SECURITY: Set authentication cookie with strict security settings"""
     max_age = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     secure = not settings.DEBUG
     response.set_cookie(
         key="access_token",
         value=token,
-        httponly=True,
-        secure=secure,
-        samesite="lax",
+        httponly=True,  # Prevent JavaScript access
+        secure=secure,  # HTTPS only in production
+        samesite="strict",  # CSRF protection
         max_age=max_age,
         path="/",
+        domain="accredit.vip" if not settings.DEBUG else None,
     )
 
 
 @router.post("/register", response_model=TokenResponse)
-async def register(req: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
+async def register(
+    req: SecureRegisterRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
+    """SECURITY: Register with strong password validation"""
+    # Password already validated by Pydantic schema (SecureRegisterRequest)
+
+    # Check if email already exists
     result = await db.execute(select(User).where(User.email == req.email))
     if result.scalar_one_or_none():
+        logger.warning(f"Registration attempt with existing email: {req.email}")
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    # Check if phone already exists
     if req.phone:
         result = await db.execute(select(User).where(User.phone == req.phone))
         if result.scalar_one_or_none():
+            logger.warning(f"Registration attempt with existing phone: {req.phone}")
             raise HTTPException(status_code=400, detail="Phone number already registered")
 
+    # Generate verification token
     channel = req.verification_channel or "email"
     is_numeric = channel in ("sms", "whatsapp")
     verification_token = generate_numeric_code() if is_numeric else secrets.token_urlsafe(32)
+
+    # Create user with hashed password
+    fingerprint_hash = None
+    if req.device_fingerprint:
+        fingerprint_hash = TrialEnforcementService._fingerprint_hash(req.device_fingerprint)
 
     user = User(
         email=req.email,
@@ -89,11 +116,14 @@ async def register(req: RegisterRequest, response: Response, db: AsyncSession = 
         verification_token=verification_token,
         verification_token_expires_at=datetime.now(timezone.utc) + timedelta(minutes=VERIFICATION_EXPIRY_MINUTES),
         verification_channel=channel,
+        failed_login_attempts=0,  # Initialize security counter
+        trial_fingerprint_hash=fingerprint_hash,  # Link device to account for trial tracking
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
+    # Send verification message
     if channel == "whatsapp" and user.phone:
         msg = f"Your Accredit.vip verification code: {verification_token}. Expires in {VERIFICATION_EXPIRY_MINUTES} minutes."
         await send_whatsapp(user.phone, msg)
@@ -105,8 +135,23 @@ async def register(req: RegisterRequest, response: Response, db: AsyncSession = 
         html = f"<p>Welcome to Accredit.vip!</p><p>Click <a href='{verify_link}'>here</a> to verify your account. This link expires in {VERIFICATION_EXPIRY_MINUTES} minutes.</p>"
         await send_email(user.email, f"Verify your Accredit.vip account (expires in {VERIFICATION_EXPIRY_MINUTES} min)", html)
 
+    # Log registration
+    await AuditService.log_event(
+        db=db,
+        user_id=user.id,
+        action="registered",
+        resource_type="user",
+        resource_id=user.id,
+        request=request,
+        description=f"User registered via {channel}",
+    )
+
+    # Create token and set secure cookie
     token = create_access_token({"sub": str(user.id)})
     set_auth_cookie(response, token)
+
+    logger.info(f"User registered successfully: {user.email}")
+
     return TokenResponse(
         access_token=token,
         user={"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role, "is_verified": user.is_verified, "verification_channel": user.verification_channel},
@@ -114,18 +159,69 @@ async def register(req: RegisterRequest, response: Response, db: AsyncSession = 
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(req: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == req.email))
-    user = result.scalar_one_or_none()
-    if not user or not verify_password(req.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+async def login(
+    req: LoginRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
+    """SECURITY: Login with account lockout and rate limiting"""
+    try:
+        # Authenticate with SecureAuthService (handles lockout, rate limiting, audit)
+        user, access_token = await SecureAuthService.authenticate_user(
+            db=db,
+            email=req.email,
+            password=req.password,
+            request=request,
+        )
 
-    token = create_access_token({"sub": str(user.id)})
-    set_auth_cookie(response, token)
-    return TokenResponse(
-        access_token=token,
-        user={"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role, "is_verified": user.is_verified, "verification_channel": user.verification_channel},
+        # Set secure authentication cookie
+        set_auth_cookie(response, access_token)
+
+        logger.info(f"User login successful: {user.email}")
+
+        return TokenResponse(
+            access_token=access_token,
+            user={
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "role": user.role,
+                "is_verified": user.is_verified,
+                "verification_channel": user.verification_channel,
+            },
+        )
+
+    except HTTPException as e:
+        logger.warning(f"Login failed for {req.email}: {e.detail}")
+        raise
+
+
+@router.post("/logout")
+async def logout(
+    request: Request,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """SECURITY: Logout with audit logging"""
+    # Log logout event
+    await AuditService.log_logout(
+        db=db,
+        user_id=user.id,
+        request=request,
     )
+
+    # Clear authentication cookie
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        domain="accredit.vip" if not settings.DEBUG else None,
+    )
+
+    logger.info(f"User logout: {user.email}")
+
+    return {"message": "Logged out successfully"}
 
 
 GOOGLE_OPENID_CONFIG = "https://accounts.google.com/.well-known/openid-configuration"

@@ -17,11 +17,12 @@ function OnboardingContent() {
   // If already authenticated, redirect to dashboard
   useEffect(() => {
     if (!loading && user) {
-      // Migrate trial events
+      // Migrate trial events and POST EVENT trial
       const events = TrialStore.getAll();
-      if (events.length > 0) {
-        // Send migration request
-        migrateTrialEvents(events);
+      const postEventTrialData = sessionStorage.getItem("post_event_trial_data");
+
+      if (events.length > 0 || postEventTrialData) {
+        migrateTrialEvents(events, postEventTrialData);
       } else {
         router.push("/dashboard");
       }
@@ -36,26 +37,67 @@ function OnboardingContent() {
     }
   }, []);
 
-  const migrateTrialEvents = async (events: any[]) => {
+  const migrateTrialEvents = async (events: any[], postEventData: string | null) => {
     try {
-      const response = await fetch("/api/v1/trial/migrate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(events),
-      });
+      // Migrate CREATE INVITE trial events
+      if (events.length > 0) {
+        const response = await fetch("/api/v1/trial/migrate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(events),
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        // Clear trial storage after successful migration
-        TrialStore.clearAll();
-        // Redirect to dashboard with success message
-        router.push("/dashboard?migrated=true");
-      } else {
-        // Migration failed, but still go to dashboard
-        router.push("/dashboard");
+        if (response.ok) {
+          TrialStore.clearAll();
+        }
       }
+
+      // Migrate POST EVENT trial event
+      if (postEventData) {
+        try {
+          const trialEvent = JSON.parse(postEventData);
+          // Create the event with pending status (not public yet)
+          const response = await fetch("/api/v1/events", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: trialEvent.title,
+              event_type: trialEvent.event_type,
+              host_name: trialEvent.host_name,
+              event_date: trialEvent.event_date,
+              event_time: trialEvent.event_time,
+              venue: trialEvent.venue,
+              city: "",
+              state: "",
+              country: "Nigeria",
+              dress_code: "",
+              description: trialEvent.description,
+              is_public: false,
+              category: trialEvent.category,
+              guest_count_range: trialEvent.guest_count_range,
+              ticket_price: trialEvent.ticket_price,
+              pass_packages: trialEvent.pass_packages,
+              lineup: trialEvent.lineup,
+              status: "pending",
+            }),
+          });
+
+          if (response.ok) {
+            const createdEvent = await response.json();
+            sessionStorage.removeItem("post_event_trial_data");
+            // Redirect to dashboard showing the new event
+            router.push(`/dashboard?migrated=true`);
+            return;
+          }
+        } catch (err) {
+          console.error("POST EVENT migration failed:", err);
+        }
+      }
+
+      // Redirect to dashboard with success message
+      router.push("/dashboard?migrated=true");
     } catch (err) {
-      console.error("Migration failed:", err);
+      console.error("Trial migration failed:", err);
       router.push("/dashboard");
     }
   };

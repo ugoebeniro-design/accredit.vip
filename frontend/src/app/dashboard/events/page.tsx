@@ -56,6 +56,7 @@ export default function EventsPage() {
             { href: "/dashboard", label: "Dashboard" },
             { href: "/dashboard/events", label: "Events", active: true },
             { href: "/dashboard/create", label: "Create Event" },
+            { href: "/dashboard/wallet", label: "Wallet" },
           ].map((item) => (
             <Link
               key={item.href}

@@ -1,9 +1,9 @@
 import re, math, unicodedata
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_, func
 from pydantic import BaseModel
-from datetime import date, time, datetime
+from datetime import date, time, datetime, timezone
 from typing import Any
 
 from app.core.database import get_db
@@ -11,6 +11,7 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
 from app.services.event_review import scan_for_keywords, compute_review_status
+from app.services.trial_enforcement import TrialEnforcementService
 
 router = APIRouter()
 
@@ -112,13 +113,34 @@ class EventPublicResponse(BaseModel):
 async def create_event(
     req: EventCreateRequest,
     user: User = Depends(get_current_user),
+    request: Request = None,
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    SECURITY: Create event with trial enforcement
+    Users get ONE free POST EVENT trial after signup
+    After trial used, they must upgrade subscription
+    """
+    # Check if user already used their event trial
+    trial_check = await TrialEnforcementService.check_trial_available(
+        user=user,
+        trial_type="event",
+        db=db,
+    )
+
+    if not trial_check["allowed"]:
+        raise HTTPException(
+            status_code=402,  # 402 Payment Required
+            detail=trial_check["reason"],
+        )
+
+    # Create event
     event = Event(
         organizer_id=user.id,
         slug=await generate_unique_slug(req.title, db),
         **req.model_dump(),
     )
+
     # Scan for suspicious keywords
     scan_text = f"{req.title} {req.description or ''}"
     flagged_keywords = scan_for_keywords(scan_text)
@@ -126,7 +148,12 @@ async def create_event(
     if flagged_keywords:
         event.flagged_keywords = flagged_keywords
 
+    # Mark trial as used
+    user.trial_event_used = True
+    user.trial_used_at = datetime.now(timezone.utc)
+
     db.add(event)
+    db.add(user)
     await db.commit()
     await db.refresh(event)
     return event
@@ -289,6 +316,56 @@ async def update_event(
     await db.commit()
     await db.refresh(event)
     return event
+
+
+@router.post("/{event_id}/submit-approval")
+async def submit_event_for_approval(
+    event_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Submit an event for admin approval"""
+    from app.services.notify import send_notification
+
+    result = await db.execute(
+        select(Event).where(Event.id == event_id, Event.organizer_id == user.id)
+    )
+    event = result.scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    if event.review_status in ["pending_review", "approved"]:
+        raise HTTPException(status_code=400, detail="Event is already submitted or approved")
+
+    # Update event status
+    event.review_status = "pending_review"
+    event.updated_at = datetime.now()
+
+    db.add(event)
+    await db.commit()
+    await db.refresh(event)
+
+    # Notify admins about the new submission
+    admin_result = await db.execute(
+        select(User).where(User.role.in_(["admin", "super_admin"]))
+    )
+    admins = admin_result.scalars().all()
+
+    for admin in admins:
+        await send_notification(
+            db=db,
+            user_id=admin.id,
+            type="event_submitted",
+            title="New Event Submission",
+            message=f"New event '{event.title}' submitted for review by {user.full_name}",
+            data={"event_id": event.id},
+        )
+
+    return {
+        "status": "submitted",
+        "event_id": event.id,
+        "message": "Event submitted for admin approval",
+    }
 
 
 @router.delete("/{event_id}")

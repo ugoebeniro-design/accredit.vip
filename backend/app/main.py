@@ -1,13 +1,18 @@
 import os
+import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.gzip import GZIPMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.database import init_db
 from app.core.rate_limit import RateLimitMiddleware
-from app.api import auth, events, guests, qr_codes, verification, payments, admin, rsvp, messaging, tickets, uploads, contact, trials, subscriptions, posts, ai, notifications, tracking, webhooks, guest_management, invite_sending, admin_dashboard, checkin_scanner, waitlist_api, coupons_api, rsvp_questions_api, event_templates_api, wallet_api, trial_migration, withdrawals
+
+logger = logging.getLogger(__name__)
+from app.api import auth, events, guests, qr_codes, verification, payments, admin, rsvp, messaging, tickets, uploads, contact, trials, subscriptions, posts, ai, notifications, tracking, webhooks, guest_management, invite_sending, admin_dashboard, checkin_scanner, waitlist_api, coupons_api, rsvp_questions_api, event_templates_api, wallet_api, trial_migration, withdrawals, admin_events
 
 
 @asynccontextmanager
@@ -18,18 +23,89 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 
+# CRITICAL: Add Trusted Host Middleware
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=[
+        "accredit.vip",
+        "www.accredit.vip",
+        "api.accredit.vip",
+        "app.accredit.vip",
+        "localhost",
+        "127.0.0.1",
+    ] if not settings.DEBUG else ["*"]
+)
+
+# CRITICAL: Add GZIP compression middleware
+app.add_middleware(GZIPMiddleware, minimum_size=1000)
+
+# Add Rate Limiting Middleware
 app.add_middleware(RateLimitMiddleware)
+
+# CRITICAL: Restrict CORS to specific origins
+allowed_origins = [
+    "https://accredit.vip",
+    "https://www.accredit.vip",
+    "https://app.accredit.vip",
+]
+
+if settings.DEBUG:
+    allowed_origins.extend([
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://accredit.vip",
-        "http://accredit.vip",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    expose_headers=["Content-Type"],
+    max_age=600,  # Cache preflight for 10 minutes
 )
+
+# CRITICAL: Add Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+
+    # Prevent MIME type sniffing
+    response.headers["X-Content-Type-Options"] = "nosniff"
+
+    # Prevent clickjacking
+    response.headers["X-Frame-Options"] = "DENY"
+
+    # Enable XSS protection
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+
+    # HSTS - Force HTTPS for 1 year (only in production)
+    if not settings.DEBUG:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+
+    # Referrer policy
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    # Content Security Policy
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "connect-src 'self' https://api.accredit.vip; "
+        "frame-ancestors 'none';"
+    )
+
+    # Disable MIME type sniffing
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+
+    # Remove server header
+    response.headers.pop("Server", None)
+
+    return response
 
 upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 os.makedirs(upload_dir, exist_ok=True)
@@ -65,6 +141,7 @@ app.include_router(event_templates_api.router, prefix="/api/v1", tags=["Event Te
 app.include_router(wallet_api.router, prefix="/api/v1", tags=["Wallet"])
 app.include_router(withdrawals.router, prefix="/api/v1", tags=["Withdrawals"])
 app.include_router(trial_migration.router, prefix="/api/v1", tags=["Trial Migration"])
+app.include_router(admin_events.router, prefix="/api/v1", tags=["Admin Events"])
 
 
 @app.get("/api/v1/health")

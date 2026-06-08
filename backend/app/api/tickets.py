@@ -15,6 +15,7 @@ from app.models.user import User
 from app.models.event import Event
 from app.models.ticket_purchase import TicketPurchase
 from app.models.wallet import Wallet, WalletTransaction, DEFAULT_BALANCES
+from app.services.ticket_delivery import generate_ticket_qr, send_ticket_email, send_ticket_whatsapp
 
 router = APIRouter()
 
@@ -113,6 +114,42 @@ async def purchase_ticket(
             event.tickets_available -= req.quantity
             await db.commit()
 
+        # Send ticket via email
+        if purchase.buyer_email and event:
+            try:
+                qr_code = generate_ticket_qr(
+                    ticket_reference=reference,
+                    event_title=event.title,
+                    event_date=str(event.event_date),
+                )
+                await send_ticket_email(
+                    buyer_email=purchase.buyer_email,
+                    buyer_name=purchase.buyer_name,
+                    event_title=event.title,
+                    event_date=str(event.event_date),
+                    event_time=str(event.event_time),
+                    venue=event.venue,
+                    ticket_reference=reference,
+                    ticket_count=purchase.quantity,
+                    amount_paid=purchase.amount,
+                    qr_code_base64=qr_code,
+                )
+            except Exception as e:
+                print(f"Failed to send ticket email: {e}")
+
+        # Send ticket via WhatsApp if phone provided
+        if purchase.buyer_phone and event:
+            try:
+                await send_ticket_whatsapp(
+                    buyer_phone=purchase.buyer_phone,
+                    buyer_name=purchase.buyer_name,
+                    ticket_reference=reference,
+                    event_title=event.title,
+                    event_date=str(event.event_date),
+                )
+            except Exception as e:
+                print(f"Failed to send ticket WhatsApp: {e}")
+
         return {
             "purchase_id": purchase.id,
             "reference": reference,
@@ -143,6 +180,42 @@ async def purchase_ticket(
     await db.refresh(purchase)
 
     if is_free:
+        # Send free event ticket via email
+        if purchase.buyer_email and event:
+            try:
+                qr_code = generate_ticket_qr(
+                    ticket_reference=reference,
+                    event_title=event.title,
+                    event_date=str(event.event_date),
+                )
+                await send_ticket_email(
+                    buyer_email=purchase.buyer_email,
+                    buyer_name=purchase.buyer_name,
+                    event_title=event.title,
+                    event_date=str(event.event_date),
+                    event_time=str(event.event_time),
+                    venue=event.venue,
+                    ticket_reference=reference,
+                    ticket_count=purchase.quantity,
+                    amount_paid=0,
+                    qr_code_base64=qr_code,
+                )
+            except Exception as e:
+                print(f"Failed to send free ticket email: {e}")
+
+        # Send free event ticket via WhatsApp if phone provided
+        if purchase.buyer_phone and event:
+            try:
+                await send_ticket_whatsapp(
+                    buyer_phone=purchase.buyer_phone,
+                    buyer_name=purchase.buyer_name,
+                    ticket_reference=reference,
+                    event_title=event.title,
+                    event_date=str(event.event_date),
+                )
+            except Exception as e:
+                print(f"Failed to send free ticket WhatsApp: {e}")
+
         return {
             "purchase_id": purchase.id,
             "reference": reference,
@@ -229,6 +302,42 @@ async def purchase_webhook(
             event.tickets_available -= purchase.quantity
 
         await db.commit()
+
+        # Send ticket via email
+        if purchase.buyer_email and event:
+            try:
+                qr_code = generate_ticket_qr(
+                    ticket_reference=reference,
+                    event_title=event.title,
+                    event_date=str(event.event_date),
+                )
+                await send_ticket_email(
+                    buyer_email=purchase.buyer_email,
+                    buyer_name=purchase.buyer_name,
+                    event_title=event.title,
+                    event_date=str(event.event_date),
+                    event_time=str(event.event_time),
+                    venue=event.venue,
+                    ticket_reference=reference,
+                    ticket_count=purchase.quantity,
+                    amount_paid=purchase.amount,
+                    qr_code_base64=qr_code,
+                )
+            except Exception as e:
+                print(f"Failed to send ticket email: {e}")
+
+        # Send ticket via WhatsApp if phone provided
+        if purchase.buyer_phone and event:
+            try:
+                await send_ticket_whatsapp(
+                    buyer_phone=purchase.buyer_phone,
+                    buyer_name=purchase.buyer_name,
+                    ticket_reference=reference,
+                    event_title=event.title,
+                    event_date=str(event.event_date),
+                )
+            except Exception as e:
+                print(f"Failed to send ticket WhatsApp: {e}")
 
     return {"status": "ok"}
 

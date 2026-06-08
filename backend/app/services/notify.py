@@ -1,8 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from datetime import datetime, timezone
 
 from app.models.subscription import Subscription
 from app.models.event import Event
+from app.models.notification import Notification
 from app.services.email_service import send_email
 from app.services.whatsapp_service import send_whatsapp
 from app.services.sms_service import send_sms
@@ -41,3 +43,27 @@ async def notify_subscribers(db: AsyncSession, event_id: int) -> int:
             pass
 
     return sent
+
+
+async def send_notification(
+    db: AsyncSession,
+    user_id: int,
+    type: str,
+    title: str,
+    message: str,
+    data: dict | None = None,
+    event_id: int | None = None,
+) -> Notification:
+    """Create and store a notification for a user"""
+    notification = Notification(
+        user_id=user_id,
+        event_id=event_id,
+        title=title,
+        message=message,
+        notification_type=type,
+        data=data or {},
+    )
+    db.add(notification)
+    await db.commit()
+    await db.refresh(notification)
+    return notification

@@ -35,14 +35,14 @@ export function Navbar({
   }, []);
 
   const resolvedAuthLinks = authLinks ?? [
-    { label: "LOG IN", href: "/login", primary: !user },
+    { label: "LOGIN", href: "/login", primary: false },
     { label: "CREATE EVENT", href: "/create-event", primary: true },
   ].filter(link => {
-    // Always show LOGIN and CREATE EVENT
+    // Always show CREATE EVENT
     // Hide DASHBOARD and WALLET from navbar (they're only in dashboard sidebar)
     if (link.label === "DASHBOARD" || link.label === "WALLET") return false;
     // Hide LOGIN button if user is already logged in
-    if (link.label === "LOG IN" && user) return false;
+    if (link.label === "LOGIN" && user) return false;
     return true;
   }) as Array<{ label: string; href: string; primary?: boolean; onClick?: () => void }>;
 

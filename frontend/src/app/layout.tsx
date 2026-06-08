@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/auth-context";
 import { ClientProviders } from "./client-providers";
+import { SessionGuard } from "@/components/session-guard";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -35,8 +36,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col" style={{ fontFamily: "var(--font-plus-jakarta), system-ui, sans-serif" }}>
         <AuthProvider>
-          {children}
-          <ClientProviders />
+          <SessionGuard>
+            {children}
+            <ClientProviders />
+          </SessionGuard>
         </AuthProvider>
       </body>
     </html>

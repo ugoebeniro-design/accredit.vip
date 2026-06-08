@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2, CheckCircle, AlertCircle, Landmark } from "lucide-react";
 import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
+import { getCountryFlag } from "@/lib/country-flag";
 
 interface BankAccount {
   id: number;
@@ -89,10 +90,13 @@ export function BankAccountManager({
                 </div>
                 <div>
                   <p className="font-bold text-[#0D1B2A]">{account.bank_name}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <p className="text-xs text-[#64748b]">{account.masked_account}</p>
                     <span className="text-xs font-semibold px-2 py-1 rounded bg-[#f0f4f8] text-[#0D1B2A]">
                       {account.currency}
+                    </span>
+                    <span className="text-xs font-semibold px-2 py-1 rounded bg-[#f0f4f8] text-[#0D1B2A] flex items-center gap-1">
+                      {getCountryFlag(account.country_code)} {account.country_code}
                     </span>
                   </div>
                 </div>

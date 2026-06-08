@@ -4,6 +4,7 @@ sqlalchemy==2.0.36
 alembic==1.14.0
 pydantic==2.10.3
 pydantic-settings==2.7.0
+pydantic[email]==2.10.3
 python-jose[cryptography]==3.3.0
 bcrypt==4.3.0
 python-multipart==0.0.18
@@ -22,3 +23,9 @@ phonenumbers==8.13.0
 pycountry==24.6.1
 pillow==10.3.0
 requests==2.32.3
+
+# SECURITY: Added for enhanced security features
+cryptography==42.0.5
+slowapi==0.1.9
+python-magic==0.4.27
+email-validator==2.1.0

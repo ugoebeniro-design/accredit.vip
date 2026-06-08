@@ -1,13 +1,17 @@
-import json
-from fastapi import APIRouter, Depends, Request
+import json, logging
+from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timezone
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.models.invite import InviteMessage
+from app.services.webhook_security import WebhookSecurityService
+from app.services.audit import AuditService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/webhooks/whatsapp/status")
@@ -80,3 +84,62 @@ async def twilio_status_webhook(req: Request, db: AsyncSession = Depends(get_db)
             msg.webhook_payload = json.dumps(payload)[:500]
             await db.commit()
     return ""
+
+
+@router.post("/webhooks/paystack")
+async def paystack_webhook(req: Request, db: AsyncSession = Depends(get_db)):
+    """
+    SECURITY: Paystack webhook handler with signature verification
+    Verifies webhook is from Paystack before processing payment events
+    """
+    body = await req.body()
+
+    try:
+        # SECURITY: Verify Paystack signature to prevent spoofed webhooks
+        data = await WebhookSecurityService.verify_paystack_signature(
+            request=req,
+            body=body,
+            paystack_secret_key=settings.PAYSTACK_SECRET_KEY,
+        )
+
+        event = data.get("event")
+        payment_data = data.get("data", {})
+        reference = payment_data.get("reference")
+
+        logger.info(f"Valid Paystack webhook: {event} for reference {reference}")
+
+        # Log webhook received
+        await AuditService.log_event(
+            db=db,
+            user_id=None,
+            action=f"webhook_{event}",
+            resource_type="payment",
+            resource_id=None,
+            request=req,
+            description=f"Paystack {event}: {reference}",
+        )
+
+        # Handle specific payment events
+        if event == "charge.success":
+            # Payment successful - update order/transaction status
+            logger.info(f"Payment successful: {reference}")
+            # TODO: Update transaction status in database
+            pass
+
+        elif event == "charge.failed":
+            # Payment failed
+            logger.warning(f"Payment failed: {reference}")
+            # TODO: Update transaction status to failed
+            pass
+
+        elif event == "invoice.payment_requested":
+            # Invoice payment requested
+            logger.info(f"Invoice payment requested: {reference}")
+            # TODO: Update invoice status
+            pass
+
+        return {"status": "ok"}
+
+    except HTTPException as e:
+        logger.error(f"Paystack webhook verification failed: {e.detail}")
+        raise

@@ -187,13 +187,13 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fc] pt-20 pb-12">
+    <div className="min-h-screen bg-[#f8f9fc] pt-4 pb-12">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-[#E91E8C] hover:underline mb-4"
+            className="flex items-center gap-2 px-4 py-2 text-[#E91E8C] border border-[#E91E8C] rounded-lg hover:bg-[#E91E8C]/10 transition-colors mb-4 font-semibold text-sm"
           >
             <ChevronLeft className="h-4 w-4" />
             Back

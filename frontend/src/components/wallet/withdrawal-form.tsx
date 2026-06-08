@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { AlertCircle, Send, Info } from "lucide-react";
 import { SUPPORTED_CURRENCIES, formatCurrencyAmount } from "@/lib/currencies";
+import { getCountryFlag } from "@/lib/country-flag";
 
 interface WithdrawalFormProps {
   wallets: Array<{ currency: string; balance: number }>;
-  bankAccounts: Array<{ id: number; bank_name: string; currency: string; masked_account: string }>;
+  bankAccounts: Array<{ id: number; bank_name: string; currency: string; country_code: string; masked_account: string }>;
   onSubmit: (accountId: number, amount: number) => Promise<void>;
   loading?: boolean;
 }
@@ -102,7 +103,7 @@ export function WithdrawalForm({
           <option value="">Select a bank account...</option>
           {bankAccounts.map((account) => (
             <option key={account.id} value={account.id}>
-              {account.bank_name} • {account.masked_account} ({account.currency})
+              {getCountryFlag(account.country_code)} {account.bank_name} • {account.masked_account} ({account.currency})
             </option>
           ))}
         </select>

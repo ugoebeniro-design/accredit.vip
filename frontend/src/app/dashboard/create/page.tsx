@@ -648,20 +648,51 @@ export default function CreateEventPage() {
     }
     setError("");
 
-    // For CREATE INVITE, initiate payment first
+    // For CREATE INVITE, initiate payment first (requires login)
     if (mode === "invite") {
+      if (!user) {
+        router.push("/auth/signup?source=create_invite");
+        return;
+      }
       await handlePaymentRedirect();
     } else {
-      // For POST EVENT, create event directly
-      setSubmitting(true);
-      await handleCreateEvent();
-      setSubmitting(false);
+      // For POST EVENT
+      if (!user) {
+        // Trial mode: save and redirect to preview
+        const { saveTrialEvent } = await import("@/lib/post-event-trial");
+        saveTrialEvent({
+          title: form.title,
+          host_name: form.host_name,
+          event_date: finalDate,
+          event_time: form.event_time,
+          venue: form.venue,
+          description: form.description,
+          guest_count_range: form.guest_range,
+          event_type: form.event_type || "concert",
+          category: form.category,
+          ticket_price: form.gate_fee ? Number(form.gate_fee) : undefined,
+          pass_packages: passPackages.length > 0 ? passPackages : undefined,
+          lineup: lineup.length > 0 ? lineup : undefined,
+        });
+        router.push("/create-event/trial-preview");
+      } else {
+        // Real event creation
+        setSubmitting(true);
+        await handleCreateEvent();
+        setSubmitting(false);
+      }
     }
   };
 
   const showFlierUpload = mode === "event" || mode === "invite";
 
-  if (loading || !user) return null;
+  if (loading) return null;
+
+  // Allow POST EVENT trial mode without authentication
+  // CREATE INVITE requires authentication
+  if (!user && mode === "invite") {
+    return null; // Will redirect in handleSubmit
+  }
 
   if (!mode) {
     return (
@@ -677,14 +708,14 @@ export default function CreateEventPage() {
             transform: translateZ(0);
           }
         `}</style>
-        <header className="border-b border-[#e8edf2]">
-          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center hover:opacity-75">
-              <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
+        <header className="border-b border-[#e8edf2] bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0">
+              <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-10 sm:h-12 w-auto object-contain" />
             </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[#0D1B2A] px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C]">Dashboard</Link>
-              <Link href="/" className="rounded-lg border border-[#d9e2ec] bg-white px-4 py-2 text-xs font-bold text-[#0D1B2A] shadow-sm transition-all hover:border-[#E91E8C] hover:text-[#E91E8C]">Home</Link>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Link href="/dashboard" className="rounded-lg border border-[#0D1B2A] bg-[#0D1B2A] px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C] hover:shadow-md">Dashboard</Link>
+              <Link href="/" className="rounded-lg border border-[#d9e2ec] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-[#0D1B2A] shadow-sm transition-all hover:border-[#E91E8C] hover:text-[#E91E8C] hover:shadow-md">Home</Link>
             </div>
           </div>
         </header>
@@ -775,14 +806,14 @@ export default function CreateEventPage() {
       `}</style>
 
       {/* Header */}
-      <header className="border-b border-[#e8edf2]">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <button type="button" onClick={() => setMode(null)} className="flex items-center hover:opacity-75 transition-opacity">
-            <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
+      <header className="border-b border-[#e8edf2] bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <button type="button" onClick={() => setMode(null)} className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0">
+            <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-10 sm:h-12 w-auto object-contain" />
           </button>
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="rounded-lg border border-[rgba(255,255,255,0.18)] bg-[#0D1B2A] px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C]">Dashboard</Link>
-            <Link href="/" className="rounded-lg border border-[#d9e2ec] bg-white px-4 py-2 text-xs font-bold text-[#0D1B2A] shadow-sm transition-all hover:border-[#E91E8C] hover:text-[#E91E8C]">Home</Link>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Link href="/dashboard" className="rounded-lg border border-[#0D1B2A] bg-[#0D1B2A] px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C] hover:shadow-md">Dashboard</Link>
+            <Link href="/" className="rounded-lg border border-[#d9e2ec] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-[#0D1B2A] shadow-sm transition-all hover:border-[#E91E8C] hover:text-[#E91E8C] hover:shadow-md">Home</Link>
           </div>
         </div>
       </header>

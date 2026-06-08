@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
+import { getCountryFlag } from "@/lib/country-flag";
 
 interface AddBankAccountFormProps {
   userFullName: string;
@@ -223,23 +224,30 @@ export function AddBankAccountForm({
         <label htmlFor="country_code" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
           Country
         </label>
-        <select
-          id="country_code"
-          name="country_code"
-          value={formData.country_code}
-          onChange={handleInputChange}
-          disabled={loading}
-          className={`w-full h-11 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] ${
-            errors.country_code ? "border-[#dc2626]" : "border-[#d9e2ec]"
-          }`}
-        >
-          <option value="">Select a country...</option>
-          {SUPPORTED_CURRENCIES.map((currency) => (
-            <option key={currency.code} value={currency.code}>
-              {currency.country} ({currency.code})
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            id="country_code"
+            name="country_code"
+            value={formData.country_code}
+            onChange={handleInputChange}
+            disabled={loading}
+            className={`w-full h-11 rounded-xl border px-3 pl-10 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] appearance-none ${
+              errors.country_code ? "border-[#dc2626]" : "border-[#d9e2ec]"
+            }`}
+          >
+            <option value="">Select a country...</option>
+            {SUPPORTED_CURRENCIES.map((currency) => (
+              <option key={currency.code} value={currency.code}>
+                {getCountryFlag(currency.flag)} {currency.country} ({currency.code})
+              </option>
+            ))}
+          </select>
+          {formData.country_code && (
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
+              {getCountryFlag(formData.country_code)}
+            </span>
+          )}
+        </div>
         {errors.country_code && (
           <p className="text-xs text-[#dc2626] mt-1">{errors.country_code}</p>
         )}

@@ -1,19 +1,11 @@
 "use client";
 
 import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
+import { getCountryFlag } from "@/lib/country-flag";
 
 interface CurrencySelectorProps {
   onSelect: (currency: string) => void;
   selectedCurrency?: string;
-}
-
-function CountryFlag({ code }: { code: string }) {
-  // Convert country code to flag emoji using regional indicator symbols
-  const codePoints = code
-    .toUpperCase()
-    .split("")
-    .map((char) => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
 }
 
 export function CurrencySelector({ onSelect, selectedCurrency }: CurrencySelectorProps) {
@@ -38,7 +30,7 @@ export function CurrencySelector({ onSelect, selectedCurrency }: CurrencySelecto
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f0f4f8] text-xl">
-                  {CountryFlag({ code: currency.flag })}
+                  {getCountryFlag(currency.flag)}
                 </div>
                 <div>
                   <p className="font-bold text-[#0D1B2A]">{currency.code}</p>

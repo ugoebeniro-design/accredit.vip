@@ -10,12 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.security import get_current_user
 from app.models.trial_usage import TrialUsage
+from app.models.user import User
 from app.services.email_service import send_email, send_email_with_images
 from app.services.ai_service import generate_flier_image
 from app.services.whatsapp_service import send_whatsapp
 from app.services.sms_service import send_sms
 from app.services.qr_service import qr_gif_to_base64, qr_gif_to_url
+from app.services.trial_enforcement import TrialEnforcementService
 
 router = APIRouter()
 
@@ -287,6 +290,16 @@ async def use_trial(
         else:
             # Fallback if image generation fails
             response["message"] = "Event preview generated. Image generation is currently unavailable, but you can see the event details above."
+
+    # SECURITY: Detect multi-account abuse
+    abuse = await TrialEnforcementService.detect_multi_account_abuse(
+        req.fingerprint, client_hash, db
+    )
+    if abuse and abuse.get("abuse_detected"):
+        raise HTTPException(
+            status_code=409,
+            detail=abuse.get("message", "Trial already used from this device"),
+        )
 
     # Record trial usage
     usage = TrialUsage(

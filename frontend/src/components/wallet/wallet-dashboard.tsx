@@ -2,14 +2,7 @@
 
 import { CreditCard, ArrowDownLeft, ArrowUpRight, Plus } from "lucide-react";
 import { SUPPORTED_CURRENCIES, formatCurrencyAmount } from "@/lib/currencies";
-
-function CountryFlag({ code }: { code: string }) {
-  const codePoints = code
-    .toUpperCase()
-    .split("")
-    .map((char) => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
-}
+import { getCountryFlag } from "@/lib/country-flag";
 
 interface Wallet {
   id: number;
@@ -82,7 +75,7 @@ export function WalletDashboard({
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#f0f4f8] text-2xl">
-                      <CountryFlag code={currency.flag} />
+                      {getCountryFlag(currency.flag)}
                     </div>
                     <div>
                       <p className="font-bold text-[#0D1B2A]">{currency.code}</p>

@@ -1,15 +1,34 @@
+import os
+import logging
 from pydantic_settings import BaseSettings
 from typing import Literal
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
     APP_NAME: str = "Accredit.vip API"
-    DEBUG: bool = True
+
+    # CRITICAL: Environment-based debug setting
+    DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
+
     DATABASE_URL: str = "sqlite+aiosqlite:///./accredit.db"
-    SECRET_KEY: str = "change-me-in-production"
+
+    # CRITICAL: Strong SECRET_KEY must be set in production
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
+    ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "")
+
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
-    SESSION_IDLE_TIMEOUT_MINUTES: int = 30  # idle timeout on frontend
+
+    # CRITICAL: Reduced token expiration from 24 hours to 15 minutes
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    SESSION_IDLE_TIMEOUT_MINUTES: int = 30
+
+    # Security: Max failed login attempts before lockout
+    MAX_LOGIN_ATTEMPTS: int = 5
+    LOCKOUT_DURATION_MINUTES: int = 15
+
     REDIS_URL: str = "redis://localhost:6379/0"
     STORAGE_BUCKET: str = "accredit"
     STORAGE_ENDPOINT: str = ""
@@ -49,7 +68,40 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
     BACKEND_URL: str = "http://localhost:8000"
 
+    # Security: Allowed hosts for CORS
+    ALLOWED_HOSTS: list = [
+        "accredit.vip",
+        "www.accredit.vip",
+        "api.accredit.vip",
+        "app.accredit.vip",
+    ]
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+        # CRITICAL: Validate SECRET_KEY is set in production
+        if not self.SECRET_KEY:
+            if self.DEBUG:
+                self.SECRET_KEY = "dev-only-key-change-in-production"
+                logger.warning("⚠️ Using development SECRET_KEY - CHANGE IN PRODUCTION!")
+            else:
+                raise ValueError(
+                    "CRITICAL: SECRET_KEY must be set via environment variable. "
+                    "Generate with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+                )
+
+        # CRITICAL: Validate ENCRYPTION_KEY for data protection
+        if not self.ENCRYPTION_KEY and not self.DEBUG:
+            raise ValueError(
+                "CRITICAL: ENCRYPTION_KEY must be set via environment variable. "
+                "Generate with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+            )
+
+        # WARN: Debug mode in production
+        if self.DEBUG:
+            logger.warning("⚠️⚠️⚠️ DEBUG MODE IS ENABLED - DO NOT USE IN PRODUCTION ⚠️⚠️⚠️")
 
 
 settings = Settings()
