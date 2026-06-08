@@ -2034,7 +2034,8 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
               </>
               )}
 
-              {/* Mobile - Live Preview (appears at end of form on mobile) */}
+              {/* Mobile - Live Preview (only on final form page) */}
+              {formPage === 2 && (
               <div className="lg:hidden mt-8 rounded-2xl bg-white p-6 text-[#0D1B2A] border border-[#e8edf2]" data-live-preview-mobile>
                 {mode === "event" ? (
                   <>
@@ -2132,13 +2133,6 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                   </div>
                 )}
               </div>
-
-              {/* Live Preview Button - only on final page */}
-              {formPage === 2 && (
-                <button type="button" onClick={() => document.querySelector('[data-live-preview-mobile]')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="w-full mt-5 h-12 rounded-xl font-black text-sm border-2 border-[#E91E8C] text-[#E91E8C] transition-all hover:bg-[#fff1f8] bounce-button lg:hidden">
-                  Preview Before {mode === "event" ? "Posting" : "Creating"}
-                </button>
               )}
 
               {/* Sticky Bottom Navigation Bar for Form Pages */}
