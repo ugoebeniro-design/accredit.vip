@@ -659,11 +659,13 @@ export default function CreateEventPage() {
       // For POST EVENT
       if (!user) {
         // Trial mode: save and redirect to preview
+        const allDay = [dayPart, monthPart, yearPart].filter(Boolean).join("-");
+        const trialDate = allDay.length === 10 ? allDay : form.event_date;
         const { saveTrialEvent } = await import("@/lib/post-event-trial");
         saveTrialEvent({
           title: form.title,
           host_name: form.host_name,
-          event_date: finalDate,
+          event_date: trialDate,
           event_time: form.event_time,
           venue: form.venue,
           description: form.description,
