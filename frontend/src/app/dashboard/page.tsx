@@ -191,13 +191,13 @@ function DashboardContent() {
               <p className="text-white/55 text-[11px] leading-tight" title={maskEmail(user.email)}>{maskEmail(user.email)}</p>
             </div>
           </div>
-          <Link href="/change-password" onClick={() => setMobileNavOpen(false)} className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-white/50 hover:text-white hover:bg-white/08 transition-all">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <Link href="/dashboard/change-password" onClick={() => setMobileNavOpen(false)} className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-red-400 border-2 border-red-800/40 hover:bg-red-500/10 hover:border-red-500/50 font-bold text-sm transition-all">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
             Change Password
           </Link>
-          <button onClick={() => setShowLogoutConfirm(true)} className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-red-500 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 font-bold text-sm transition-all">
+          <button onClick={() => setShowLogoutConfirm(true)} className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-red-500 border-2 border-red-800/40 hover:bg-red-500/10 hover:border-red-500/50 font-bold text-sm transition-all">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
