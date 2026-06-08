@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { CheckCircle2, Eye, EyeOff } from "lucide-react";
@@ -116,10 +117,16 @@ export default function ChangePasswordPage() {
           Back
         </Link>
         <div className="text-center pt-0">
-          <Link href="/" className="text-xl font-bold tracking-tight">
-            Accredit<span className="text-primary">.vip</span>
+          <Link href="/" className="inline-block mb-4">
+            <Image
+              src="/logo-dark-trim.png"
+              alt="accredit.vip"
+              width={4071}
+              height={761}
+              className="h-8 w-auto object-contain"
+            />
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold">Change Password</h1>
+          <h1 className="text-2xl font-semibold">Change Password</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Update your account password
           </p>

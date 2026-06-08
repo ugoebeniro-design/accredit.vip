@@ -2006,6 +2006,71 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
               )}
               </>
               )}
+
+              {/* Mobile - Live Preview (appears at end of form on mobile) */}
+              <div className="lg:hidden mt-8 rounded-2xl bg-white p-6 text-[#0D1B2A] border border-[#e8edf2]" data-live-preview-mobile>
+                {mode === "event" ? (
+                  <>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Flyer builder</p>
+                    <h3 className="mt-3 text-2xl font-black">Live Preview</h3>
+                    <p className="mt-2 text-sm text-gray-500">
+                      See exactly how your event flyer will appear on Discover Events.
+                    </p>
+                  </>
+                ) : (
+                  <div className="rounded-xl bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 border border-[#fce4f0]">
+                    <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
+                    </div>
+                    <h3 className="mt-3 text-2xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
+                    <p className="mt-2 text-sm text-gray-500">
+                      {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-6 overflow-hidden rounded-xl bg-white text-[#07182f] border border-[#e8edf2]">
+                  {(() => {
+                    const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
+                    const styles = activeTemplate ? templateStyles[activeTemplate] : null;
+                    const headerText = styles ? styles.textColor : "white";
+                    return (
+                      <>
+                        <div
+                          className="flex min-h-28 flex-col justify-end p-4"
+                          style={{
+                            background: styles ? styles.headerBg : (
+                              mode === "invite"
+                                ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
+                                : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)"
+                            ),
+                            color: headerText,
+                          }}
+                        >
+                          <p className="text-xs font-black uppercase tracking-[0.22em] opacity-75">
+                            {mode === "event" ? "Event flyer" : "Invite flyer"}
+                          </p>
+                          <h4 className="mt-2 text-2xl font-black leading-tight">{form.title || (mode === "event" ? "Your Event Title" : "Your Invitation")}</h4>
+                        </div>
+                        <div className="p-3">
+                          <h4 className="text-lg font-black">{form.title || (mode === "event" ? "Your Event Title" : "Your Invitation")}</h4>
+                          <p className="mt-1 text-xs text-[#64748b]">{form.host_name || "Host name"}</p>
+                          <p className="mt-2 text-xs text-[#23466f]">{form.venue || "Event venue"}</p>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Live Preview Button - only on final page */}
+              {formPage === 2 && (
+                <button type="button" onClick={() => document.querySelector('[data-live-preview-mobile]')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="w-full mt-5 h-12 rounded-xl font-black text-sm border-2 border-[#E91E8C] text-[#E91E8C] transition-all hover:bg-[#fff1f8] bounce-button lg:hidden">
+                  Preview Before {mode === "event" ? "Posting" : "Creating"}
+                </button>
+              )}
+
               {/* Sticky Bottom Navigation Bar for Form Pages */}
               {(step === 1) && mode && (
                 <div className="sticky bottom-4 z-30 flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-white px-4 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
@@ -2054,41 +2119,172 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
             </form>
 
             {step === 1 && (
-              <aside className="hidden lg:block sticky top-8 self-start rounded-2xl bg-white p-6 text-[#0D1B2A] shadow-[0_18px_48px_rgba(0,0,0,0.08)] border border-[#e8edf2] h-fit">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">
-                  {mode === "event" ? "Flyer preview" : "Invite preview"}
-                </p>
-                <h3 className="mt-3 text-xl font-black">Live preview</h3>
-
-                <div className="mt-6 space-y-4">
-                  {(uploadedImagePreviewUrl || form.generated_image_url) && (
-                    <div className="overflow-hidden rounded-lg">
-                      <img
-                        src={uploadedImagePreviewUrl || form.generated_image_url}
-                        alt="Preview"
-                        className="w-full object-cover rounded-lg max-h-48"
-                      />
+              <div className="hidden lg:block space-y-6" data-live-preview>
+                <div className="sticky top-20 rounded-2xl bg-white p-6 text-[#0D1B2A] shadow-[0_18px_48px_rgba(0,0,0,0.08)] border border-[#e8edf2] min-h-[500px] flex flex-col">
+                  {mode === "event" ? (
+                    <>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Flyer builder</p>
+                      <h3 className="mt-3 text-3xl font-black">Live Preview</h3>
+                      <p className="mt-2 text-sm text-gray-500">
+                        See exactly how your event flyer will appear on Discover Events.
+                      </p>
+                    </>
+                  ) : (
+                    <div className="rounded-xl bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-5 border border-[#fce4f0]">
+                      <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
+                      </div>
+                      <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
+                      <p className="mt-2 text-sm text-gray-500">
+                        {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
+                      </p>
+                      <div className="mt-5 space-y-2">
+                        {form.delivery_channels.length === 0 ? (
+                          <p className="rounded-xl bg-white/80 p-3 text-sm text-gray-500 border border-[#e8edf2]">Select at least one channel.</p>
+                        ) : (
+                          form.delivery_channels.map((channel) => (
+                            <div key={channel} className="flex items-center justify-between rounded-xl bg-white/80 p-3 text-sm border border-[#e8edf2]">
+                              <span className="text-gray-700">{channelLabels[channel]}</span>
+                              <strong className="text-[#0D1B2A]">{formatNaira(pricing[channel] * pricingUnits)}</strong>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   )}
 
-                  <div className="rounded-lg bg-gradient-to-br from-[#f8f9fc] to-[#f0f1f7] p-4">
-                    <h4 className="font-black text-sm text-[#0D1B2A]">{form.title || "Event title"}</h4>
-                    <p className="mt-1 text-xs text-[#64748b]">{form.host_name || "Host name"}</p>
-                    {form.venue && (
-                      <div className="mt-2 flex items-center gap-2 text-xs text-[#94a3b8]">
-                        <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-[#E91E8C]" />
-                        <span>{form.venue}</span>
+                  <div className="mt-8 space-y-5">
+                    {(uploadedImagePreviewUrl || form.generated_image_url) && (
+                      <div className="overflow-hidden rounded-xl bg-white">
+                        <img
+                          src={uploadedImagePreviewUrl || form.generated_image_url}
+                          alt="Event image"
+                          className="w-full object-cover"
+                        />
                       </div>
                     )}
-                    {form.event_date && (
-                      <div className="mt-1 flex items-center gap-2 text-xs text-[#94a3b8]">
-                        <Calendar className="w-3.5 h-3.5 flex-shrink-0 text-[#E91E8C]" />
-                        <span>{formatDisplayDate(form.event_date)}</span>
+                    <div className="overflow-hidden rounded-xl bg-white text-[#07182f]">
+                      {(() => {
+                        const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
+                        const styles = activeTemplate ? templateStyles[activeTemplate] : null;
+                        const headerText = styles ? styles.textColor : "white";
+                        return (
+                          <>
+                            <div
+                              className="flex min-h-36 flex-col justify-end p-5"
+                              style={{
+                                background: styles ? styles.headerBg : (
+                                  mode === "invite"
+                                    ? "linear-gradient(135deg, #E91E8C 0%, #07182f 52%, #F5A623 100%)"
+                                    : "linear-gradient(135deg, #0f172a 0%, #263b5e 50%, #E91E8C 100%)"
+                                ),
+                                color: headerText,
+                              }}
+                            >
+                              <p className="text-xs font-black uppercase tracking-[0.22em] opacity-75">
+                                {mode === "event" ? "Event flyer" : "Invite flyer"}
+                              </p>
+                              <h4 className="mt-3 text-3xl font-black leading-tight">{form.title || (mode === "event" ? "Your Event Title" : "Your Invitation")}</h4>
+                              <p className="mt-2 text-sm opacity-85">
+                                {form.venue || (mode === "event" ? "Event venue" : "Venue TBD")}
+                              </p>
+                            </div>
+                            <div className="p-4">
+                              <h4 className="text-xl font-black">{form.title || (mode === "event" ? "Your Event Title" : "Your Invitation")}</h4>
+                              <p className="mt-1 text-sm text-[#64748b]">{form.host_name || "Host name"}</p>
+                              {mode === "event" ? (
+                                <>
+                                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                                    <div className="rounded-lg bg-[#f8fafc] p-2">
+                                      <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
+                                      <dd className="mt-1 font-semibold">{formatDisplayDate(form.event_date) || "Event date"}</dd>
+                                    </div>
+                                    <div className="rounded-lg bg-[#f8fafc] p-2">
+                                      <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
+                                      <dd className="mt-1 font-semibold">{form.event_time || "Event time"}</dd>
+                                    </div>
+                                    <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                      <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
+                                      <dd className="mt-1 font-semibold">{form.venue || "Event venue"}</dd>
+                                    </div>
+                                  </div>
+                                  <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                                    {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
+                                      ? (form.description || "").split(/\n{2,}/).map((para, i) => (
+                                          <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                                        ))
+                                      : <p>Your event description will appear here in the preview.</p>}
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                                    <p className="font-semibold">Dear <span className="text-[#E91E8C]">[Guest Name]</span>,</p>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div className="rounded-lg bg-[#f8fafc] p-2">
+                                        <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
+                                        <dd className="mt-1 font-semibold">{formatDisplayDate(form.event_date) || "Event date"}</dd>
+                                      </div>
+                                      <div className="rounded-lg bg-[#f8fafc] p-2">
+                                        <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
+                                        <dd className="mt-1 font-semibold">{form.event_time || "Event time"}</dd>
+                                      </div>
+                                      <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                        <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
+                                        <dd className="mt-1 font-semibold">{form.venue || "Event venue"}</dd>
+                                      </div>
+                                      <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                        <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
+                                      </div>
+                                      <div className="rounded-lg bg-[#f8fafc] p-2">
+                                        <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
+                                        <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
+                                      </div>
+                                      <div className="rounded-lg bg-[#f8fafc] p-2">
+                                        <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
+                                        <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
+                                      </div>
+                                    </div>
+                                    {(() => {
+                                      const desc = form.description || "";
+                                      const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
+                                      if (paragraphs.length === 0) {
+                                        return <p className="mt-3">Your message will appear here in the preview.</p>;
+                                      }
+                                      return paragraphs.map((para, i) => (
+                                        <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                                      ));
+                                    })()}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                    {mode === "invite" && form.qr_delivery !== "without_qr" && (
+                      <div className="rounded-xl bg-white p-4 text-[#07182f]">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">QR code</p>
+                        {(form.qr_message || form.qr_delivery === "with_qr") && (
+                          <p className="mt-2 text-sm text-[#23466f]">{form.qr_message || "Attached to this invite is your QR code. Kindly present it at the event for entry."}</p>
+                        )}
+                        <div className={`mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)] ${qrStyleConfig[form.qr_style]?.wrapper || "animate-pulse"}`}>
+                          {form.qr_style === "custom" ? (
+                            <div className="col-span-5 flex items-center justify-center text-[10px] text-gray-400 text-center">Your custom QR design</div>
+                          ) : (
+                            Array.from({ length: 25 }).map((_, index) => (
+                              <span key={index}
+                                className={`rounded-sm ${qrStyleConfig[form.qr_style]?.square || ""} ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
+                              />
+                            ))
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
-              </aside>
+              </div>
             )}
 
             {step === 2 && (

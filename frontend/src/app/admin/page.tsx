@@ -112,14 +112,18 @@ export default function AdminPage() {
           }`}
         >
           <div className="h-20 flex items-center justify-between px-4 border-b border-[#e8edf2]">
-            {sidebarOpen && (
-              <Link href="/">
-                <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
-              </Link>
-            )}
+            <Link href="/" className="flex-1">
+              <Image
+                src="/logo-dark-trim.png"
+                alt="accredit.vip"
+                width={4071}
+                height={761}
+                className={`h-8 w-auto object-contain transition-opacity ${sidebarOpen ? 'opacity-100' : 'opacity-50'}`}
+              />
+            </Link>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-[#f0f1f7] rounded-lg transition-colors"
+              className="p-2 hover:bg-[#f0f1f7] rounded-lg transition-colors flex-shrink-0"
             >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
