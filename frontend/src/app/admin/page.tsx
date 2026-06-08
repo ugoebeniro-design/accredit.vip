@@ -113,12 +113,10 @@ export default function AdminPage() {
         >
           <div className="h-20 flex items-center justify-between px-4 border-b border-[#e8edf2]">
             <Link href="/" className="flex-1 overflow-hidden">
-              <Image
+              <img
                 src="/logo-dark-trim.png"
                 alt="accredit.vip"
-                width={4071}
-                height={761}
-                className={`h-8 w-full object-contain transition-opacity ${sidebarOpen ? 'opacity-100' : 'opacity-50'}`}
+                className={`h-10 max-w-full w-auto object-contain transition-opacity ${sidebarOpen ? 'opacity-100' : 'opacity-50'}`}
               />
             </Link>
             <button

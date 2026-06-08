@@ -342,9 +342,40 @@ export default function CreateEventPage() {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
 
-  // Load saved draft when user selects a mode
+  // Restore draft+step after mount (refresh persistence)
+  const initialRestoreDone = useRef(false);
+  useEffect(() => {
+    if (loading) return;
+    const lastMode = localStorage.getItem("accredit_last_dashboard_mode") as Mode | null;
+    const savedDraft = lastMode ? localStorage.getItem(`accredit_draft_${lastMode}`) : null;
+    if (lastMode && savedDraft && ["invite", "event"].includes(lastMode)) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        // Only restore if there's real data (not just defaults)
+        if (draft && draft.form && draft.form.title) {
+          setMode(lastMode);
+          setForm(draft.form || DEFAULT_FORM);
+          setPassPackages(draft.passPackages || [{ name: "Regular", price: "" }]);
+          setSocialHandles(draft.socialHandles || [{ platform: "instagram", handle: "" }]);
+          setLineup(draft.lineup || [{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
+          setUploadedImageData(draft.uploadedImageData || null);
+          const lastStep = localStorage.getItem("accredit_dashboard_step");
+          if (lastStep) setStep(parseInt(lastStep, 10));
+          const lastFormPage = localStorage.getItem("accredit_dashboard_formPage");
+          if (lastFormPage) setFormPage(parseInt(lastFormPage, 10));
+          initialRestoreDone.current = true;
+        }
+      } catch {}
+    }
+  }, [loading]);
+
+  // Load saved draft when user changes mode mid-session (skip restore that already ran)
   useEffect(() => {
     if (!mode) return;
+    if (initialRestoreDone.current) {
+      initialRestoreDone.current = false;
+      return;
+    }
     const savedDraft = localStorage.getItem(`accredit_draft_${mode}`);
     if (savedDraft) {
       try {
