@@ -10,6 +10,7 @@ export type User = {
   full_name: string;
   phone: string | null;
   role: string;
+  is_admin: boolean;
   is_verified: boolean;
   verification_channel: string;
 };

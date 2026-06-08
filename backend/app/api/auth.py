@@ -362,6 +362,7 @@ async def get_me(user: User = Depends(get_current_user)):
         "full_name": user.full_name,
         "phone": user.phone,
         "role": user.role,
+        "is_admin": user.role == "admin",
         "is_verified": user.is_verified,
         "verification_channel": user.verification_channel,
     }
