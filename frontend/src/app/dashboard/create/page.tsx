@@ -755,7 +755,7 @@ export default function CreateEventPage() {
         <header className="border-b border-[#e8edf2] bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             <Link href="/" className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0">
-              <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-10 sm:h-12 w-auto object-contain" />
+              <Image src="/logo-trim.png" alt="accredit.vip" width={4071} height={761} className="h-10 sm:h-12 w-auto object-contain" />
             </Link>
             <div className="flex items-center gap-3 sm:gap-4">
               <Link href="/dashboard" className="rounded-lg border border-[#0D1B2A] bg-[#0D1B2A] px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C] hover:shadow-md">Dashboard</Link>
@@ -853,7 +853,7 @@ export default function CreateEventPage() {
       <header className="border-b border-[#e8edf2] bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <button type="button" onClick={() => setMode(null)} className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0">
-            <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-10 sm:h-12 w-auto object-contain" />
+            <Image src="/logo-trim.png" alt="accredit.vip" width={4071} height={761} className="h-10 sm:h-12 w-auto object-contain" />
           </button>
           <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/dashboard" className="rounded-lg border border-[#0D1B2A] bg-[#0D1B2A] px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C] hover:shadow-md">Dashboard</Link>

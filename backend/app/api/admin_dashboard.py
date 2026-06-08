@@ -40,7 +40,7 @@ class EventSummary(BaseModel):
 
 async def verify_admin(user: User = Depends(get_current_user)):
     """Verify user is admin."""
-    if not hasattr(user, 'role') or user.role != "superadmin":
+    if not hasattr(user, 'role') or user.role not in ("super_admin", "admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 

@@ -24,7 +24,7 @@ export function Navbar({
     { label: "Contact", href: "/contact" },
   ],
 }: NavbarProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -34,17 +34,20 @@ export function Navbar({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const resolvedAuthLinks = authLinks ?? [
-    { label: "LOGIN", href: "/login", primary: false },
-    { label: "CREATE EVENT", href: "/create-event", primary: true },
-  ].filter(link => {
-    // Always show CREATE EVENT
-    // Hide DASHBOARD and WALLET from navbar (they're only in dashboard sidebar)
-    if (link.label === "DASHBOARD" || link.label === "WALLET") return false;
-    // Hide LOGIN button only if user is logged in
-    if (link.label === "LOGIN" && user !== null) return false;
-    return true;
-  }) as Array<{ label: string; href: string; primary?: boolean; onClick?: () => void }>;
+  const resolvedAuthLinks: Array<{ label: string; href?: string; primary?: boolean; onClick?: () => void }> = authLinks ?? [];
+  if (resolvedAuthLinks.length === 0) {
+    if (user) {
+      resolvedAuthLinks.push(
+        { label: "LOGOUT", onClick: () => logout() },
+        { label: "CREATE EVENT", href: "/create-event", primary: true },
+      );
+    } else {
+      resolvedAuthLinks.push(
+        { label: "LOGIN", href: "/login", primary: false },
+        { label: "CREATE EVENT", href: "/create-event", primary: true },
+      );
+    }
+  }
 
   const isDark = variant === "solid" || variant === "transparent";
 
