@@ -2053,6 +2053,38 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
               )}
             </form>
 
+            {step === 1 && (
+              <aside className="hidden lg:block sticky top-8 self-start rounded-2xl bg-white p-6 text-[#0D1B2A] shadow-[0_18px_48px_rgba(0,0,0,0.08)] border border-[#e8edf2] h-fit">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">
+                  {mode === "event" ? "Flyer preview" : "Invite preview"}
+                </p>
+                <h3 className="mt-3 text-xl font-black">Live preview</h3>
+
+                <div className="mt-6 space-y-4">
+                  {(uploadedImagePreviewUrl || form.generated_image_url) && (
+                    <div className="overflow-hidden rounded-lg">
+                      <img
+                        src={uploadedImagePreviewUrl || form.generated_image_url}
+                        alt="Preview"
+                        className="w-full object-cover rounded-lg max-h-48"
+                      />
+                    </div>
+                  )}
+
+                  <div className="rounded-lg bg-gradient-to-br from-[#f8f9fc] to-[#f0f1f7] p-4">
+                    <h4 className="font-black text-sm text-[#0D1B2A]">{form.title || "Event title"}</h4>
+                    <p className="mt-1 text-xs text-[#64748b]">{form.host_name || "Host name"}</p>
+                    {form.venue && (
+                      <p className="mt-2 text-xs text-[#94a3b8]">📍 {form.venue}</p>
+                    )}
+                    {form.event_date && (
+                      <p className="mt-1 text-xs text-[#94a3b8]">📅 {formatDisplayDate(form.event_date)}</p>
+                    )}
+                  </div>
+                </div>
+              </aside>
+            )}
+
             {step === 2 && (
               <div className="space-y-6 lg:col-span-2">
                 <button

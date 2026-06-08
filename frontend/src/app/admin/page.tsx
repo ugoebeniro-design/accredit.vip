@@ -314,7 +314,7 @@ export default function AdminPage() {
     try {
       const res = await apiClient<{ access_token: string; user: any }>("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: { email, password },
       });
 
       if (res.user.role !== "admin") {
