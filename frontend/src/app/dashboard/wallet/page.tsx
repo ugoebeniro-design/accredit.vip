@@ -9,7 +9,8 @@ import { BankAccountManager } from "@/components/wallet/bank-account-manager";
 import { AddBankAccountForm } from "@/components/wallet/add-bank-account-form";
 import { WithdrawalForm } from "@/components/wallet/withdrawal-form";
 import { CurrencySelector } from "@/components/wallet/currency-selector";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LayoutGrid, Calendar, Plus, Wallet as WalletIcon, Compass, LogOut, Lock } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface Wallet {
   id: number;
@@ -31,33 +32,24 @@ interface BankAccount {
 
 export default function WalletPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { user, logout } = useAuth();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "deposit" | "withdraw" | "accounts">("overview");
   const [selectedCurrency, setSelectedCurrency] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch("/api/v1/auth/me");
-        if (!res.ok) {
-          router.push("/login");
-          return;
-        }
-        const data = await res.json();
-        setUser(data);
-      } catch {
-        router.push("/login");
-      }
-    };
-
-    checkAuth();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     fetchWallets();
     fetchBankAccounts();
-  }, [router]);
+  }, [user, router]);
 
   const fetchWallets = async () => {
     try {
@@ -181,6 +173,11 @@ export default function WalletPage() {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    router.push("/");
+  };
+
   if (!user) return null;
 
   return (
@@ -190,44 +187,128 @@ export default function WalletPage() {
         <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setMobileNavOpen(false)} />
       )}
 
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl p-6 max-w-sm mx-4">
+            <h2 className="text-lg font-bold text-[#0D1B2A] mb-2">Sign Out?</h2>
+            <p className="text-[#64748b] mb-6">Are you sure you want to sign out?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-[#e8edf2] text-[#0D1B2A] font-semibold hover:bg-[#f8f9fc] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 flex-col flex-shrink-0 transition-transform duration-300 ${mobileNavOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:flex`} style={{ background: "#0D1B2A" }}>
-        <div className="flex items-center h-16 px-6" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <Link href="/" onClick={() => setMobileNavOpen(false)}>
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex-col flex-shrink-0 transition-all duration-300 ${
+          mobileNavOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0 lg:static lg:flex`}
+        style={{
+          background: "#0D1B2A",
+          width: sidebarOpen ? "256px" : "80px",
+        }}
+      >
+        {/* Logo */}
+        <div className="flex items-center justify-between h-20 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center flex-1 min-w-0">
             <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4071} height={761} className="h-8 w-auto object-contain" />
           </Link>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0 hidden lg:block"
+          >
+            {sidebarOpen ? <X className="w-4 h-4 text-white/60" /> : <Menu className="w-4 h-4 text-white/60" />}
+          </button>
         </div>
-        <nav className="flex-1 px-3 py-6 space-y-1">
-          <p className="px-3 text-[10px] font-bold text-white/25 uppercase tracking-widest mb-3">Main Menu</p>
+
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+          <p className={`px-3 text-[10px] font-bold text-white/25 uppercase tracking-widest mb-3 ${!sidebarOpen && "hidden"}`}>
+            Main Menu
+          </p>
           {[
-            { href: "/dashboard", label: "Dashboard" },
-            { href: "/dashboard/events", label: "Events" },
-            { href: "/dashboard/create", label: "Create Event" },
-            { href: "/dashboard/wallet", label: "Wallet", active: true },
+            { href: "/dashboard", label: "Dashboard", icon: <LayoutGrid className="w-4 h-4" /> },
+            { href: "/dashboard/events", label: "Events", icon: <Calendar className="w-4 h-4" /> },
+            { href: "/dashboard/create", label: "Create Event", icon: <Plus className="w-4 h-4" /> },
+            { href: "/dashboard/wallet", label: "Wallet", icon: <WalletIcon className="w-4 h-4" />, active: true },
           ].map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
               onClick={() => setMobileNavOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group"
               style={{
                 background: item.active ? "rgba(233,30,140,0.15)" : "transparent",
                 color: item.active ? "#E91E8C" : "rgba(255,255,255,0.6)",
               }}
+              title={!sidebarOpen ? item.label : ""}
             >
-              {item.label}
+              <span className={item.active ? "text-[#E91E8C]" : "text-white/40"}>{item.icon}</span>
+              {sidebarOpen && <span>{item.label}</span>}
             </Link>
           ))}
+
+          {/* Discover Section */}
+          <div className={`pt-4 mt-4 ${!sidebarOpen && "hidden"}`} style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <p className="px-3 text-[10px] font-bold text-white/25 uppercase tracking-widest mb-3">Discover</p>
+            <Link
+              href="/attend"
+              onClick={() => setMobileNavOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white hover:bg-white/08 transition-all"
+            >
+              <Compass className="w-4 h-4" />
+              Browse Events
+            </Link>
+          </div>
         </nav>
-        <div className="px-3 py-4 flex-shrink-0" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+
+        {/* User Section */}
+        <div className="px-3 py-4 flex-shrink-0 space-y-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          {/* User Profile */}
           <div className="flex items-center gap-3 px-3 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}>
               {user.full_name?.charAt(0) || "U"}
             </div>
-            <div className="min-w-0">
-              <p className="text-white text-xs font-semibold truncate">{user.full_name}</p>
-            </div>
+            {sidebarOpen && (
+              <div className="min-w-0 flex-1">
+                <p className="text-white text-xs font-semibold truncate">{user.full_name}</p>
+                <p className="text-white/40 text-xs truncate">{user.email}</p>
+              </div>
+            )}
           </div>
+
+          {/* Change Password & Logout */}
+          {sidebarOpen && (
+            <>
+              <Link
+                href="/change-password"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white hover:bg-white/08 transition-all"
+              >
+                <Lock className="w-4 h-4" />
+                Change Password
+              </Link>
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 border-2 border-red-200 text-red-600 hover:bg-red-100 hover:border-red-400 font-bold text-sm transition-all hover:shadow-lg active:scale-95"
+              >
+                <LogOut className="w-5 h-5" />
+                Sign Out
+              </button>
+            </>
+          )}
         </div>
       </aside>
 
@@ -236,9 +317,7 @@ export default function WalletPage() {
         <header className="h-16 flex items-center justify-between px-6 flex-shrink-0" style={{ background: "white", borderBottom: "1px solid #e8edf2" }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileNavOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
-              <svg className="w-5 h-5 text-[#0D1B2A]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <Menu className="w-5 h-5 text-[#0D1B2A]" />
             </button>
             <div>
               <h1 className="text-lg font-bold text-[#0D1B2A]">Wallet</h1>
