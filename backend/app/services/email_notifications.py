@@ -4,6 +4,7 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 from app.core.config import settings
+from app.services.email_service import send_email
 
 async def send_payment_confirmation(
     user_email: str,
@@ -205,5 +206,4 @@ async def send_guest_invitation(
     </html>
     """
 
-    # Email will be sent asynchronously - logic handled by backend
-    return True
+    return await send_email(guest_email, f"You're Invited to {event_title}!", html_content)

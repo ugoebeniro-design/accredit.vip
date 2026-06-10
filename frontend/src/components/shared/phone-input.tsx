@@ -39,7 +39,9 @@ export function PhoneInput({ value, onChange, placeholder = "Phone number", requ
   const displayValue = value.startsWith(selected.code) ? value.slice(selected.code.length) : value;
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const num = e.target.value.replace(/\D/g, "");
+    const raw = e.target.value.replace(/\D/g, "");
+    const codeDigits = selected.code.replace(/\D/g, "");
+    const num = raw.startsWith(codeDigits) ? raw.slice(codeDigits.length) : raw;
     onChange(`${selected.code}${num}`);
   };
 

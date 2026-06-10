@@ -69,7 +69,10 @@ async def add_guest(
     guests_count = await db.execute(
         select(Guest).where(Guest.event_id == event_id)
     )
-    if len(guests_count.scalars().all()) >= int(event.guest_count_range.split("-")[1] or event.guest_count_range.split("+")[0]):
+    import re
+    range_numbers = [int(x) for x in re.findall(r"\d+", event.guest_count_range or "0")]
+    max_guests = max(range_numbers) if range_numbers else 0
+    if len(guests_count.scalars().all()) >= max_guests:
         raise HTTPException(status_code=400, detail="Guest quota exceeded")
 
     # Validate and normalize phone
@@ -175,7 +178,8 @@ async def upload_guests(
         select(Guest).where(Guest.event_id == event_id)
     )
     total = len(existing.scalars().all()) + len(guests_to_add)
-    max_guests = int(event.guest_count_range.split("-")[-1] or event.guest_count_range.split("+")[0])
+    import re
+    max_guests = max([int(x) for x in re.findall(r"\d+", event.guest_count_range or "0")] or [0])
 
     if total > max_guests:
         raise HTTPException(
