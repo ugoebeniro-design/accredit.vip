@@ -166,9 +166,9 @@ const QR_PATTERN = [
 
 const HOME_HERO_COPY = Object.freeze({
   eyebrow: "Premium Event Infrastructure · Africa",
-  titleStart: "From invitation to entry, stay in",
-  titleMiddle: " complete control.",
-  titleAccent: "",
+  titleStart: "From invitation to",
+  titleMiddle: " entry, stay in",
+  titleAccent: "complete control.",
   subtitle:
     "Send branded invitations by WhatsApp, SMS, or Email, give every guest a unique QR pass, and run check-in from one live dashboard.",
 });

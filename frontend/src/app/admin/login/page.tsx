@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Eye, EyeOff, Shield } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -33,9 +31,8 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Store token and redirect to admin dashboard
-      localStorage.setItem("access_token", res.access_token);
-      router.push("/admin");
+      // Full page reload to re-initialize auth context with fresh session
+      window.location.href = "/admin";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {
@@ -44,15 +41,15 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#f8f9fc] to-[#f0f1f7] px-4 py-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4 py-4">
       {/* Logo */}
-      <Link href="/" className="mb-1 hover:opacity-80 transition-opacity">
+      <Link href="/" className="mb-8 hover:opacity-80 transition-opacity">
         <Image
           src="/logo-dark-trim.png"
           alt="accredit.vip"
           width={4071}
           height={761}
-          className="h-12 w-auto object-contain"
+          className="h-16 w-auto object-contain"
         />
       </Link>
 
@@ -149,11 +146,11 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Security Notice */}
-        <div className="mt-8 p-6 rounded-2xl bg-[#0D1B2A] border-2 border-[#E91E8C] flex gap-4 shadow-lg">
-          <Shield className="w-7 h-7 text-[#E91E8C] flex-shrink-0 mt-0.5 font-bold" />
+        <div className="mt-6 p-4 rounded-xl bg-[#0D1B2A] border-2 border-[#E91E8C] flex gap-3 shadow-lg">
+          <Shield className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5 font-bold" />
           <div>
-            <p className="text-base font-bold text-white mb-2">Secure Access Required</p>
-            <p className="text-sm text-white leading-relaxed">
+            <p className="text-sm font-bold text-white mb-1">Secure Access Required</p>
+            <p className="text-xs text-white leading-snug">
               This page is for authorized administrators only. All unauthorized access attempts are logged, monitored, and reported.
             </p>
           </div>

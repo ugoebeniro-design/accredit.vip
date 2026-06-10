@@ -53,9 +53,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setOnUnauthorized(() => {
       setUser(null);
       localStorage.removeItem("user_data");
-      if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
-        window.location.href = "/admin/login";
-      }
     });
   }, []);
 
