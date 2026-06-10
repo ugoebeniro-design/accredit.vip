@@ -19,6 +19,7 @@ from app.models.subscription import Subscription
 from app.models.community_post import CommunityPost
 from app.models.data_management import DataGroup, DataProfile, DataRequest
 from app.models.waitlist import WaitlistEntry
+from app.models.audience import AudienceProfile, AudienceExportLog
 from app.models.coupon import Coupon
 from app.models.rsvp_question import RSVPQuestion, RSVPAnswer
 from app.models.event_template import EventTemplate
@@ -31,5 +32,5 @@ all_models = [
     PasswordResetToken, TrialUsage, Subscription, CommunityPost,
     DataGroup, DataProfile, DataRequest, WaitlistEntry, Coupon,
     RSVPQuestion, RSVPAnswer, EventTemplate, Wallet, WalletTransaction,
-    BankAccount, Withdrawal,
+    BankAccount, Withdrawal, AudienceProfile, AudienceExportLog,
 ]

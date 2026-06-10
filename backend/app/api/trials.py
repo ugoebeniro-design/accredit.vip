@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import os
@@ -237,9 +238,9 @@ async def use_trial(
                 </html>
                 """
             if email_images:
-                await send_email_with_images(test_email, f"Your Test Invitation: {title}", html, email_images)
+                asyncio.create_task(send_email_with_images(test_email, f"Your Test Invitation: {title}", html, email_images))
             else:
-                await send_email(test_email, f"Your Test Invitation: {title}", html)
+                asyncio.create_task(send_email(test_email, f"Your Test Invitation: {title}", html))
             sent_channels.append("Email")
 
         # Send via WhatsApp - try with media image, fallback to text-only

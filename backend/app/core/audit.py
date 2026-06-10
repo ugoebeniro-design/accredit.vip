@@ -6,17 +6,17 @@ async def log_action(
     db: AsyncSession,
     user_id: int | None,
     action: str,
-    resource: str,
+    resource_type: str,
     resource_id: int | None = None,
-    details: str | None = None,
+    description: str | None = None,
     ip_address: str | None = None,
 ):
     entry = AuditLog(
         user_id=user_id,
         action=action,
-        resource=resource,
+        resource_type=resource_type,
         resource_id=resource_id,
-        details=details,
+        description=description,
         ip_address=ip_address,
     )
     db.add(entry)

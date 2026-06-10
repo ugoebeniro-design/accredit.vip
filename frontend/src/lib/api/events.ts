@@ -33,6 +33,7 @@ export type EventData = {
   map_link: string | null;
   cover_image: string | null;
   ticket_price: number | null;
+  currency: string;
   tickets_available: number | null;
   pass_packages: PassPackage[] | null;
   lineup: SavedLineupPerson[] | null;
@@ -78,6 +79,7 @@ export type CreateEventInput = {
   map_link?: string;
   cover_image?: string;
   ticket_price?: number;
+  currency?: string;
   tickets_available?: number;
   pass_packages?: PassPackage[];
   lineup?: SavedLineupPerson[];

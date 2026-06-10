@@ -23,8 +23,7 @@ Domain: accredit.vip (not .com). Tech: Next.js 16 (frontend) + FastAPI (backend)
 - Login redirect: Login page reads ?redirect= query param and navigates there after success.
 - Forgot Password: User enters email, gets reset link. Reset page lets them set new password. Tokens are single-use with expiry, stored in password_reset_tokens table.
 - Change Password: Available from dashboard after login. Requires current password + new password.
-- Default admin: admin@example.com / admin123 (super_admin role, pre-verified).
-- User roles: regular user, admin, super_admin. Role management from admin dashboard.
+- Role management from admin dashboard.
 
 === EVENTS ===
 - Two types: 'invite' (private, guest list + QR invites) and 'event' (public, discoverable, with ticketing).

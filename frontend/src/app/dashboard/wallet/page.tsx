@@ -32,6 +32,14 @@ interface BankAccount {
   created_at: string;
 }
 
+function maskEmail(email: string) {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return email;
+  const visibleStart = local.slice(0, Math.min(8, local.length));
+  const visibleEnd = local.length > 1 ? local.slice(-1) : "";
+  return `${visibleStart}******${visibleEnd}@${domain}`;
+}
+
 export default function WalletPage() {
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -235,9 +243,9 @@ export default function WalletPage() {
         }}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between h-20 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center justify-between h-24 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center flex-1 min-w-0">
-            <Image src="/logo-trim.png" alt="accredit.vip" width={4071} height={761} className="h-14 w-auto object-contain" />
+            <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4086} height={801} className="h-16 w-auto object-contain drop-shadow-[0_0_12px_rgba(233,30,140,0.25)]" />
           </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -301,7 +309,7 @@ export default function WalletPage() {
             {sidebarOpen && (
               <div className="min-w-0 flex-1">
                 <p className="text-white text-xs font-semibold truncate">{user.full_name}</p>
-                <p className="text-white/40 text-xs truncate">{user.email}</p>
+                <p className="text-white/40 text-xs truncate" title={maskEmail(user.email)}>{maskEmail(user.email)}</p>
               </div>
             )}
           </div>

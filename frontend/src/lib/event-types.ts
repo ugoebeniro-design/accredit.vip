@@ -41,11 +41,6 @@ export const DRESS_CODE_FEMALE_MALE = [
   { category: 'Male', options: ['Tuxedo', 'Suit', 'Dress Shirt & Slacks', 'Blazer & Dress Pants', 'Formal Jacket'] },
 ];
 
-export const DRESS_CODE_FEMALE_MALE_REORDERED = [
-  { category: 'Female', options: ['Evening Gown', 'Cocktail Dress', 'Elegant Jumpsuit', 'Formal Dress', 'Blouse & Dress Pants'] },
-  { category: 'Male', options: ['Tuxedo', 'Suit', 'Dress Shirt & Slacks', 'Blazer & Dress Pants', 'Formal Jacket'] },
-];
-
 export const getEventTypeLabel = (value: string, isInvite: boolean): string => {
   const types = isInvite ? INVITE_EVENT_TYPES : EVENT_EVENT_TYPES;
   return types.find((t) => t.value === value)?.label || value;

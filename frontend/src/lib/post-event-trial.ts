@@ -14,6 +14,7 @@ export interface PostEventTrialData {
   guest_count_range: string;
   event_type: string;
   category?: string;
+  currency?: string;
   ticket_price?: number;
   pass_packages?: any[];
   lineup?: any[];

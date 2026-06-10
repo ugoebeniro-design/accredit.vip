@@ -95,3 +95,15 @@ export function cleanLineup(lineup: LineupPerson[]) {
     }))
     .filter((person) => person.role || person.name);
 }
+
+import { SUPPORTED_CURRENCIES } from "./currencies";
+
+export const CURRENCIES = SUPPORTED_CURRENCIES.map((c) => ({
+  code: c.code,
+  symbol: c.symbol,
+  label: `${c.name} (${c.symbol})`,
+}));
+
+export function getCurrencySymbol(code: string): string {
+  return CURRENCIES.find((c) => c.code === code)?.symbol || code;
+}

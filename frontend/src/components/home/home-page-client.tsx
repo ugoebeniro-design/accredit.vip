@@ -193,7 +193,7 @@ export function HomePageClient() {
     `}</style>
 
       {/* ════════════════════════════════════════
-          HERO
+          HERO (with carousel overlay at top)
       ════════════════════════════════════════ */}
       <section
         className="hero-animated-bg relative overflow-hidden"
@@ -208,6 +208,8 @@ export function HomePageClient() {
         }}
       >
         <div className="absolute inset-0" style={{ background: "rgba(5,10,20,0.4)", pointerEvents: "none" }} />
+        <div className="absolute top-0 left-0 right-0 z-20 hidden sm:block" style={{ WebkitMaskImage: "linear-gradient(to right, transparent 0%, transparent 45%, black 48%, black 100%)", maskImage: "linear-gradient(to right, transparent 0%, transparent 45%, black 48%, black 100%)" }}><EventsCarousel /></div>
+        <div className="absolute top-0 left-0 right-0 z-20 sm:hidden"><EventsCarousel /></div>
 
         {/* Mobile CTA Section — shown only on small screens */}
         <div className="sm:hidden relative mx-4 flex flex-1 flex-col items-center justify-center pt-56 pb-8" style={{ zIndex: 10 }}>
@@ -419,8 +421,6 @@ export function HomePageClient() {
             </div>
           </div>
         </section>
-
-        <EventsCarousel />
 
         {/* FEATURES */}
         <section className="py-28 bg-white">

@@ -13,15 +13,19 @@ import {
   cleanLineup,
   cleanPassPackages,
   parseTimeInputTo24Hour,
+  CURRENCIES,
+  getCurrencySymbol,
 } from "@/lib/event-form-options";
+import { formatCurrencyAmount } from "@/lib/currencies";
 import { INVITE_EVENT_TYPES, EVENT_EVENT_TYPES } from "@/lib/event-types";
+import { VenueInput } from "@/components/shared/venue-input";
 
 type Mode = "invite" | "event";
 type Channel = "email" | "whatsapp" | "sms";
 type QrDeliveryOption = "with_qr" | "without_qr" | "qr_later";
 type SocialPlatform = "instagram" | "x" | "facebook" | "tiktok" | "linkedin" | "website" | "other";
 type InviteTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate";
-type QRStyle = "pulsing" | "rotating" | "gradient" | "neon" | "bounce" | "custom";
+type QRStyle = "pulsing" | "rotating" | "gradient" | "neon" | "bounce" | "scanner" | "ripple" | "sparkle" | "custom";
 type EventTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate" | null;
 type SocialHandle = { platform: SocialPlatform; handle: string };
 type PassPackage = { name: string; price: string };
@@ -76,6 +80,9 @@ const qrStyles: Array<{ value: string; label: string; description: string; bestF
   { value: "gradient", label: "Gradient", description: "Color shift animation", bestFor: "Modern, vibrant events", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>) },
   { value: "neon", label: "Neon", description: "Bright neon glow effect", bestFor: "Nightlife, parties, concerts", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>) },
   { value: "bounce", label: "Bounce", description: "Bouncing/scaling animation", bestFor: "Fun, playful events", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>) },
+  { value: "scanner", label: "Scanner", description: "Scanning beam moving top-to-bottom", bestFor: "Tech, futuristic events", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>) },
+  { value: "ripple", label: "Ripple", description: "Expanding circular ripple from center", bestFor: "Concert, festival vibes", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 12a8 8 0 11-16 0 8 8 0 0116 0zM12 10a2 2 0 100 4 2 2 0 000-4z" /></svg>) },
+  { value: "sparkle", label: "Sparkle", description: "Sparkling dots across the QR", bestFor: "Luxury, premium events", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>) },
   { value: "custom", label: "Use My Own", description: "Upload your custom QR code", bestFor: "Branded, unique design", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>) },
 ];
 
@@ -107,43 +114,6 @@ const timezoneOptions = [
   { value: "America/Los_Angeles|PT", label: "US Los Angeles, United States (PT)" },
   { value: "Asia/Dubai|GST", label: "AE Dubai, UAE (GST)" },
 ];
-
-const STATIC_VENUES = [
-  "Eko Hotels & Suites, Victoria Island, Lagos",
-  "Landmark Event Centre, Victoria Island, Lagos",
-  "Federal Palace Hotel, Victoria Island, Lagos",
-  "Civic Centre, Victoria Island, Lagos",
-  "Oriental Hotel, Lekki Road, Lagos",
-  "Harbour Point, Victoria Island, Lagos",
-  "Balmoral Convention Centre, Ikeja, Lagos",
-  "Transcorp Hilton, Abuja",
-  "International Conference Centre, Abuja",
-  "Dome Event Centre, Abuja",
-  "Polo Club, Ikoyi, Lagos",
-  "Muri Okunola Park, Victoria Island, Lagos",
-];
-
-function getSavedVenues(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem("accredit_saved_venues");
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-function saveVenue(venue: string) {
-  try {
-    const saved = getSavedVenues();
-    if (!saved.includes(venue)) {
-      saved.unshift(venue);
-      localStorage.setItem("accredit_saved_venues", JSON.stringify(saved.slice(0, 20)));
-    }
-  } catch {}
-}
-
-function formatNaira(value: number) {
-  return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(value);
-}
 
 function toggleChannel(channels: Channel[], channel: Channel) {
   return channels.includes(channel) ? channels.filter((item) => item !== channel) : [...channels, channel];
@@ -212,6 +182,9 @@ const qrStyleConfig: Record<string, { wrapper: string; square: string }> = {
   gradient: { wrapper: "", square: "bg-gradient-to-br from-[#E91E8C] to-[#07182f]" },
   neon: { wrapper: "", square: "bg-[#00ff88] shadow-[0_0_6px_#00ff88]" },
   bounce: { wrapper: "animate-bounce", square: "" },
+  scanner: { wrapper: "animate-pulse", square: "bg-[#E91E8C]" },
+  ripple: { wrapper: "", square: "bg-gradient-to-br from-[#E91E8C] to-[#7C3AED] animate-ping" },
+  sparkle: { wrapper: "animate-pulse", square: "bg-[#FFD700] shadow-[0_0_4px_#FFD700]" },
 };
 
 const DEFAULT_FORM = {
@@ -238,6 +211,7 @@ const DEFAULT_FORM = {
   male_dress_code: "",
   female_dress_code: "",
   gate_fee: "",
+  currency: CURRENCIES[0]?.code || "NGN",
   headliners: "",
   social_platform: "instagram" as SocialPlatform,
   social_handle: "",
@@ -312,7 +286,7 @@ export default function CreateEventPage() {
   const [aiImageGenerating, setAiImageGenerating] = useState(false);
   const [uploadedImagePreviewUrl, setUploadedImagePreviewUrl] = useState<string | null>(null);
   const [uploadedImageData, setUploadedImageData] = useState<string | null>(null);
-  const [venueSuggestionsOpen, setVenueSuggestionsOpen] = useState(false);
+  const [locationData, setLocationData] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
   const [form, setForm] = useState({ ...DEFAULT_FORM });
   const [passPackages, setPassPackages] = useState<PassPackage[]>([{ name: "Regular", price: "" }]);
   const [socialHandles, setSocialHandles] = useState<SocialHandle[]>([{ platform: "instagram", handle: "" }]);
@@ -414,20 +388,6 @@ export default function CreateEventPage() {
     [form.delivery_channels, mode, pricingUnits]
   );
   const selectedChannelNames = form.delivery_channels.map((channel) => channelLabels[channel]);
-
-  const venueRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (venueRef.current && !venueRef.current.contains(e.target as Node)) setVenueSuggestionsOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const filteredVenues = useMemo(() => {
-    const allVenues = [...STATIC_VENUES, ...getSavedVenues()];
-    const search = form.venue.trim().toLowerCase();
-    if (!search) return [];
-    return allVenues.filter((venue) => venue.toLowerCase().includes(search)).slice(0, 5);
-  }, [form.venue]);
 
   const selectedTimezone = timezoneOptions.find((zone) => zone.value === form.timezone) || timezoneOptions[0];
   const selectedQrDelivery = qrDeliveryOptions.find((option) => option.value === form.qr_delivery) || qrDeliveryOptions[0];
@@ -584,7 +544,6 @@ export default function CreateEventPage() {
   const handleCreateEvent = async () => {
     if (!mode || !user) return;
     try {
-      if (form.venue.trim()) saveVenue(form.venue.trim());
       const allDay = [dayPart, monthPart, yearPart].filter(Boolean).join("-");
       const finalDate = allDay.length === 10 ? allDay : form.event_date;
       const event = await createEvent({
@@ -600,6 +559,7 @@ export default function CreateEventPage() {
         category: mode === "event" ? form.category || form.event_type : undefined,
         event_type: mode === "event" ? form.event_type : "private",
         ticket_price: form.gate_fee ? Number(form.gate_fee) : undefined,
+        currency: form.currency,
         pass_packages: mode === "event" ? cleanPassPackages(passPackages) : undefined,
         lineup: mode === "event" ? cleanLineup(lineup) : undefined,
         dress_code: form.male_dress_code || undefined,
@@ -629,7 +589,6 @@ export default function CreateEventPage() {
     setError("");
 
     try {
-      if (form.venue.trim()) saveVenue(form.venue.trim());
       const allDay = [dayPart, monthPart, yearPart].filter(Boolean).join("-");
       const finalDate = allDay.length === 10 ? allDay : form.event_date;
 
@@ -715,6 +674,7 @@ export default function CreateEventPage() {
           event_type: form.event_type || "concert",
           category: form.category,
           ticket_price: form.gate_fee ? Number(form.gate_fee) : undefined,
+          currency: form.currency,
           pass_packages: passPackages.length > 0 ? passPackages : undefined,
           lineup: lineup.length > 0 ? lineup : undefined,
         });
@@ -755,7 +715,7 @@ export default function CreateEventPage() {
         <header className="border-b border-[#e8edf2] bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             <Link href="/" className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0">
-              <Image src="/logo-trim.png" alt="accredit.vip" width={4071} height={761} className="h-10 sm:h-12 w-auto object-contain" />
+              <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4086} height={801} className="h-10 sm:h-12 w-auto object-contain" />
             </Link>
             <div className="flex items-center gap-3 sm:gap-4">
               <Link href="/dashboard" className="rounded-lg border border-[#0D1B2A] bg-[#0D1B2A] px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C] hover:shadow-md">Dashboard</Link>
@@ -853,7 +813,7 @@ export default function CreateEventPage() {
       <header className="border-b border-[#e8edf2] bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <button type="button" onClick={() => setMode(null)} className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0">
-            <Image src="/logo-trim.png" alt="accredit.vip" width={4071} height={761} className="h-10 sm:h-12 w-auto object-contain" />
+            <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4086} height={801} className="h-10 sm:h-12 w-auto object-contain" />
           </button>
           <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/dashboard" className="rounded-lg border border-[#0D1B2A] bg-[#0D1B2A] px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C] hover:shadow-md">Dashboard</Link>
@@ -1116,22 +1076,17 @@ export default function CreateEventPage() {
                       </label>
                     )}
 
-                    {/* Venue with suggestions */}
-                    <div ref={venueRef} className="space-y-1.5 relative">
+                    <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-[#23466f]">Venue / Address</label>
-                      <div className="relative">
-                        <input value={form.venue} onChange={(e) => { setForm({ ...form, venue: e.target.value }); setVenueSuggestionsOpen(true); }} onFocus={() => setVenueSuggestionsOpen(true)} required={!detailsToBeCommunicated}
-                          className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]" placeholder="Search or type venue address" disabled={detailsToBeCommunicated} />
-                        <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>
-                      </div>
-                      {venueSuggestionsOpen && filteredVenues.length > 0 && (
-                        <div className="absolute z-50 mt-1 w-full rounded-xl border border-[#d9e2ec] bg-white shadow-lg overflow-hidden">
-                          {filteredVenues.map((venue) => (
-                            <button key={venue} type="button" onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, venue }); setVenueSuggestionsOpen(false); }}
-                              className="block w-full px-4 py-2.5 text-left text-sm hover:bg-[#f8fafc] text-[#23466f]">{venue}</button>
-                          ))}
-                        </div>
-                      )}
+                      <VenueInput
+                        value={form.venue}
+                        onChange={(v) => setForm({ ...form, venue: v })}
+                        onLocationChange={(loc) => setLocationData({ lat: loc.lat, lng: loc.lng })}
+                        disabled={detailsToBeCommunicated}
+                        className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
+                        placeholder="Search for a venue or type manually..."
+                        required={!detailsToBeCommunicated}
+                      />
                     </div>
 
                     {/* Guest range */}
@@ -1166,7 +1121,7 @@ export default function CreateEventPage() {
                                   <input type="checkbox" checked={selected} onChange={() => setForm({ ...form, delivery_channels: toggleChannel(form.delivery_channels, channel) })} className="w-4 h-4 rounded border-gray-300 text-[#E91E8C] focus:ring-[#E91E8C]" />
                                   <span className="text-sm font-bold text-[#23466f]">{channelLabels[channel]}{channel !== "email" && <span className="ml-2 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Not available</span>}</span>
                                 </div>
-                                <span className="text-xs text-[#94a3b8]">{formatNaira(pricing[channel])}/100</span>
+                                <span className="text-xs text-[#94a3b8]">{formatCurrencyAmount(pricing[channel], "NGN")}/100</span>
                               </label>
                             );
                           })}
@@ -1326,12 +1281,21 @@ export default function CreateEventPage() {
                           <svg className={`w-4 h-4 text-[#94a3b8] transition-transform group-open:rotate-180`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                         </summary>
                         <div className="px-4 pb-4 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-[#23466f]">Currency:</span>
+                            <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                              className="h-9 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] bg-white">
+                              {CURRENCIES.map((c) => (
+                                <option key={c.code} value={c.code}>{c.label}</option>
+                              ))}
+                            </select>
+                          </div>
                           {passPackages.map((pkg, index) => (
                             <div key={index} className="flex gap-2 items-center">
                               <input value={pkg.name} onChange={(e) => updatePassPackage(index, { name: e.target.value })}
                                 className="h-10 flex-1 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]" placeholder="Package name" />
                               <input value={pkg.price} onChange={(e) => updatePassPackage(index, { price: e.target.value })} type="number" min="0"
-                                className="h-10 w-28 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]" placeholder="Price (₦)" />
+                                className="h-10 w-28 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]" placeholder={"Price ("+getCurrencySymbol(form.currency)+")"} />
                               {passPackages.length > 1 && (
                                 <button type="button" onClick={() => setPassPackages((cur) => cur.filter((_, i) => i !== index))}
                                   className="h-10 w-10 rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors flex items-center justify-center flex-shrink-0">
@@ -1450,7 +1414,7 @@ export default function CreateEventPage() {
                       <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
                       </div>
-                      <h3 className="mt-3 text-2xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
+                      <h3 className="mt-3 text-2xl font-black text-[#0D1B2A]">{formatCurrencyAmount(selectedPrice, form.currency)}</h3>
                       <p className="mt-2 text-sm text-gray-500">
                         {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
                       </p>
@@ -1572,7 +1536,7 @@ export default function CreateEventPage() {
                     <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
                       <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
                     </div>
-                    <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
+                    <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatCurrencyAmount(selectedPrice, form.currency)}</h3>
                     <p className="mt-2 text-sm text-gray-500">
                       {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
                     </p>
@@ -1583,7 +1547,7 @@ export default function CreateEventPage() {
                         form.delivery_channels.map((channel) => (
                           <div key={channel} className="flex items-center justify-between rounded-xl bg-white/80 p-3 text-sm border border-[#e8edf2]">
                             <span className="text-gray-700">{channelLabels[channel]}</span>
-                            <strong className="text-[#0D1B2A]">{formatNaira(pricing[channel] * pricingUnits)}</strong>
+                            <strong className="text-[#0D1B2A]">{formatCurrencyAmount(pricing[channel] * pricingUnits, form.currency)}</strong>
                           </div>
                         ))
                       )}

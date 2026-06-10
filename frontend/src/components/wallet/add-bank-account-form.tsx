@@ -5,6 +5,8 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { getCountryFlag } from "@/lib/country-flag";
 
+const DEFAULT_CURRENCY = SUPPORTED_CURRENCIES[0]?.code || "NGN";
+
 interface AddBankAccountFormProps {
   userFullName: string;
   onSubmit: (accountData: {
@@ -29,7 +31,7 @@ export function AddBankAccountForm({
     bank_name: "",
     bank_code: "",
     country_code: "",
-    currency: "NGN",
+    currency: DEFAULT_CURRENCY,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState("");
@@ -98,7 +100,7 @@ export function AddBankAccountForm({
         bank_name: "",
         bank_code: "",
         country_code: "",
-        currency: "NGN",
+        currency: DEFAULT_CURRENCY,
       });
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {

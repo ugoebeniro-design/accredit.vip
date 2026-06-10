@@ -12,7 +12,7 @@ from app.core.database import init_db
 from app.core.rate_limit import RateLimitMiddleware
 
 logger = logging.getLogger(__name__)
-from app.api import auth, events, guests, qr_codes, verification, payments, admin, rsvp, messaging, tickets, uploads, contact, trials, subscriptions, posts, ai, notifications, tracking, webhooks, guest_management, invite_sending, admin_dashboard, checkin_scanner, waitlist_api, coupons_api, rsvp_questions_api, event_templates_api, wallet_api, trial_migration, withdrawals, admin_events
+from app.api import auth, events, guests, qr_codes, verification, payments, admin, rsvp, messaging, tickets, uploads, contact, trials, subscriptions, posts, ai, notifications, tracking, webhooks, guest_management, invite_sending, admin_dashboard, checkin_scanner, waitlist_api, coupons_api, rsvp_questions_api, event_templates_api, wallet_api, trial_migration, withdrawals, admin_events, admin_audience
 
 
 @asynccontextmanager
@@ -118,6 +118,7 @@ app.include_router(guests.router, prefix="/api/v1/events", tags=["Guests"])
 app.include_router(qr_codes.router, prefix="/api/v1/events", tags=["QR Codes"])
 app.include_router(verification.router, prefix="/api/v1/qr", tags=["Verification"])
 app.include_router(payments.router, prefix="/api/v1/payments", tags=["Payments"])
+app.include_router(admin_events.router, prefix="/api/v1", tags=["Admin Events"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(rsvp.router, prefix="/api/v1", tags=["RSVP"])
 app.include_router(messaging.router, prefix="/api/v1/events", tags=["Messaging"])
@@ -142,7 +143,7 @@ app.include_router(event_templates_api.router, prefix="/api/v1", tags=["Event Te
 app.include_router(wallet_api.router, prefix="/api/v1", tags=["Wallet"])
 app.include_router(withdrawals.router, prefix="/api/v1", tags=["Withdrawals"])
 app.include_router(trial_migration.router, prefix="/api/v1", tags=["Trial Migration"])
-app.include_router(admin_events.router, prefix="/api/v1", tags=["Admin Events"])
+app.include_router(admin_audience.router, prefix="/api/v1", tags=["Admin Audience"])
 
 
 @app.get("/api/v1/health")

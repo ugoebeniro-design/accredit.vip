@@ -1,3 +1,4 @@
+import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timezone
@@ -31,7 +32,7 @@ async def notify_subscribers(db: AsyncSession, event_id: int) -> int:
         channels = [c.strip() for c in sub.channels.split(",")]
         try:
             if sub.email and "email" in channels:
-                await send_email(sub.email, subject, body)
+                asyncio.create_task(send_email(sub.email, subject, body))
                 sent += 1
             if sub.phone and "whatsapp" in channels:
                 await send_whatsapp(sub.phone, body)

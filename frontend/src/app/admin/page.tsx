@@ -18,7 +18,14 @@ import {
   Lock,
   Loader,
   ShieldCheck,
+  Settings,
+  Clock,
+  AlertTriangle,
+  CreditCard,
+  DollarSign,
+  Database,
 } from "lucide-react";
+import { NotificationBell } from "@/components/notification-bell";
 
 interface DashboardOverview {
   total_users: number;
@@ -39,22 +46,33 @@ interface Event {
   created_at: string;
 }
 
+function maskEmail(email: string) {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return email;
+  const visibleStart = local.slice(0, Math.min(8, local.length));
+  const visibleEnd = local.length > 1 ? local.slice(-1) : "";
+  return `${visibleStart}******${visibleEnd}@${domain}`;
+}
+
 export default function AdminPage() {
-  const { user, logout } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardOverview | null>(null);
   const [recentEvents, setRecentEvents] = useState<Event[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const itemsPerPage = 10;
 
   // Fetch admin dashboard data
   useEffect(() => {
-    if (user?.role === "admin") {
+    if (user?.role === "admin" || user?.role === "super_admin") {
       fetchDashboardData();
     }
   }, [user]);
@@ -64,7 +82,7 @@ export default function AdminPage() {
       setDataLoading(true);
       const [overview, events] = await Promise.all([
         apiClient<DashboardOverview>("/admin/dashboard/overview"),
-        apiClient<Event[]>("/admin/dashboard/events?limit=10"),
+        apiClient<Event[]>("/admin/dashboard/events?limit=100"),
       ]);
       setDashboardData(overview);
       setRecentEvents(events);
@@ -75,83 +93,104 @@ export default function AdminPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
-
+    setSubmitting(true);
     try {
       const res = await apiClient<{ access_token: string; user: any }>("/auth/login", {
-        method: "POST",
-        body: { email, password },
+        method: "POST", body: { email, password },
       });
-
-      if (res.user.role !== "admin") {
+      if (res.user.role !== "admin" && res.user.role !== "super_admin") {
         setError("Access denied. Admin credentials required.");
-        setLoading(false);
+        setSubmitting(false);
         return;
       }
-
       localStorage.setItem("access_token", res.access_token);
+      localStorage.setItem("user_data", JSON.stringify(res.user));
       window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
-    } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  // Show admin dashboard if user is logged in as admin
-  if (user?.role === "admin") {
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fc]"><Loader className="w-8 h-8 animate-spin text-[#E91E8C]" /></div>;
+  }
+  if (user?.role === "admin" || user?.role === "super_admin") {
     return (
       <div className="min-h-screen bg-[#f8f9fc]">
         {/* Sidebar */}
         <aside
-          className={`fixed left-0 top-0 h-screen bg-white border-r border-[#e8edf2] transition-all duration-300 z-40 ${
+          className={`fixed left-0 top-0 h-screen flex flex-col transition-all duration-300 z-40 ${
             sidebarOpen ? "w-64" : "w-20"
           }`}
+          style={{ background: "#0D1B2A", borderRight: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <div className="h-20 flex items-center justify-between px-4 border-b border-[#e8edf2]">
+          <div className="h-20 flex items-center justify-between px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <Link href="/" className={`flex-shrink-0 ${sidebarOpen ? 'w-48' : 'w-10'}`}>
-              <img
-                src="/logo-trim.png"
+              <Image
+                src="/logo-dark-trim.png"
                 alt="accredit.vip"
+                width={4086}
+                height={801}
                 className={`h-10 w-auto object-contain transition-opacity ${sidebarOpen ? 'opacity-100' : 'opacity-50'}`}
               />
             </Link>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-[#f0f1f7] rounded-lg transition-colors flex-shrink-0"
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
             >
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {sidebarOpen ? <X className="w-5 h-5 text-white/80" /> : <Menu className="w-5 h-5 text-white/80" />}
             </button>
           </div>
 
           {/* Navigation */}
-          <nav className="p-4 space-y-2">
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {[
               { label: "Dashboard", href: "/admin", icon: BarChart3 },
               { label: "Event Moderation", href: "/admin/events", icon: Calendar },
+              { label: "Users", href: "/admin/users", icon: Users },
+              { label: "Sessions", href: "/admin/sessions", icon: Clock },
+              { label: "Payments", href: "/admin/payments", icon: DollarSign },
+              { label: "Withdrawals", href: "/admin/withdrawals", icon: CreditCard },
+              { label: "Fraud", href: "/admin/fraud", icon: AlertTriangle },
+              ...(user?.role === "super_admin" ? [{ label: "Audience Data", href: "/admin/audience", icon: Database }] : []),
+              { label: "Settings", href: "/admin/settings", icon: Settings },
             ].map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-[#64748b] hover:bg-[#f0f1f7] hover:text-[#E91E8C] transition-all group"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white hover:bg-white/08 transition-all"
+                  style={{ "--tw-bg-opacity": "0.08" } as React.CSSProperties}
+                  title={!sidebarOpen ? item.label : ""}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  {sidebarOpen && <span className="text-sm font-medium group-hover:font-bold">{item.label}</span>}
+                  <Icon className="w-5 h-5 flex-shrink-0 text-white/40" />
+                  {sidebarOpen && <span>{item.label}</span>}
                 </Link>
               );
             })}
           </nav>
 
           {/* Logout */}
-          <div className="absolute bottom-4 left-4 right-4">
+          <div className="px-3 py-4 flex-shrink-0 space-y-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            {sidebarOpen && (
+              <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <div className="text-[10px] font-semibold text-white/40 uppercase tracking-wide">Account</div>
+                <div className="text-xs text-white font-medium truncate" title={maskEmail(user.email)}>
+                  {maskEmail(user.email)}
+                </div>
+                <div className="text-[11px] text-white/55">
+                  Last logged in: {new Date(user.last_login || Date.now()).toLocaleDateString()} at {new Date(user.last_login || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            )}
             <button
               onClick={() => setShowLogoutConfirm(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 border-2 border-red-200 text-red-600 hover:bg-red-100 hover:border-red-400 font-bold text-sm transition-all hover:shadow-lg active:scale-95"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500 text-white font-bold text-sm transition-all hover:bg-red-600 active:scale-95"
             >
               <LogOut className="w-5 h-5 flex-shrink-0" />
               {sidebarOpen && <span>Sign Out</span>}
@@ -166,10 +205,13 @@ export default function AdminPage() {
             <div className="h-full px-6 flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-black text-[#0D1B2A]">Dashboard</h1>
-                <p className="text-xs text-[#94a3b8] mt-1">Welcome back, {user.full_name}!</p>
+                <p className="text-xs text-[#64748b] font-semibold mt-1">Welcome back, {user.role === "super_admin" ? "Super Admin" : user.full_name}!</p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E91E8C] to-[#C4166F] flex items-center justify-center text-white font-bold text-sm">
-                {user.full_name.charAt(0)}
+              <div className="flex items-center gap-3">
+                <NotificationBell admin />
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E91E8C] to-[#C4166F] flex items-center justify-center text-white font-bold text-sm">
+                  {user.role === "super_admin" ? "SA" : user.full_name.charAt(0)}
+                </div>
               </div>
             </div>
           </header>
@@ -253,6 +295,16 @@ export default function AdminPage() {
                     </Link>
                   </div>
 
+                  {recentEvents.length > 0 && (
+                    <div className="border-b border-[#e8edf2] mb-4 pb-4 flex items-center justify-between">
+                      <p className="text-sm text-[#64748b]">Showing page <input type="text" inputMode="numeric" value={pageInput} onChange={(e) => setPageInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { const maxPages = Math.ceil(recentEvents.length / itemsPerPage); const num = parseInt(e.currentTarget.value); if (!e.currentTarget.value || isNaN(num) || num < 1) { setCurrentPage(1); setPageInput("1"); } else if (num > maxPages) { setCurrentPage(maxPages); setPageInput(String(maxPages)); } else { setCurrentPage(num); setPageInput(String(num)); } e.currentTarget.blur(); } }} onBlur={(e) => { const maxPages = Math.ceil(recentEvents.length / itemsPerPage); const num = parseInt(e.target.value); if (!e.target.value || isNaN(num) || num < 1) { setCurrentPage(1); setPageInput("1"); } else if (num > maxPages) { setCurrentPage(maxPages); setPageInput(String(maxPages)); } else { setCurrentPage(num); setPageInput(String(num)); } }} className="w-12 px-2 py-1 rounded-lg border-2 border-[#E91E8C] text-center font-bold text-[#0D1B2A] focus:outline-none focus:border-[#E91E8C] bg-[#E91E8C]/5" /> of {Math.ceil(recentEvents.length / itemsPerPage)}</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-lg bg-[#E91E8C] text-white font-bold text-sm hover:bg-[#C4166F] disabled:opacity-40 disabled:cursor-not-allowed transition-all">← Previous</button>
+                        <button onClick={() => setCurrentPage(p => Math.min(Math.ceil(recentEvents.length / itemsPerPage), p + 1))} disabled={currentPage === Math.ceil(recentEvents.length / itemsPerPage)} className="px-4 py-2 rounded-lg bg-[#E91E8C] text-white font-bold text-sm hover:bg-[#C4166F] disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next →</button>
+                      </div>
+                    </div>
+                  )}
+
                   {recentEvents.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -266,34 +318,37 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {recentEvents.map((event) => (
-                            <tr
-                              key={event.id}
-                              className="border-b border-[#e8edf2] hover:bg-[#f8f9fc] transition-colors"
-                            >
-                              <td className="py-3 px-4">
-                                <p className="font-semibold text-[#0D1B2A]">{event.title}</p>
-                              </td>
-                              <td className="py-3 px-4 text-[#64748b]">{event.organizer_email}</td>
-                              <td className="py-3 px-4 text-[#64748b]">
-                                {new Date(event.event_date).toLocaleDateString()}
-                              </td>
-                              <td className="py-3 px-4 font-semibold text-[#0D1B2A]">{event.guest_count}</td>
-                              <td className="py-3 px-4">
-                                <span
-                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                                    event.status === "published"
-                                      ? "bg-green-50 text-green-600"
-                                      : event.status === "draft"
-                                      ? "bg-blue-50 text-blue-600"
-                                      : "bg-amber-50 text-amber-600"
-                                  }`}
-                                >
-                                  {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                          {recentEvents
+                            .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime())
+                            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                            .map((event) => (
+                              <tr
+                                key={event.id}
+                                className="border-b border-[#e8edf2] hover:bg-[#f8f9fc] transition-colors"
+                              >
+                                <td className="py-3 px-4">
+                                  <p className="font-semibold text-[#0D1B2A]">{event.title}</p>
+                                </td>
+                                <td className="py-3 px-4 text-[#64748b]">{event.organizer_email}</td>
+                                <td className="py-3 px-4 text-[#64748b]">
+                                  {new Date(event.event_date).toLocaleDateString()}
+                                </td>
+                                <td className="py-3 px-4 font-semibold text-[#0D1B2A]">{event.guest_count}</td>
+                                <td className="py-3 px-4">
+                                  <span
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                                      event.status === "published"
+                                        ? "bg-green-50 text-green-600"
+                                        : event.status === "draft"
+                                        ? "bg-blue-50 text-blue-600"
+                                        : "bg-amber-50 text-amber-600"
+                                    }`}
+                                  >
+                                    {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                     </div>
@@ -336,32 +391,6 @@ export default function AdminPage() {
   }
 
   // Admin Login Form
-  const handleAdminLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      const res = await apiClient<{ access_token: string; user: any }>("/auth/login", {
-        method: "POST",
-        body: { email, password },
-      });
-
-      if (res.user.role !== "admin") {
-        setError("Access denied. Admin credentials required.");
-        setLoading(false);
-        return;
-      }
-
-      localStorage.setItem("access_token", res.access_token);
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#0D1B2A] via-[#1a2a3a] to-[#E91E8C]/20 flex-col items-center justify-center px-4 py-12">
       {/* Decorative Elements */}
@@ -400,7 +429,7 @@ export default function AdminPage() {
           )}
 
           {/* Form */}
-          <form onSubmit={handleAdminLoginSubmit} className="space-y-5">
+          <form onSubmit={handleAdminLogin} className="space-y-5">
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-bold text-[#23466f] mb-2">
@@ -411,9 +440,9 @@ export default function AdminPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
+                placeholder="you@company.com"
                 required
-                disabled={loading}
+                disabled={submitting}
                 className="w-full px-4 py-3 rounded-xl border border-[#d9e2ec] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               />
             </div>
@@ -431,14 +460,14 @@ export default function AdminPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  disabled={loading}
+                  disabled={submitting}
                   className="w-full px-4 py-3 pr-12 rounded-xl border border-[#d9e2ec] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#0D1B2A] transition-colors"
-                  disabled={loading}
+                  disabled={submitting}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -448,14 +477,14 @@ export default function AdminPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={submitting}
               className="w-full h-12 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                background: loading ? "#94a3b8" : "linear-gradient(135deg, #E91E8C, #C4166F)",
-                boxShadow: loading ? "none" : "0 6px 20px rgba(233,30,140,0.35)",
+                background: submitting ? "#94a3b8" : "linear-gradient(135deg, #E91E8C, #C4166F)",
+                boxShadow: submitting ? "none" : "0 6px 20px rgba(233,30,140,0.35)",
               }}
             >
-              {loading ? "Logging in..." : "Admin Login"}
+              {submitting ? "Logging in..." : "Admin Login"}
             </button>
           </form>
 
@@ -471,12 +500,12 @@ export default function AdminPage() {
         </div>
 
         {/* Security Notice */}
-        <div className="mt-6 p-4 rounded-lg bg-[#E91E8C]/5 border border-[#E91E8C]/20 flex gap-3">
-          <ShieldCheck className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-[#23466f]">
-            <strong>Secure Access:</strong> This page is for administrators only. Unauthorized access attempts are logged.
-          </p>
-        </div>
+          <div className="mt-6 p-4 rounded-lg bg-[#0D1B2A] border border-[#E91E8C]/30 flex gap-3">
+            <ShieldCheck className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-white/90 font-semibold">
+              Secure Access: This page is for administrators only. Unauthorized access attempts are logged.
+            </p>
+          </div>
       </div>
     </div>
   );

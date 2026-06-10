@@ -100,7 +100,7 @@ function ContactContent() {
       <Navbar variant="light" />
 
       {/* Hero */}
-      <section className="bg-hero-gradient py-8 px-4 text-center">
+      <section className="bg-[#0D1B2A] py-8 px-4 text-center">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-2">Get in touch</h1>
         <p className="text-white/60 text-sm max-w-lg mx-auto">
           Have questions about pricing, features, or accreditation support? We&apos;re here to help.

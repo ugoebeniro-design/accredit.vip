@@ -153,7 +153,7 @@ export default function ForgotPasswordPage() {
             <div className="mb-6">
               <Link
                 href="/login"
-                className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-[#0D1B2A] transition-all hover:border-gray-300 hover:bg-white hover:shadow-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />

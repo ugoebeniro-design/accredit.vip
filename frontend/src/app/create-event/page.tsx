@@ -9,6 +9,9 @@ import { Footer } from "@/components/shared/footer";
 import { apiClient } from "@/lib/api-client";
 import { aiChat, generateFlier, parseFlier } from "@/lib/api/ai";
 import { TrialStore } from "@/lib/trial-store";
+import { CURRENCIES, getCurrencySymbol } from "@/lib/event-form-options";
+import { formatCurrencyAmount } from "@/lib/currencies";
+import { VenueInput } from "@/components/shared/venue-input";
 
 const DRAFT_KEY = "accredit_event_draft";
 const DRAFT_KEYS: Record<string, string> = { invite: "accredit_draft_invite", event: "accredit_draft_event" };
@@ -37,6 +40,7 @@ const DEFAULT_FORM = {
   male_dress_code: "",
   female_dress_code: "",
   gate_fee: "",
+  currency: CURRENCIES[0]?.code || "NGN",
   headliners: "",
   social_platform: "instagram" as SocialPlatform,
   social_handle: "",
@@ -58,7 +62,7 @@ type Channel = "email" | "whatsapp" | "sms";
 type QrDeliveryOption = "with_qr" | "without_qr" | "qr_later";
 type SocialPlatform = "instagram" | "x" | "facebook" | "tiktok" | "linkedin" | "website" | "other";
 type InviteTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate";
-type QRStyle = "pulsing" | "rotating" | "gradient" | "neon" | "bounce" | "custom";
+type QRStyle = "pulsing" | "rotating" | "gradient" | "neon" | "bounce" | "scanner" | "ripple" | "sparkle" | "custom";
 type EventTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate" | null;
 type SocialHandle = { platform: SocialPlatform; handle: string };
 type PassPackage = { name: string; price: string };
@@ -243,6 +247,39 @@ const qrStyles: Array<{ value: string; label: string; description: string; bestF
     ),
   },
   {
+    value: "scanner",
+    label: "Scanner",
+    description: "Scanning beam moving top-to-bottom",
+    bestFor: "Tech, futuristic events",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    value: "ripple",
+    label: "Ripple",
+    description: "Expanding circular ripple from center",
+    bestFor: "Concert, festival vibes",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20 12a8 8 0 11-16 0 8 8 0 0116 0zM12 10a2 2 0 100 4 2 2 0 000-4z" />
+      </svg>
+    ),
+  },
+  {
+    value: "sparkle",
+    label: "Sparkle",
+    description: "Sparkling dots across the QR",
+    bestFor: "Luxury, premium events",
+    icon: ({ className }: any) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+      </svg>
+    ),
+  },
+  {
     value: "custom",
     label: "Use My Own",
     description: "Upload your custom QR code",
@@ -283,47 +320,6 @@ const timezoneOptions = [
   { value: "America/Los_Angeles|PT", label: "US Los Angeles, United States (PT)" },
   { value: "Asia/Dubai|GST", label: "AE Dubai, UAE (GST)" },
 ];
-
-const STATIC_VENUES = [
-  "Eko Hotels & Suites, Victoria Island, Lagos",
-  "Landmark Event Centre, Victoria Island, Lagos",
-  "Federal Palace Hotel, Victoria Island, Lagos",
-  "Civic Centre, Victoria Island, Lagos",
-  "Oriental Hotel, Lekki Road, Lagos",
-  "Harbour Point, Victoria Island, Lagos",
-  "Balmoral Convention Centre, Ikeja, Lagos",
-  "Transcorp Hilton, Abuja",
-  "International Conference Centre, Abuja",
-  "Dome Event Centre, Abuja",
-  "Polo Club, Ikoyi, Lagos",
-  "Muri Okunola Park, Victoria Island, Lagos",
-];
-
-function getSavedVenues(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem("accredit_saved_venues");
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-function saveVenue(venue: string) {
-  try {
-    const saved = getSavedVenues();
-    if (!saved.includes(venue)) {
-      saved.unshift(venue);
-      localStorage.setItem("accredit_saved_venues", JSON.stringify(saved.slice(0, 20)));
-    }
-  } catch {}
-}
-
-function formatNaira(value: number) {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function getTrialFingerprint() {
   const key = "accredit_trial_fingerprint";
@@ -500,6 +496,9 @@ const qrStyleConfig: Record<string, { wrapper: string; square: string }> = {
   gradient: { wrapper: "", square: "bg-gradient-to-br from-[#E91E8C] to-[#07182f]" },
   neon: { wrapper: "", square: "bg-[#00ff88] shadow-[0_0_6px_#00ff88]" },
   bounce: { wrapper: "", square: "animate-bounce" },
+  scanner: { wrapper: "animate-pulse", square: "bg-[#E91E8C]" },
+  ripple: { wrapper: "", square: "bg-gradient-to-br from-[#E91E8C] to-[#7C3AED] animate-ping" },
+  sparkle: { wrapper: "animate-pulse", square: "bg-[#FFD700] shadow-[0_0_4px_#FFD700]" },
 };
 
 export default function CreateEventPage() {
@@ -516,7 +515,7 @@ export default function CreateEventPage() {
   const [aiImageGenerating, setAiImageGenerating] = useState(false);
   const [uploadedImagePreviewUrl, setUploadedImagePreviewUrl] = useState<string | null>(null);
   const [uploadedImageData, setUploadedImageData] = useState<string | null>(null);
-  const [venueSuggestionsOpen, setVenueSuggestionsOpen] = useState(false);
+  const [locationData, setLocationData] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
   const [trialComplete, setTrialComplete] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -648,26 +647,6 @@ export default function CreateEventPage() {
     [form.delivery_channels, mode, pricingUnits]
   );
   const selectedChannelNames = form.delivery_channels.map((channel) => channelLabels[channel]);
-
-  const venueRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (venueRef.current && !venueRef.current.contains(e.target as Node)) {
-        setVenueSuggestionsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const filteredVenues = useMemo(() => {
-    const allVenues = [...STATIC_VENUES, ...getSavedVenues()];
-    const search = form.venue.trim().toLowerCase();
-    if (!search) return [];
-    const matched = allVenues.filter((venue) => venue.toLowerCase().includes(search));
-    return matched.slice(0, 5);
-  }, [form.venue]);
 
   const selectedTimezone = timezoneOptions.find((zone) => zone.value === form.timezone) || timezoneOptions[0];
   const selectedQrDelivery = qrDeliveryOptions.find((option) => option.value === form.qr_delivery) || qrDeliveryOptions[0];
@@ -886,7 +865,6 @@ export default function CreateEventPage() {
         },
       });
 
-      if (form.venue.trim()) saveVenue(form.venue.trim());
       localStorage.setItem(`accredit_trial_used_${mode}`, "true");
       setUsedTrials((current) => ({ ...current, [mode]: true }));
       localStorage.removeItem(DRAFT_KEY);
@@ -936,7 +914,7 @@ export default function CreateEventPage() {
       trialEvent.testedVia = mode === "invite"
         ? (form.delivery_channels.includes("email") ? "email" : form.delivery_channels[0] || "email") as 'email' | 'whatsapp' | 'sms'
         : 'email';
-      trialEvent.testRecipient = mode === "invite" ? testEmail || "test@example.com" : undefined;
+      trialEvent.testRecipient = mode === "invite" ? testEmail || "" : undefined;
       TrialStore.save(trialEvent);
 
       // For POST EVENT mode, also save to sessionStorage so onboarding can create a real event
@@ -952,6 +930,7 @@ export default function CreateEventPage() {
           event_type: form.event_type || "concert",
           category: form.category,
           ticket_price: form.gate_fee ? Number(form.gate_fee) : undefined,
+          currency: form.currency,
           pass_packages: passPackages,
           lineup,
         };
@@ -1584,41 +1563,24 @@ export default function CreateEventPage() {
                             className="h-4 w-4 accent-[#E91E8C]"
                           />
                           <span>{channelLabels[channel]}{channel !== "email" && <span className="ml-2 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Not available</span>}</span>
-                          <span className="ml-auto text-xs text-[#94a3b8]">{formatNaira(pricing[channel])}/100</span>
+                          <span className="ml-auto text-xs text-[#94a3b8]">{formatCurrencyAmount(pricing[channel], "NGN")}/100</span>
                         </label>
                       ))}
                     </div>
                   </fieldset>
 
                   {/* Venue & Dress Code - moved up */}
-                  <div ref={venueRef} className="relative block space-y-2">
+                  <div className="space-y-2">
                     <span className="text-sm font-semibold text-[#23466f]">Venue</span>
-                    <input
+                    <VenueInput
                       value={form.venue}
-                      onChange={(e) => {
-                        setForm({ ...form, venue: e.target.value });
-                        setVenueSuggestionsOpen(true);
-                      }}
-                      onFocus={() => setVenueSuggestionsOpen(true)}
+                      onChange={(v) => setForm({ ...form, venue: v })}
+                      onLocationChange={(loc) => setLocationData({ lat: loc.lat, lng: loc.lng })}
                       disabled={detailsToBeCommunicated}
                       className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:text-[#94a3b8]"
-                      placeholder={detailsToBeCommunicated ? "To be communicated" : "Start typing a venue or address"}
+                      placeholder={detailsToBeCommunicated ? "To be communicated" : "Search for a venue or type manually..."}
                       required={!detailsToBeCommunicated}
                     />
-                    {venueSuggestionsOpen && filteredVenues.length > 0 && (
-                      <div className="rounded-xl border border-[#e2e8f0] bg-white p-2 shadow-sm">
-                        {filteredVenues.map((venue) => (
-                          <button
-                            key={venue}
-                            type="button"
-                            onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, venue }); saveVenue(venue); setVenueSuggestionsOpen(false); }}
-                            className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[#23466f] hover:bg-[#fff1f8]"
-                          >
-                            {venue}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   {/* Dress code - Female & Male */}
@@ -1830,6 +1792,15 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                       </svg>
                     </summary>
                     <div className="px-4 pb-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-xs font-semibold text-[#23466f]">Currency:</span>
+                        <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                          className="h-9 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] bg-white">
+                          {CURRENCIES.map((c) => (
+                            <option key={c.code} value={c.code}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
                       <button
                         type="button"
                         onClick={() => setPassPackages((current) => [...current, { name: "", price: "" }])}
@@ -1850,7 +1821,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                             value={item.price}
                             onChange={(e) => updatePassPackage(index, { price: e.target.value })}
                             className="h-11 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
-                            placeholder="Free, NGN 10,000, NGN 250,000"
+                            placeholder={"e.g. "+getCurrencySymbol(form.currency)+"10,000"}
                           />
                           <button
                             type="button"
@@ -2100,7 +2071,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                       <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
                       </div>
-                      <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
+                      <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatCurrencyAmount(selectedPrice, form.currency)}</h3>
                       <p className="mt-2 text-sm text-gray-500">
                         {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
                       </p>
@@ -2111,7 +2082,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                           form.delivery_channels.map((channel) => (
                             <div key={channel} className="flex items-center justify-between rounded-xl bg-white/80 p-3 text-sm border border-[#e8edf2]">
                               <span className="text-gray-700">{channelLabels[channel]}</span>
-                              <strong className="text-[#0D1B2A]">{formatNaira(pricing[channel] * pricingUnits)}</strong>
+                              <strong className="text-[#0D1B2A]">{formatCurrencyAmount(pricing[channel] * pricingUnits, form.currency)}</strong>
                             </div>
                           ))
                         )}
@@ -2281,7 +2252,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                       <div className="inline-block px-3 py-1.5 rounded-lg" style={{ background: "rgba(233,30,140,0.1)" }}>
                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E91E8C]">Live estimate</p>
                       </div>
-                      <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatNaira(selectedPrice)}</h3>
+                      <h3 className="mt-3 text-3xl font-black text-[#0D1B2A]">{formatCurrencyAmount(selectedPrice, form.currency)}</h3>
                       <p className="mt-2 text-sm text-gray-500">
                         {form.guest_range} guests across {pricingUnits} pricing block{pricingUnits > 1 ? "s" : ""} of 100.
                       </p>
@@ -2292,7 +2263,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                           form.delivery_channels.map((channel) => (
                             <div key={channel} className="flex items-center justify-between rounded-xl bg-white/80 p-3 text-sm border border-[#e8edf2]">
                               <span className="text-gray-700">{channelLabels[channel]}</span>
-                              <strong className="text-[#0D1B2A]">{formatNaira(pricing[channel] * pricingUnits)}</strong>
+                              <strong className="text-[#0D1B2A]">{formatCurrencyAmount(pricing[channel] * pricingUnits, form.currency)}</strong>
                             </div>
                           ))
                         )}

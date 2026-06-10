@@ -42,8 +42,8 @@ function CommunityContent() {
     <div className="flex min-h-screen flex-col bg-white">
       <Navbar variant="light" />
 
-      <section className="bg-hero-gradient py-20 px-4 text-center">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4">Community</h1>
+      <section className="bg-[#0D1B2A] py-6 px-4 text-center">
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-2">Community</h1>
         <p className="text-white/60 text-lg max-w-2xl mx-auto">
           Event stories, charity initiatives, behind-the-scenes coverage of events we&apos;ve accredited,
           and conversations shaping Africa&apos;s event industry.

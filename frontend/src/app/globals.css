@@ -327,6 +327,15 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes bell-swing {
+  0%, 100% { transform: rotate(0deg); transform-origin: top center; }
+  15% { transform: rotate(-12deg); transform-origin: top center; }
+  30% { transform: rotate(12deg); transform-origin: top center; }
+  45% { transform: rotate(-8deg); transform-origin: top center; }
+  60% { transform: rotate(6deg); transform-origin: top center; }
+  75% { transform: rotate(-3deg); transform-origin: top center; }
+}
+
 .animate-float        { animation: float 4s ease-in-out infinite; }
 .animate-pulse-glow   { animation: pulse-glow 2.5s ease-in-out infinite; }
 .animate-fade-up      { animation: fade-up 0.6s ease-out forwards; }
@@ -334,6 +343,7 @@
 .animate-scale-in     { animation: scale-in 0.4s ease-out forwards; }
 .animate-spin-slow    { animation: spin-slow 20s linear infinite; }
 .animate-orb          { animation: orb-float 8s ease-in-out infinite; }
+.animate-bell-swing   { animation: bell-swing 0.6s ease-in-out; }
 
 .delay-100 { animation-delay: 0.1s; }
 .delay-200 { animation-delay: 0.2s; }
@@ -635,6 +645,11 @@
   50% { transform: translateY(-6px); }
 }
 
+@keyframes bounce-share {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
 .feature-icon {
   animation: icon-bounce 2s ease-in-out infinite;
 }
@@ -645,6 +660,10 @@
 
 .delivery-icon {
   animation: icon-bounce 2.4s ease-in-out infinite;
+}
+
+.bounce-share {
+  animation: bounce-share 0.8s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { TrialStore } from "@/lib/trial-store";
+import { NotificationBell } from "@/components/notification-bell";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -92,5 +93,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
   }, [user, logout]);
 
-  return <>{children}</>;
+  return (
+    <>
+      <div className="fixed top-4 right-4 z-50">
+        <NotificationBell />
+      </div>
+      {children}
+    </>
+  );
 }

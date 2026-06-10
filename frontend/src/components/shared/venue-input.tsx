@@ -29,9 +29,12 @@ type VenueInputProps = {
   onChange: (value: string) => void;
   onLocationChange?: (loc: LocationData) => void;
   required?: boolean;
+  className?: string;
+  disabled?: boolean;
+  placeholder?: string;
 };
 
-export function VenueInput({ value, onChange, onLocationChange, required }: VenueInputProps) {
+export function VenueInput({ value, onChange, onLocationChange, required, className, disabled, placeholder }: VenueInputProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -87,9 +90,10 @@ export function VenueInput({ value, onChange, onLocationChange, required }: Venu
       <input
         value={value}
         onChange={(e) => handleChange(e.target.value)}
-        className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-        placeholder="Search for a venue or type manually..."
+        className={className || "flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"}
+        placeholder={placeholder || "Search for a venue or type manually..."}
         required={required}
+        disabled={disabled}
         autoComplete="off"
       />
       {loading && (

@@ -8,7 +8,8 @@ import { apiClient } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
-import { formatTimeForDisplay } from "@/lib/event-form-options";
+import { ReminderBanner } from "@/components/shared/reminder-banner";
+import { formatTimeForDisplay, getCurrencySymbol } from "@/lib/event-form-options";
 
 const UPLOAD_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1").replace(/\/api\/v1\/?$/, "");
 
@@ -77,7 +78,7 @@ function ShareButton({ title, url }: { title: string; url: string }) {
   return (
     <button
       onClick={handleShare}
-      className="flex items-center gap-2 text-sm font-semibold text-[#64748b] hover:text-[#E91E8C] transition-colors"
+      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#E91E8C] hover:bg-[#C4166F] transition-all duration-200 hover:scale-105 bounce-share"
     >
       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -189,6 +190,7 @@ function PublicEventContent() {
 
   const imgUrl = coverImageUrl(event.cover_image);
   const isFreeEvent = !event.ticket_price || event.ticket_price === 0;
+  const cs = getCurrencySymbol(event?.currency || "NGN");
   const passPackages = event.pass_packages?.filter((p: any) => p.name || p.price) || [];
   const lineup = event.lineup?.filter((p: any) => p.role || p.name) || [];
   const cat = event.category || event.event_type || "";
@@ -211,7 +213,7 @@ function PublicEventContent() {
       <Navbar variant="light" />
 
       {/* Hero Banner */}
-      <div className="relative w-full h-64 sm:h-80 overflow-hidden">
+      <div className="relative w-full h-48 sm:h-56 overflow-hidden">
         {imgUrl ? (
           <img src={imgUrl} alt={event.title} className="w-full h-full object-cover" />
         ) : (
@@ -247,7 +249,7 @@ function PublicEventContent() {
         {/* LEFT: Event Details */}
         <div className="space-y-8">
           {/* Back link */}
-          <Link href="/attend" className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 bg-white border border-[#e8edf2] text-sm font-semibold text-[#0D1B2A] hover:bg-[#f8f9fc] hover:border-[#E91E8C] hover:text-[#E91E8C] transition-all shadow-sm hover:shadow-md">
+          <Link href="/attend" className="inline-flex items-center gap-2 rounded-xl px-5 py-3 bg-white border-2 border-[#E91E8C] text-sm font-bold text-[#0D1B2A] hover:bg-[#E91E8C] hover:text-white transition-all shadow-md hover:shadow-lg hover:scale-105 duration-200">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
@@ -350,7 +352,7 @@ function PublicEventContent() {
               ) : (
                 <>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
-                  Get Ticket — ₦{event.ticket_price!.toLocaleString()}
+                  Get Ticket — {cs}{event.ticket_price!.toLocaleString()}
                 </>
               )}
             </a>
@@ -433,21 +435,21 @@ function PublicEventContent() {
               ) : (
                 <>
                   <p className="text-2xl font-black text-white">
-                    ₦{event.ticket_price!.toLocaleString()}
+                    {cs}{event.ticket_price!.toLocaleString()}
                     <span className="text-sm font-normal text-white/60 ml-1">per ticket</span>
                   </p>
                   <div className="mt-2 space-y-0.5 text-xs text-white/50">
                     <div className="flex justify-between">
                       <span>Accredit fee (5%)</span>
-                      <span className="line-through">-₦{Math.round(event.ticket_price! * PLATFORM_FEE_PERCENT / 100).toLocaleString()}</span>
+                      <span className="line-through">-{cs}{Math.round(event.ticket_price! * PLATFORM_FEE_PERCENT / 100).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>VAT (2.5%)</span>
-                      <span>+₦{Math.round(event.ticket_price! * VAT_PERCENT / 100).toLocaleString()}</span>
+                      <span>+{cs}{Math.round(event.ticket_price! * VAT_PERCENT / 100).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between font-bold text-white/80 border-t border-white/20 pt-1">
                       <span>Buyer pays</span>
-                      <span>₦{Math.round(event.ticket_price! * (1 + VAT_PERCENT / 100)).toLocaleString()}</span>
+                      <span>{cs}{Math.round(event.ticket_price! * (1 + VAT_PERCENT / 100)).toLocaleString()}</span>
                     </div>
                   </div>
                 </>
@@ -502,21 +504,31 @@ function PublicEventContent() {
                     </div>
                   )}
 
-                  <input
-                    placeholder="Your full name"
-                    value={buyerName}
-                    onChange={(e) => setBuyerName(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] transition-colors"
-                    required
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email address"
-                    value={buyerEmail}
-                    onChange={(e) => setBuyerEmail(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] transition-colors"
-                    required
-                  />
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-[#94a3b8] block mb-1.5">
+                      Your full name <span className="text-[#E91E8C]">*</span>
+                    </label>
+                    <input
+                      placeholder="Your full name"
+                      value={buyerName}
+                      onChange={(e) => setBuyerName(e.target.value)}
+                      className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] transition-colors"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-[#94a3b8] block mb-1.5">
+                      Email address <span className="text-[#E91E8C]">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="Email address"
+                      value={buyerEmail}
+                      onChange={(e) => setBuyerEmail(e.target.value)}
+                      className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] transition-colors"
+                      required
+                    />
+                  </div>
                   {!isFreeEvent && (
                     <>
                       <input
@@ -545,16 +557,16 @@ function PublicEventContent() {
                   {!isFreeEvent && event.ticket_price && (
                     <div className="rounded-xl bg-[#f8f9fc] border border-[#e8edf2] px-4 py-3 text-xs space-y-1.5">
                       <div className="flex justify-between text-[#64748b]">
-                        <span>₦{event.ticket_price.toLocaleString()} × {quantity}</span>
-                        <span>₦{(event.ticket_price * quantity).toLocaleString()}</span>
+                        <span>{cs}{event.ticket_price.toLocaleString()} × {quantity}</span>
+                        <span>{cs}{(event.ticket_price * quantity).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-[#64748b]">
                         <span>VAT (2.5%)</span>
-                        <span>₦{Math.round(event.ticket_price * quantity * VAT_PERCENT / 100).toLocaleString()}</span>
+                        <span>{cs}{Math.round(event.ticket_price * quantity * VAT_PERCENT / 100).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between font-black text-[#0D1B2A] border-t border-[#e8edf2] pt-1.5">
                         <span>Total</span>
-                        <span>₦{Math.round(event.ticket_price * quantity * (1 + VAT_PERCENT / 100)).toLocaleString()}</span>
+                        <span>{cs}{Math.round(event.ticket_price * quantity * (1 + VAT_PERCENT / 100)).toLocaleString()}</span>
                       </div>
                     </div>
                   )}
@@ -584,7 +596,7 @@ function PublicEventContent() {
                         ? "Processing..."
                         : isFreeEvent
                         ? "Save My Spot — Free"
-                        : `Pay with Card ₦${Math.round(event.ticket_price! * quantity * (1 + VAT_PERCENT / 100)).toLocaleString()}`}
+                        : `Pay with Card ${cs}${Math.round(event.ticket_price! * quantity * (1 + VAT_PERCENT / 100)).toLocaleString()}`}
                     </button>
                     {!isFreeEvent && walletBalance !== null && (
                       <button
@@ -594,8 +606,8 @@ function PublicEventContent() {
                         className="w-full rounded-xl font-semibold text-sm py-3 transition-all border-2 border-pink-200 text-pink-700 hover:bg-pink-50 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {walletBalance < Math.round(event.ticket_price! * quantity * (1 + VAT_PERCENT / 100))
-                          ? `Insufficient wallet (₦${walletBalance.toLocaleString()})`
-                          : `Pay with Wallet (₦${walletBalance.toLocaleString()})`}
+                          ? `Insufficient wallet (${cs}${walletBalance.toLocaleString()})`
+                          : `Pay with Wallet (${cs}${walletBalance.toLocaleString()})`}
                       </button>
                     )}
                   </div>
@@ -621,6 +633,7 @@ function PublicEventContent() {
       </div>
 
       <Footer />
+      <ReminderBanner />
     </div>
   );
 }

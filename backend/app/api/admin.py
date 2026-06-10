@@ -20,6 +20,7 @@ from app.models.audit_log import AuditLog
 from app.models.accreditation import AccreditationRequest
 from app.models.ticket_purchase import TicketPurchase
 from app.models.data_management import DataGroup, DataProfile, DataRequest
+from app.models.wallet import Withdrawal, BankAccount, WalletTransaction, Wallet
 from sqlalchemy.orm import joinedload
 
 router = APIRouter()
@@ -28,6 +29,12 @@ router = APIRouter()
 async def require_admin(user: User = Depends(get_current_user)) -> User:
     if user.role not in ("super_admin", "admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
+async def require_super_admin(user: User = Depends(get_current_user)) -> User:
+    if user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="Super admin access required")
     return user
 
 
@@ -138,19 +145,110 @@ async def admin_user_detail(
 @router.patch("/users/{user_id}/role")
 async def update_user_role(
     user_id: int,
-    role: str,
-    admin: User = Depends(require_admin),
+    role: str = Query(...),
+    admin: User = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot change own role")
     old_role = user.role
     user.role = role
     await db.commit()
     await log_action(db, admin.id, "role_change", "user", user_id, f"Role changed from {old_role} to {role}")
     return {"message": "Role updated"}
+
+
+@router.post("/users")
+async def create_admin_user(
+    email: str = Query(...),
+    password: str = Query(...),
+    full_name: str = Query("Admin"),
+    admin: User = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    existing = await db.execute(select(User).where(User.email == email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Email already registered")
+    user = User(
+        email=email,
+        full_name=full_name,
+        password_hash=hash_password(password),
+        role="admin",
+        is_verified=True,
+        is_active=True,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    await log_action(db, admin.id, "admin_created", "user", user.id, f"Created admin: {email}")
+    return {"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role}
+
+
+@router.put("/users/{user_id}/email")
+async def update_admin_email(
+    user_id: int,
+    new_email: str = Query(...),
+    admin: User = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role not in ("admin", "super_admin"):
+        raise HTTPException(status_code=400, detail="Can only update admin emails")
+    existing = await db.execute(select(User).where(User.email == new_email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Email already in use")
+    old_email = user.email
+    user.email = new_email
+    user.is_verified = False
+    await db.commit()
+    await log_action(db, admin.id, "admin_email_changed", "user", user.id, f"Admin email: {old_email} -> {new_email}")
+    return {"message": "Email updated", "email": new_email}
+
+
+@router.put("/users/{user_id}/password")
+async def update_admin_password(
+    user_id: int,
+    new_password: str = Query(...),
+    admin: User = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role not in ("admin", "super_admin"):
+        raise HTTPException(status_code=400, detail="Can only update admin passwords")
+    user.password_hash = hash_password(new_password)
+    await db.commit()
+    await log_action(db, admin.id, "admin_password_changed", "user", user.id, f"Admin password changed for user {user_id}")
+    return {"message": "Password updated"}
+
+
+@router.delete("/users/{user_id}")
+async def delete_admin_user(
+    user_id: int,
+    admin: User = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role not in ("admin", "super_admin"):
+        raise HTTPException(status_code=400, detail="Can only delete admin users")
+    await db.delete(user)
+    await db.commit()
+    await log_action(db, admin.id, "admin_deleted", "user", user_id, f"Deleted admin: {user.email}")
+    return {"message": "Admin deleted"}
 
 
 @router.get("/events")
@@ -588,6 +686,59 @@ async def admin_payments(
     }
 
 
+@router.get("/deposits")
+async def admin_deposits(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+):
+    tx_type_col = WalletTransaction.__table__.c.type
+    q = select(
+        WalletTransaction.id,
+        WalletTransaction.amount,
+        WalletTransaction.currency,
+        tx_type_col,
+        WalletTransaction.reference,
+        WalletTransaction.description,
+        WalletTransaction.status,
+        WalletTransaction.created_at,
+        Wallet.user_id,
+        User.full_name,
+        User.email,
+    ).join(Wallet, WalletTransaction.wallet_id == Wallet.id
+    ).join(User, Wallet.user_id == User.id
+    ).where(tx_type_col == "deposit"
+    ).order_by(WalletTransaction.created_at.desc())
+
+    total_q = select(func.count()).select_from(q.subquery())
+    total = await db.scalar(total_q)
+    q = q.offset((page - 1) * per_page).limit(per_page)
+    result = await db.execute(q)
+    rows = result.all()
+    return {
+        "total": total or 0,
+        "page": page,
+        "per_page": per_page,
+        "deposits": [
+            {
+                "id": r.id,
+                "amount": float(r.amount),
+                "currency": r.currency,
+                "type": r[3],
+                "reference": r.reference,
+                "description": r.description,
+                "status": r.status,
+                "user_id": r.user_id,
+                "user_name": r.full_name,
+                "user_email": r.email,
+                "created_at": str(r.created_at),
+            }
+            for r in rows
+        ],
+    }
+
+
 @router.get("/audit-logs")
 async def admin_audit_logs(
     admin: User = Depends(require_admin),
@@ -613,9 +764,9 @@ async def admin_audit_logs(
                 "id": r.id,
                 "user_id": r.user_id,
                 "action": r.action,
-                "resource": r.resource,
+                "resource_type": r.resource_type,
                 "resource_id": r.resource_id,
-                "details": r.details,
+                "description": r.description,
                 "ip_address": r.ip_address,
                 "created_at": str(r.created_at),
             }
@@ -638,13 +789,99 @@ async def admin_fraud_flags(
     flagged_events = await db.scalar(
         select(func.count(Event.id)).where(Event.review_status == "flagged")
     )
+    aml_flagged = await db.scalar(
+        select(func.count(Withdrawal.id)).where(Withdrawal.is_aml_flagged == True)
+    )
+    locked_accounts = await db.scalar(
+        select(func.count(User.id)).where(User.locked_until > datetime.now(timezone.utc))
+    )
     return {
         "inactive_users": inactive_users or 0,
         "unverified_users": unverified_users or 0,
         "failed_payments": failed_payments or 0,
         "failed_deliveries": failed_deliveries or 0,
         "flagged_events": flagged_events or 0,
+        "aml_flagged": aml_flagged or 0,
+        "locked_accounts": locked_accounts or 0,
     }
+
+
+@router.get("/withdrawals")
+async def admin_withdrawals(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    status: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+):
+    q = select(Withdrawal).order_by(Withdrawal.created_at.desc())
+    if status:
+        q = q.where(Withdrawal.status == status)
+    total_q = select(func.count()).select_from(q.subquery())
+    total = await db.scalar(total_q)
+    q = q.offset((page - 1) * per_page).limit(per_page)
+    result = await db.execute(q)
+    rows = result.scalars().all()
+
+    items = []
+    for w in rows:
+        user_result = await db.execute(select(User).where(User.id == w.user_id))
+        u = user_result.scalar_one_or_none()
+        items.append({
+            "id": w.id,
+            "user_id": w.user_id,
+            "user_name": u.full_name if u else "Unknown",
+            "user_email": u.email if u else "",
+            "amount": w.amount,
+            "currency": w.currency,
+            "status": w.status,
+            "reference": w.reference,
+            "is_aml_flagged": w.is_aml_flagged,
+            "aml_reason": w.aml_reason,
+            "failure_reason": w.failure_reason,
+            "created_at": str(w.created_at),
+            "processed_at": str(w.processed_at) if w.processed_at else None,
+        })
+
+    return {"total": total or 0, "page": page, "per_page": per_page, "withdrawals": items}
+
+
+@router.post("/withdrawals/{withdrawal_id}/process")
+async def admin_process_withdrawal(
+    withdrawal_id: int,
+    action: str,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Withdrawal).where(Withdrawal.id == withdrawal_id))
+    w = result.scalar_one_or_none()
+    if not w:
+        raise HTTPException(404, detail="Withdrawal not found")
+    if w.status != "pending":
+        raise HTTPException(400, detail="Withdrawal is not pending")
+
+    if action == "approve":
+        w.status = "processing"
+    elif action == "complete":
+        w.status = "completed"
+        w.processed_at = datetime.now(timezone.utc)
+    elif action == "fail":
+        w.status = "failed"
+        w.processed_at = datetime.now(timezone.utc)
+    elif action == "flag":
+        w.status = "flagged"
+        w.is_aml_flagged = True
+    else:
+        raise HTTPException(400, detail="Invalid action")
+    w.updated_at = datetime.now(timezone.utc)
+    db.add(w)
+    await db.commit()
+    await log_action(
+        db=db, user_id=admin.id, action=f"withdrawal_{action}",
+        resource_type="withdrawal", resource_id=w.id,
+        description=f"Withdrawal {w.reference} {action}d",
+    )
+    return {"status": w.status, "withdrawal_id": w.id, "reference": w.reference}
 
 
 @router.get("/accreditation-requests")

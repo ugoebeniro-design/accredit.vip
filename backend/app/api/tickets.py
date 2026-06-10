@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import httpx
 import qrcode
 
@@ -22,10 +22,10 @@ router = APIRouter()
 
 class PurchaseRequest(BaseModel):
     event_id: int
-    buyer_name: str
-    buyer_email: str
+    buyer_name: str = Field(min_length=1)
+    buyer_email: str = Field(min_length=1)
     buyer_phone: str | None = None
-    quantity: int = 1
+    quantity: int = Field(default=1, ge=1)
     payment_method: str = "paystack"
 
 

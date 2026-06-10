@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update
 from datetime import datetime, timezone
+from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -13,7 +14,22 @@ from app.models.event import Event
 router = APIRouter()
 
 
-@router.get("/notifications")
+class NotificationResponse(BaseModel):
+    id: int
+    user_id: int
+    event_id: int | None = None
+    title: str
+    message: str
+    notification_type: str
+    data: dict | None = None
+    read: bool = False
+    read_at: datetime | None = None
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+@router.get("/notifications", response_model=list[NotificationResponse])
 async def list_notifications(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

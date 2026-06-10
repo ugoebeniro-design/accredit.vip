@@ -154,7 +154,7 @@ async def register(
 
     return TokenResponse(
         access_token=token,
-        user={"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role, "is_verified": user.is_verified, "verification_channel": user.verification_channel},
+        user={"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role, "last_login": None, "is_verified": user.is_verified, "verification_channel": user.verification_channel},
     )
 
 
@@ -187,6 +187,7 @@ async def login(
                 "email": user.email,
                 "full_name": user.full_name,
                 "role": user.role,
+                "last_login": str(user.last_login_at) if user.last_login_at else None,
                 "is_verified": user.is_verified,
                 "verification_channel": user.verification_channel,
             },
@@ -344,14 +345,8 @@ async def social_login(req: SocialLoginRequest, response: Response, db: AsyncSes
     set_auth_cookie(response, token)
     return TokenResponse(
         access_token=token,
-        user={"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role, "is_verified": user.is_verified, "verification_channel": user.verification_channel},
+        user={"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role, "last_login": None, "is_verified": user.is_verified, "verification_channel": user.verification_channel},
     )
-
-
-@router.post("/logout")
-async def logout(response: Response):
-    response.delete_cookie("access_token", path="/")
-    return {"message": "Logged out"}
 
 
 @router.get("/me")
@@ -362,7 +357,8 @@ async def get_me(user: User = Depends(get_current_user)):
         "full_name": user.full_name,
         "phone": user.phone,
         "role": user.role,
-        "is_admin": user.role == "admin",
+        "last_login": str(user.last_login_at) if user.last_login_at else None,
+        "is_admin": user.role in ("admin", "super_admin"),
         "is_verified": user.is_verified,
         "verification_channel": user.verification_channel,
     }
@@ -417,7 +413,7 @@ async def resend_verification(
     else:
         verify_link = f"{settings.FRONTEND_URL}/verify?token={verification_token}"
         html = f"<p>Click <a href='{verify_link}'>here</a> to verify your account. Expires in {VERIFICATION_EXPIRY_MINUTES} minutes.</p>"
-        await send_email(user.email, f"Verify your Accredit.vip account (expires in {VERIFICATION_EXPIRY_MINUTES} min)", html)
+        asyncio.create_task(send_email(user.email, f"Verify your Accredit.vip account (expires in {VERIFICATION_EXPIRY_MINUTES} min)", html))
 
     return {"message": f"Verification sent via {channel}", "is_numeric": is_numeric}
 
@@ -441,7 +437,7 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
 
     reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
     html = f"<p>Click <a href='{reset_link}'>here</a> to reset your password. This link expires in 1 hour.</p>"
-    await send_email(user.email, "Reset your Accredit.vip password", html)
+    asyncio.create_task(send_email(user.email, "Reset your Accredit.vip password", html))
 
     return {"message": "If that email exists, a reset link has been sent"}
 
@@ -493,6 +489,8 @@ async def change_password(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if user.role not in ("super_admin",):
+        raise HTTPException(status_code=403, detail="Only super admin can change passwords")
     if not verify_password(req.current_password, user.password_hash):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
 
@@ -507,6 +505,8 @@ async def update_email(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if user.role not in ("super_admin",):
+        raise HTTPException(status_code=403, detail="Only super admin can change email")
     if not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Password is incorrect")
 

@@ -58,6 +58,7 @@ class EventCreateRequest(BaseModel):
     is_public: bool = False
     category: str | None = None
     ticket_price: int | None = None
+    currency: str = "NGN"
     tickets_available: int | None = None
     pass_packages: list[dict[str, Any]] | None = None
     lineup: list[dict[str, Any]] | None = None
@@ -93,6 +94,7 @@ class EventPublicResponse(BaseModel):
     is_public: bool
     category: str | None
     ticket_price: int | None
+    currency: str
     tickets_available: int | None
     pass_packages: list[dict[str, Any]] | None
     lineup: list[dict[str, Any]] | None
@@ -121,18 +123,19 @@ async def create_event(
     Users get ONE free POST EVENT trial after signup
     After trial used, they must upgrade subscription
     """
-    # Check if user already used their event trial
-    trial_check = await TrialEnforcementService.check_trial_available(
-        user=user,
-        trial_type="event",
-        db=db,
-    )
-
-    if not trial_check["allowed"]:
-        raise HTTPException(
-            status_code=402,  # 402 Payment Required
-            detail=trial_check["reason"],
+    # Admins bypass trial enforcement
+    if user.role != "admin":
+        trial_check = await TrialEnforcementService.check_trial_available(
+            user=user,
+            trial_type="event",
+            db=db,
         )
+
+        if not trial_check["allowed"]:
+            raise HTTPException(
+                status_code=402,  # 402 Payment Required
+                detail=trial_check["reason"],
+            )
 
     # Create event
     event = Event(
@@ -148,9 +151,10 @@ async def create_event(
     if flagged_keywords:
         event.flagged_keywords = flagged_keywords
 
-    # Mark trial as used
-    user.trial_event_used = True
-    user.trial_used_at = datetime.now(timezone.utc)
+    # Mark trial as used (admins bypass this)
+    if user.role != "admin":
+        user.trial_event_used = True
+        user.trial_used_at = datetime.now(timezone.utc)
 
     db.add(event)
     db.add(user)
@@ -199,7 +203,7 @@ async def list_public_events(
     radius_km: float = Query(50, description="Search radius in km (default 50)"),
     sort: str = Query("latest", description="Sort order: latest, soonest, name"),
 ):
-    query = select(Event).where(Event.is_public == True, Event.review_status != "flagged")
+    query = select(Event).where(Event.is_public == True, Event.status == "published", Event.review_status != "flagged")
     if search:
         query = query.where(
             or_(Event.title.ilike(f"%{search}%"), Event.venue.ilike(f"%{search}%"))
@@ -351,6 +355,10 @@ async def submit_event_for_approval(
     )
     admins = admin_result.scalars().all()
 
+    import asyncio
+    from app.services.email_service import send_email
+    from app.core.config import settings
+
     for admin in admins:
         await send_notification(
             db=db,
@@ -360,6 +368,21 @@ async def submit_event_for_approval(
             message=f"New event '{event.title}' submitted for review by {user.full_name}",
             data={"event_id": event.id},
         )
+        if admin.email:
+            asyncio.create_task(
+                send_email(
+                    to=admin.email,
+                    subject=f"New Event Submission: {event.title}",
+                    html=f"""
+                    <h2>New Event Submitted for Review</h2>
+                    <p><strong>Event:</strong> {event.title}</p>
+                    <p><strong>Organizer:</strong> {user.full_name} ({user.email})</p>
+                    <p><strong>Type:</strong> {event.event_type or 'N/A'}</p>
+                    <p><strong>Date:</strong> {event.event_date}</p>
+                    <p><a href="{settings.FRONTEND_URL}/admin/events" style="display:inline-block;padding:12px 24px;background:#E91E8C;color:white;text-decoration:none;border-radius:8px">Review in Dashboard</a></p>
+                    """,
+                )
+            )
 
     return {
         "status": "submitted",

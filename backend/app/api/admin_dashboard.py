@@ -12,6 +12,7 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
 from app.models.guest import Guest
+from app.models.payment import Payment
 from app.models.invite import InviteMessage
 
 router = APIRouter()
@@ -72,12 +73,17 @@ async def get_dashboard_overview(
     )
     new_users = new_users.scalar() or 0
     
+    revenue_result = await db.execute(
+        select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.status == "paid")
+    )
+    total_revenue = float(revenue_result.scalar() or 0)
+
     return {
         "total_users": total_users,
         "total_events": total_events,
         "total_guests": total_guests,
         "active_events": active_events,
-        "total_revenue": 0,
+        "total_revenue": total_revenue,
         "new_users_7days": new_users,
     }
 
@@ -111,13 +117,30 @@ async def list_all_clients(
         )
         active_events = active_result.scalar() or 0
         
+        guest_result = await db.execute(
+            select(func.count(Guest.id)).where(
+                Guest.event_id.in_(
+                    select(Event.id).where(Event.organizer_id == user.id)
+                )
+            )
+        )
+        total_guests = guest_result.scalar() or 0
+
+        paid_result = await db.execute(
+            select(func.coalesce(func.sum(Payment.amount), 0)).where(
+                Payment.organizer_id == user.id,
+                Payment.status == "paid"
+            )
+        )
+        total_paid = float(paid_result.scalar() or 0)
+
         clients.append(ClientSummary(
             id=user.id,
             email=user.email,
             name=getattr(user, 'name', None),
             total_events=total_events,
-            total_guests=0,
-            total_paid=0,
+            total_guests=total_guests,
+            total_paid=total_paid,
             active_events=active_events,
             created_at=user.created_at.isoformat() if user.created_at else None,
         ))
@@ -151,12 +174,17 @@ async def list_all_events(
         )
         organizer = organizer_result.scalar_one_or_none()
         
+        guest_result = await db.execute(
+            select(func.count(Guest.id)).where(Guest.event_id == event.id)
+        )
+        guest_count = guest_result.scalar() or 0
+
         summaries.append(EventSummary(
             id=event.id,
             title=event.title,
             organizer_email=organizer.email if organizer else "Unknown",
             event_date=str(event.event_date),
-            guest_count=0,
+            guest_count=guest_count,
             status=event.status,
             created_at=event.created_at.isoformat() if event.created_at else None,
         ))
@@ -213,6 +241,19 @@ async def get_event_details(
     guests_result = await db.execute(select(func.count(Guest.id)).where(Guest.event_id == event_id))
     guest_count = guests_result.scalar() or 0
     
+    rsvp_yes_result = await db.execute(
+        select(func.count(Guest.id)).where(
+            Guest.event_id == event_id,
+            Guest.rsvp_status == "yes"
+        )
+    )
+    rsvp_no_result = await db.execute(
+        select(func.count(Guest.id)).where(
+            Guest.event_id == event_id,
+            Guest.rsvp_status == "no"
+        )
+    )
+
     return {
         "event": {
             "id": event.id,
@@ -226,7 +267,7 @@ async def get_event_details(
         },
         "statistics": {
             "total_guests": guest_count,
-            "rsvp_yes": 0,
-            "rsvp_no": 0,
+            "rsvp_yes": rsvp_yes_result.scalar() or 0,
+            "rsvp_no": rsvp_no_result.scalar() or 0,
         }
     }

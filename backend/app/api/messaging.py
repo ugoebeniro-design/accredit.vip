@@ -1,5 +1,6 @@
 import os
 import re
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -193,26 +194,6 @@ async def _send_to_guest(
     flyer = flyer_result.scalar_one_or_none()
     flyer_url = flyer.url if flyer else event.cover_image
 
-    # Fallback: use image_data (base64 uploaded during trial)
-    uploaded_image_path = None
-    if not flyer_url and event.image_data:
-        try:
-            import base64
-            upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
-            os.makedirs(upload_dir, exist_ok=True)
-            img_data = event.image_data
-            if "," in img_data:
-                img_data = img_data.split(",")[1]
-            decoded = base64.b64decode(img_data)
-            img_filename = f"trial_upload_{event.id}.png"
-            img_path = os.path.join(upload_dir, img_filename)
-            with open(img_path, "wb") as f:
-                f.write(decoded)
-            uploaded_image_path = img_path
-            flyer_url = f"/uploads/{img_filename}"
-        except Exception as e:
-            print(f"[Messaging] Failed to process image_data for event {event.id}: {e}")
-
     qr_data = qr_token_url
     qr_image_url_obj = qr_gif_to_url(qr_data, size=250, style="pulsing")
     qr_image_url = qr_image_url_obj if qr_image_url_obj else None
@@ -228,14 +209,13 @@ async def _send_to_guest(
             from_addr = f"{event.host_name} via Accredit.vip <noreply@wristbandsng.com>"
             email_images = []
             if flyer_url:
-                fp = uploaded_image_path if uploaded_image_path else _upload_path_from_url(flyer_url)
-                email_images.append(("flyer", fp))
+                email_images.append(("flyer", _upload_path_from_url(flyer_url)))
             if qr_image_url:
                 email_images.append(("qr_code", _upload_path_from_url(qr_image_url)))
             if email_images:
-                ok = await send_email_with_images(guest.email, subject, html, email_images, from_addr=from_addr)
+                ok = await asyncio.wait_for(send_email_with_images(guest.email, subject, html, email_images, from_addr=from_addr), timeout=15)
             else:
-                ok = await send_email(guest.email, subject, html, from_addr=from_addr)
+                ok = await asyncio.wait_for(send_email(guest.email, subject, html, from_addr=from_addr), timeout=15)
         elif channel == "whatsapp" and guest.phone:
             media_to_send = _absolute_url(flyer_url) or _absolute_url(qr_image_url)
             ok = await _send_whatsapp(guest.phone, body, media_url=media_to_send)
@@ -317,9 +297,9 @@ async def _send_qr_to_guest(
         if channel == "email" and guest.email:
             from_addr = f"{event.host_name} via Accredit.vip <noreply@wristbandsng.com>"
             if qr_image_url:
-                ok = await send_email_with_images(guest.email, subject, html, [("qr_code", _upload_path_from_url(qr_image_url))], from_addr=from_addr)
+                ok = await asyncio.wait_for(send_email_with_images(guest.email, subject, html, [("qr_code", _upload_path_from_url(qr_image_url))], from_addr=from_addr), timeout=15)
             else:
-                ok = await send_email(guest.email, subject, html, from_addr=from_addr)
+                ok = await asyncio.wait_for(send_email(guest.email, subject, html, from_addr=from_addr), timeout=15)
         elif channel == "whatsapp" and guest.phone:
             ok = await _send_whatsapp(guest.phone, body, media_url=_absolute_url(qr_image_url))
         elif channel == "sms" and guest.phone:
@@ -765,7 +745,7 @@ async def test_send(
 ):
     sent = []
     if req.channel == "email" and req.email:
-        ok = await send_email(req.email, "Accredit.vip Test Message", "<h2>Test Send</h2><p>This is a test message from Accredit.vip.</p>")
+        ok = await asyncio.wait_for(send_email(req.email, "Accredit.vip Test Message", "<h2>Test Send</h2><p>This is a test message from Accredit.vip.</p>"), timeout=15)
         sent.append(f"email to {req.email}: {'OK' if ok else 'FAILED'}")
     elif req.channel == "whatsapp" and req.phone:
         ok = await _send_whatsapp(req.phone, "Hello! This is a test WhatsApp message from Accredit.vip.")

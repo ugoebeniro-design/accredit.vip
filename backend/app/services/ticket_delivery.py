@@ -1,5 +1,6 @@
 """Ticket delivery service - generates QR codes and sends via email/WhatsApp"""
 
+import asyncio
 import qrcode
 import io
 import base64
@@ -158,10 +159,9 @@ async def send_ticket_email(
         qr_code_base64=qr_code_base64,
     )
 
-    await send_email(
-        to=buyer_email,
-        subject=subject,
-        html=html_content,
+    await asyncio.wait_for(
+        send_email(to=buyer_email, subject=subject, html=html_content),
+        timeout=15,
     )
 
 

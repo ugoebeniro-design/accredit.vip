@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { NotificationBell } from "@/components/notification-bell";
 import { getEvents, type EventData, type EventFilters } from "@/lib/api/events";
 import { apiClient } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
@@ -115,9 +116,9 @@ function DashboardContent() {
         }}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between h-20 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center justify-between h-24 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center flex-1 min-w-0">
-            <Image src="/logo-trim.png" alt="accredit.vip" width={4071} height={761} className="h-14 w-auto object-contain drop-shadow-[0_0_12px_rgba(233,30,140,0.15)]" />
+            <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4086} height={801} className="h-16 w-auto object-contain drop-shadow-[0_0_12px_rgba(233,30,140,0.25)]" />
           </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -254,6 +255,7 @@ function DashboardContent() {
           </div>
 
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <Link href="/dashboard/wallet" className="flex items-center gap-1.5 rounded-xl border border-[#e8edf2] bg-white px-3 py-1.5 text-xs font-bold text-[#0D1B2A] hover:border-pink-300 hover:text-pink-600 transition-colors">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />

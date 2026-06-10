@@ -101,6 +101,16 @@ export const SUPPORTED_CURRENCIES = [
     daily_withdrawal_limit: 500000000,
     verification_threshold: 100000000,
   },
+  {
+    code: "XOF",
+    name: "CFA Franc",
+    flag: "CI",
+    symbol: "CFA",
+    country: "West African States",
+    min_fund: 500,
+    daily_withdrawal_limit: 10000000,
+    verification_threshold: 5000000,
+  },
 ];
 
 export const getCurrencyByCode = (code: string) => {

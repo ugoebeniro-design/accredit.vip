@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.core.audit import log_action
 from app.models.user import User
 from app.models.event import Event
 from app.services.notify import send_notification
@@ -179,6 +180,12 @@ async def approve_event(
             data={"event_id": event.id},
         )
 
+    await log_action(
+        db=db, user_id=admin.id, action="event_approved",
+        resource_type="event", resource_id=event.id,
+        description=f"Event '{event.title}' approved and published",
+    )
+
     return {
         "status": "approved",
         "event_id": event.id,
@@ -189,7 +196,7 @@ async def approve_event(
 @router.post("/admin/events/{event_id}/reject")
 async def reject_event(
     event_id: int,
-    reason: str,
+    reason: str = "No reason provided",
     admin: User = Depends(check_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -230,6 +237,12 @@ async def reject_event(
             data={"event_id": event.id, "reason": reason},
         )
 
+    await log_action(
+        db=db, user_id=admin.id, action="event_rejected",
+        resource_type="event", resource_id=event.id,
+        description=f"Event '{event.title}' rejected. Reason: {reason}",
+    )
+
     return {
         "status": "rejected",
         "event_id": event.id,
@@ -254,6 +267,12 @@ async def delete_event(
     # Delete the event
     db.delete(event)
     await db.commit()
+
+    await log_action(
+        db=db, user_id=admin.id, action="event_deleted",
+        resource_type="event", resource_id=event_id,
+        description=f"Event '{event.title}' deleted by admin",
+    )
 
     return {
         "status": "deleted",

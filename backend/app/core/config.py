@@ -20,8 +20,8 @@ class Settings(BaseSettings):
 
     ALGORITHM: str = "HS256"
 
-    # CRITICAL: Reduced token expiration from 24 hours to 15 minutes
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    # Token expiration: 7 days (refresh token handles rotation)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     SESSION_IDLE_TIMEOUT_MINUTES: int = 30
 

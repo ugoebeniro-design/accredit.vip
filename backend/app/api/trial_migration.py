@@ -1,6 +1,8 @@
 """Trial event migration - moves localStorage trial data to dashboard after signup."""
 
-from fastapi import APIRouter, Depends, HTTPException
+import base64, os, logging
+from datetime import date, time
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from typing import List, Optional
@@ -9,6 +11,8 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -45,44 +49,64 @@ async def migrate_trial_events(
 
     for trial in migrations:
         try:
-            # Create draft event in database
+            ev_date = trial.form.event_date
+            ev_time = trial.form.event_time
+            parsed_date = None
+            parsed_time = None
+            if ev_date:
+                try:
+                    parsed_date = date.fromisoformat(ev_date.replace("Z", "+00:00")[:10])
+                except (ValueError, TypeError):
+                    logger.warning("Could not parse event_date: %s", ev_date)
+            if ev_time:
+                try:
+                    ev_time_clean = ev_time.strip()
+                    if len(ev_time_clean) == 5:
+                        ev_time_clean += ":00"
+                    parsed_time = time.fromisoformat(ev_time_clean)
+                except (ValueError, TypeError):
+                    logger.warning("Could not parse event_time: %s", ev_time)
+            if parsed_date is None:
+                parsed_date = date.today()
+            if parsed_time is None:
+                parsed_time = time(18, 0, 0)
+
             event = Event(
                 organizer_id=user.id,
                 title=trial.form.title,
                 description=trial.form.description,
-                event_date=trial.form.event_date,
-                event_time=trial.form.event_time,
+                event_date=parsed_date,
+                event_time=parsed_time,
                 timezone=trial.form.timezone,
                 venue=trial.form.venue,
                 event_type="invite" if trial.mode == "invite" else "event",
-                delivery_channels=",".join(trial.form.delivery_channels),
-                template=trial.form.template or "minimal",
+                host_name=trial.form.venue or "Trial Event",
                 guest_count_range="50-500",
                 status="draft",
-                is_trial_migration=True,
-                extra_data=trial.form.extra_data or {},
             )
 
             db.add(event)
-            await db.flush()  # Get the ID without committing yet
+            await db.flush()
 
-            # Store pass packages if provided
             if trial.pass_packages:
                 event.pass_packages = trial.pass_packages
-
-            # Store social handles if provided
-            if trial.social_handles:
-                event.social_handles = trial.social_handles
-
-            # Store lineup if provided
             if trial.lineup:
                 event.lineup = trial.lineup
-
-            # Store image if provided
             if trial.uploaded_image_data:
-                event.image_data = trial.uploaded_image_data
+                try:
+                    upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
+                    os.makedirs(upload_dir, exist_ok=True)
+                    img_data = trial.uploaded_image_data
+                    if "," in img_data:
+                        img_data = img_data.split(",")[1]
+                    decoded = base64.b64decode(img_data)
+                    img_filename = f"trial_upload_{event.id}.png"
+                    with open(os.path.join(upload_dir, img_filename), "wb") as f:
+                        f.write(decoded)
+                    event.cover_image = f"/uploads/{img_filename}"
+                except Exception as img_err:
+                    logger.warning("Failed to save trial image for event %s: %s", event.id, img_err)
 
-            db.add(event)
             created_events.append({
                 "id": event.id,
                 "title": event.title,
@@ -91,8 +115,7 @@ async def migrate_trial_events(
             })
 
         except Exception as e:
-            # Continue with other migrations if one fails
-            print(f"Failed to migrate trial event: {e}")
+            logger.exception("Failed to migrate trial event")
             continue
 
     await db.commit()
@@ -116,7 +139,6 @@ async def check_trial_status(
         select(Event).where(
             Event.organizer_id == user.id,
             Event.status == "draft",
-            Event.is_trial_migration == True,
         )
     )
     events = result.scalars().all()

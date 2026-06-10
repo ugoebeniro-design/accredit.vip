@@ -31,6 +31,7 @@ class Event(Base):
     is_public = Column(Boolean, default=False)
     category = Column(String, nullable=True)
     ticket_price = Column(Integer, nullable=True)
+    currency = Column(String, default="NGN")
     tickets_available = Column(Integer, nullable=True)
     pass_packages = Column(JSON, nullable=True)
     lineup = Column(JSON, nullable=True)

@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
       });
 
       // Check if user is admin
-      if (res.user.role !== "admin") {
+      if (res.user.role !== "admin" && res.user.role !== "super_admin") {
         setError("Access denied. Admin credentials required.");
         setLoading(false);
         return;
@@ -44,9 +44,9 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#f8f9fc] to-[#f0f1f7] px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#f8f9fc] to-[#f0f1f7] px-4 py-4">
       {/* Logo */}
-      <Link href="/" className="mb-8 hover:opacity-80 transition-opacity">
+      <Link href="/" className="mb-1 hover:opacity-80 transition-opacity">
         <Image
           src="/logo-dark-trim.png"
           alt="accredit.vip"
@@ -89,7 +89,7 @@ export default function AdminLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
+                placeholder="you@company.com"
                 required
                 disabled={loading}
                 className="w-full px-4 py-3 rounded-xl border border-[#d9e2ec] bg-white text-[#0D1B2A] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 focus:border-[#E91E8C] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
@@ -149,11 +149,14 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Security Notice */}
-        <div className="mt-6 p-4 rounded-lg bg-[#E91E8C]/5 border border-[#E91E8C]/20 flex gap-3">
-          <Shield className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-[#23466f]">
-            <strong>Secure Access:</strong> This page is for administrators only. Unauthorized access attempts are logged.
-          </p>
+        <div className="mt-8 p-6 rounded-2xl bg-[#0D1B2A] border-2 border-[#E91E8C] flex gap-4 shadow-lg">
+          <Shield className="w-7 h-7 text-[#E91E8C] flex-shrink-0 mt-0.5 font-bold" />
+          <div>
+            <p className="text-base font-bold text-white mb-2">Secure Access Required</p>
+            <p className="text-sm text-white leading-relaxed">
+              This page is for authorized administrators only. All unauthorized access attempts are logged, monitored, and reported.
+            </p>
+          </div>
         </div>
       </div>
     </div>

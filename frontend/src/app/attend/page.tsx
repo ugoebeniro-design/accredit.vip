@@ -6,7 +6,67 @@ import { getPublicEvents, type EventData, type EventFilters } from "@/lib/api/ev
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
-import { X } from "lucide-react";
+import { ReminderBanner } from "@/components/shared/reminder-banner";
+import { X, Share2, Bookmark, BookmarkCheck } from "lucide-react";
+import { getCurrencySymbol } from "@/lib/event-form-options";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+function ShareBtn({ event }: { event: EventData }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${SITE_URL}/events/${event.id}`;
+  return (
+    <button
+      onClick={(e) => { e.preventDefault(); e.stopPropagation();
+        if (navigator.share) navigator.share({ title: event.title, url }).catch(() => {});
+        else navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+      }}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all duration-200 hover:scale-105 bounce-share"
+      style={{ background: "rgba(233,30,140,0.85)" }}
+    >
+      <Share2 className="w-3.5 h-3.5" />
+      {copied ? "Copied!" : "Share"}
+    </button>
+  );
+}
+
+function BookmarkBtn({ event }: { event: EventData }) {
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    const savedIds: number[] = JSON.parse(localStorage.getItem("bookmarked_events") || "[]");
+    setSaved(savedIds.includes(event.id));
+  }, [event.id]);
+  const toggle = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    const savedIds: number[] = JSON.parse(localStorage.getItem("bookmarked_events") || "[]");
+    let newIds: number[];
+    if (savedIds.includes(event.id)) {
+      newIds = savedIds.filter(id => id !== event.id);
+      // Remove from reminders too
+      const reminders: Record<number, string> = JSON.parse(localStorage.getItem("event_reminders") || "{}");
+      delete reminders[event.id];
+      localStorage.setItem("event_reminders", JSON.stringify(reminders));
+    } else {
+      newIds = [...savedIds, event.id];
+      // Save reminder with event title
+      const reminders: Record<number, string> = JSON.parse(localStorage.getItem("event_reminders") || "{}");
+      reminders[event.id] = event.title;
+      localStorage.setItem("event_reminders", JSON.stringify(reminders));
+    }
+    localStorage.setItem("bookmarked_events", JSON.stringify(newIds));
+    setSaved(!saved);
+  };
+  return (
+    <button
+      onClick={toggle}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 hover:scale-105 bounce-share ${saved ? "text-[#E91E8C]" : "text-white"}`}
+      style={{ background: saved ? "rgba(233,30,140,0.15)" : "rgba(255,255,255,0.2)" }}
+    >
+      {saved ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
+      {saved ? "Saved" : "Remind Me"}
+    </button>
+  );
+}
 
 const UPLOAD_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1").replace(/\/api\/v1\/?$/, "");
 
@@ -158,18 +218,30 @@ function AttendContent() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
+      <style>{`
+        @keyframes gentleBounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+        .bounce-share {
+          animation: gentleBounce 0.8s ease-in-out 3;
+        }
+        .bounce-share:hover {
+          animation: gentleBounce 0.6s ease-in-out infinite;
+        }
+      `}</style>
       <Navbar variant="light" />
 
       {/* Compact search bar — keeps events above the fold */}
-      <div className="bg-white border-b border-[#e8edf2] px-4 py-4">
+      <div className="bg-[#0D1B2A] px-4 py-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center gap-3">
           <div>
-            <h1 className="text-xl font-extrabold text-[#0D1B2A] leading-tight">Discover Events</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Concerts, conferences, weddings &amp; more across Africa</p>
+            <h1 className="text-xl font-extrabold text-white leading-tight">Discover Events</h1>
+            <p className="text-xs text-white/60 mt-0.5">Concerts, conferences, weddings &amp; more across Africa</p>
           </div>
           <form onSubmit={handleSearch} className="flex-1 flex gap-2 sm:max-w-lg sm:ml-auto">
             <div className="flex-1 relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -177,7 +249,7 @@ function AttendContent() {
                 placeholder="Search events, venues..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-10 pl-9 pr-3 rounded-xl border border-[#d9e2ec] text-sm outline-none focus:border-[#E91E8C]"
+                className="w-full h-10 pl-9 pr-3 rounded-xl border border-white/20 bg-white/10 text-sm text-white placeholder-white/50 outline-none focus:border-white/40"
               />
             </div>
             <button type="submit" className="btn-primary h-10 px-5 text-sm flex-shrink-0 rounded-xl">
@@ -188,7 +260,7 @@ function AttendContent() {
       </div>
 
       {/* Filters bar */}
-      <div className="sticky top-16 z-30 bg-white border-b border-[#e8edf2] shadow-sm">
+      <div className="sticky top-16 z-30 bg-[#0D1B2A] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-3">
           {/* Category pills */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -201,9 +273,10 @@ function AttendContent() {
                 }}
                 className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all"
                 style={{
-                  background: category === cat.value ? "linear-gradient(135deg, #E91E8C, #C4166F)" : "#f1f5f9",
-                  color: category === cat.value ? "white" : "#64748b",
+                  background: category === cat.value ? "linear-gradient(135deg, #E91E8C, #C4166F)" : "rgba(255,255,255,0.15)",
+                  color: category === cat.value ? "white" : "rgba(255,255,255,0.8)",
                   boxShadow: category === cat.value ? "0 4px 14px rgba(233,30,140,0.3)" : "none",
+                  border: category === cat.value ? "none" : "1px solid rgba(255,255,255,0.2)",
                 }}
               >
                 <CategoryIcon cat={cat.value} className="w-4 h-4" />
@@ -214,16 +287,16 @@ function AttendContent() {
           {/* Location, Month, Price filters */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative flex-1 min-w-[160px] max-w-xs">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
               <input type="text" placeholder="City or state..." value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 onBlur={() => { setNearLat(undefined); setNearLng(undefined); loadEvents(buildFilters()); }}
-                className="w-full h-9 pl-8 pr-3 rounded-lg border border-[#d9e2ec] text-xs outline-none focus:border-[#E91E8C]"
+                className="w-full h-9 pl-8 pr-3 rounded-lg border border-white/20 bg-white/10 text-xs text-white placeholder-white/50 outline-none focus:border-white/40"
               />
             </div>
             <button onClick={handleNearMe} disabled={findingLocation}
               className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold transition-all"
-              style={{ background: nearLat ? "linear-gradient(135deg, #E91E8C, #C4166F)" : "#f1f5f9", color: nearLat ? "white" : "#64748b" }}
+              style={{ background: nearLat ? "linear-gradient(135deg, #E91E8C, #C4166F)" : "rgba(255,255,255,0.15)", color: nearLat ? "white" : "rgba(255,255,255,0.8)", border: nearLat ? "none" : "1px solid rgba(255,255,255,0.2)" }}
             >
               {findingLocation ? (
                 <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
@@ -233,27 +306,29 @@ function AttendContent() {
               {nearLat ? "Nearby" : "Near Me"}
             </button>
             <select value={month} onChange={(e) => { setMonth(Number(e.target.value)); loadEvents({ ...buildFilters(), month: Number(e.target.value) || undefined }); }}
-              className="h-9 px-3 rounded-lg border border-[#d9e2ec] text-xs outline-none focus:border-[#E91E8C] text-gray-500"
+              className="h-9 px-3 rounded-lg border border-white/20 text-xs outline-none focus:border-white/40"
+              style={{ background: "rgba(13,27,42,0.6)", color: "white" }}
             >
               {MONTHS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
             </select>
-            <div className="flex items-center gap-1 bg-[#f8f9fc] rounded-lg p-0.5 border border-[#e8edf2]">
+            <div className="flex items-center gap-1 bg-white/10 rounded-lg p-0.5 border border-white/20">
               {["", "free", "paid"].map((pt) => (
                 <button key={pt} onClick={() => { setPriceType(pt); loadEvents({ ...buildFilters(), price_type: pt || undefined }); }}
                   className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all"
-                  style={{ background: priceType === pt ? "white" : "transparent", color: priceType === pt ? "#E91E8C" : "#94a3b8", boxShadow: priceType === pt ? "0 1px 4px rgba(0,0,0,0.08)" : "none" }}
+                  style={{ background: priceType === pt ? "rgba(255,255,255,0.2)" : "transparent", color: priceType === pt ? "#E91E8C" : "rgba(255,255,255,0.7)", boxShadow: priceType === pt ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}
                 >{pt === "" ? "All" : pt === "free" ? "Free" : "Paid"}</button>
               ))}
             </div>
             <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); loadEvents({ ...buildFilters(), sort_by: e.target.value || undefined }); }}
-              className="h-9 px-3 rounded-lg border border-[#d9e2ec] text-xs outline-none focus:border-[#E91E8C] text-gray-500"
+              className="h-9 px-3 rounded-lg border border-white/20 text-xs outline-none focus:border-white/40"
+              style={{ background: "rgba(13,27,42,0.6)", color: "white" }}
             >
               <option value="latest">Latest</option>
               <option value="soonest">Soonest</option>
               <option value="name">Name</option>
             </select>
             {filtersActive && (
-              <button onClick={handleReset} className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors">
+              <button onClick={handleReset} className="inline-flex items-center gap-1 text-xs font-medium text-white/60 hover:text-white transition-colors">
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
                 Clear
               </button>
@@ -322,8 +397,13 @@ function AttendContent() {
                             className="text-[11px] font-bold px-2.5 py-1 rounded-full shadow-sm"
                             style={{ background: isFree ? "#10b981" : "#E91E8C", color: "white" }}
                           >
-                            {isFree ? "FREE" : `₦${event.ticket_price!.toLocaleString()}`}
+                            {isFree ? "FREE" : `${getCurrencySymbol(event.currency || "NGN")}${event.ticket_price!.toLocaleString()}`}
                           </span>
+                        </div>
+                        {/* Action buttons overlay */}
+                        <div className="absolute bottom-3 left-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <ShareBtn event={event} />
+                          <BookmarkBtn event={event} />
                         </div>
                       </div>
 
@@ -363,6 +443,8 @@ function AttendContent() {
       </div>
 
       <Footer />
+
+      <ReminderBanner />
     </div>
   );
 }

@@ -26,10 +26,13 @@ out/
 *.sqlite3
 
 # Uploads
-uploads/*
+uploads/
+**/uploads/
 !uploads/.gitkeep
+!**/uploads/.gitkeep
 
-# IDE
+# AI / IDE
+.claude/
 .vscode/
 .idea/
 *.swp

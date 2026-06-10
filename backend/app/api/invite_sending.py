@@ -15,6 +15,7 @@ from app.models.event import Event
 from app.models.guest import Guest
 from app.models.invite import InviteBatch, InviteMessage
 from app.services.email_notifications import send_guest_invitation
+from app.api.messaging import _send_to_guest
 
 router = APIRouter()
 
@@ -56,7 +57,21 @@ async def send_invites(
     for guest in guests:
         for channel in req.channels:
             try:
-                if channel == "email" and guest.email:
+                has_contact = (channel == "email" and guest.email) or (channel in ("whatsapp", "sms") and guest.phone)
+                if not has_contact:
+                    send_results.append({
+                        "guest_id": guest.id,
+                        "channel": channel,
+                        "status": "failed",
+                        "reason": f"No {channel} contact info",
+                    })
+                    continue
+
+                batch = InviteBatch(event_id=event.id, channel=channel)
+                db.add(batch)
+                await db.flush()
+
+                if channel == "email":
                     rsvp_link = f"{settings.FRONTEND_URL}/rsvp/{guest.rsvp_token}"
                     await send_guest_invitation(
                         guest_email=guest.email,
@@ -77,25 +92,19 @@ async def send_invites(
                         "channel": channel,
                         "status": "sent",
                     })
-                elif channel == "whatsapp" and guest.phone:
-                    send_results.append({
-                        "guest_id": guest.id,
-                        "channel": channel,
-                        "status": "queued",
-                    })
-                elif channel == "sms" and guest.phone:
-                    send_results.append({
-                        "guest_id": guest.id,
-                        "channel": channel,
-                        "status": "queued",
-                    })
                 else:
+                    ok, status = await _send_to_guest(guest, event, channel, batch.id, db)
+                    if ok:
+                        guest.invite_sent = True
+                        invites_sent += 1
                     send_results.append({
                         "guest_id": guest.id,
                         "channel": channel,
-                        "status": "failed",
-                        "reason": f"No {channel} contact info",
+                        "status": status,
                     })
+
+                batch.total_sent = 1
+                batch.status = "completed"
             except Exception as e:
                 send_results.append({
                     "guest_id": guest.id,
