@@ -587,7 +587,7 @@ export default function CreateEventPage() {
         if (savedDraft) {
           try {
             const draft = JSON.parse(savedDraft);
-            setForm(draft.form || DEFAULT_FORM);
+            setForm({ ...DEFAULT_FORM, ...(draft.form || {}) });
             setPassPackages(draft.passPackages || [{ name: "Regular", price: "" }]);
             setSocialHandles(draft.socialHandles || [{ platform: "instagram", handle: "" }]);
             setLineup(draft.lineup || [{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
