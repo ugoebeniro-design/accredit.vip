@@ -52,6 +52,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setOnUnauthorized(() => {
       setUser(null);
+      localStorage.removeItem("user_data");
+      if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+        window.location.href = "/admin/login";
+      }
     });
   }, []);
 
@@ -75,23 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Try to fetch fresh user data from /auth/me
         try {
           const u = await apiClient<User>("/auth/me");
           setUser(u);
           localStorage.setItem("user_data", JSON.stringify(u));
         } catch {
-          // Fallback: restore user from localStorage if /auth/me fails
-          const stored = localStorage.getItem("user_data");
-          if (stored) {
-            try {
-              setUser(JSON.parse(stored));
-            } catch {
-              setUser(null);
-            }
-          } else {
-            setUser(null);
-          }
+          setUser(null);
+          localStorage.removeItem("user_data");
         }
       } finally {
         setLoading(false);

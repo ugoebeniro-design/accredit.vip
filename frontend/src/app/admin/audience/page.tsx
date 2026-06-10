@@ -69,8 +69,12 @@ export default function AdminAudiencePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!authLoading && user && user.role !== "super_admin") {
-      router.replace("/admin");
+    if (!authLoading) {
+      if (!user) {
+        router.push("/admin/login");
+      } else if (user.role !== "super_admin") {
+        router.replace("/admin");
+      }
     }
   }, [user, authLoading, router]);
 

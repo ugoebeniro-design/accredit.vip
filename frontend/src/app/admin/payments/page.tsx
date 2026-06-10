@@ -19,6 +19,14 @@ function maskEmail(email: string) {
 
 export default function AdminPaymentsPage() {
   const { user, loading: authLoading, logout } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && (!user || (user.role !== "admin" && user.role !== "super_admin"))) {
+      router.push("/admin/login");
+    }
+  }, [user, authLoading, router]);
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tab, setTab] = useState("payments");
   const [payments, setPayments] = useState<any[]>([]);
@@ -44,8 +52,7 @@ export default function AdminPaymentsPage() {
     fetchData();
   }, []);
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fc]"><Loader className="w-8 h-8 animate-spin text-[#E91E8C]" /></div>;
-  if (!user || (user.role !== "admin" && user.role !== "super_admin")) return null;
+  if (authLoading || !user) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fc]"><Loader className="w-8 h-8 animate-spin text-[#E91E8C]" /></div>;
 
   const displayData = tab === "payments" ? payments : deposits;
   const totalPages = Math.ceil(displayData.length / itemsPerPage);

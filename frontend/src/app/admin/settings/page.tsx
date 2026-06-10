@@ -31,6 +31,13 @@ function maskEmail(email: string) {
 export default function AdminSettingsPage() {
   const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && (!user || (user.role !== "admin" && user.role !== "super_admin"))) {
+      router.push("/admin/login");
+    }
+  }, [user, authLoading, router]);
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [tab, setTab] = useState<"profile" | "admins">("profile");
@@ -169,8 +176,7 @@ export default function AdminSettingsPage() {
     }
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fc]"><Loader className="w-8 h-8 animate-spin text-[#E91E8C]" /></div>;
-  if (!user || (user.role !== "admin" && user.role !== "super_admin")) return null;
+  if (authLoading || !user) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fc]"><Loader className="w-8 h-8 animate-spin text-[#E91E8C]" /></div>;
 
   return (
     <div className="min-h-screen bg-[#f8f9fc]">

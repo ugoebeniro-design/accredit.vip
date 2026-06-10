@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
 
 function VerifyContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const token = searchParams.get("token");
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
   const [message, setMessage] = useState("Verifying your account...");
@@ -25,12 +26,13 @@ function VerifyContent() {
       .then((res) => {
         setStatus("success");
         setMessage(res.message || "Account verified successfully!");
+        setTimeout(() => router.push("/dashboard"), 2000);
       })
       .catch((err) => {
         setStatus("error");
         setMessage(err instanceof Error ? err.message : "Verification failed.");
       });
-  }, [token]);
+  }, [token, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0D1B2A]">

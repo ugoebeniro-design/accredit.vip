@@ -188,7 +188,11 @@ export function HomePageClient() {
         50% { box-shadow: 0 0 0 8px rgba(233,30,140,0.1); }
       }
       @media (max-width: 639px) {
-        .hero-animated-bg { background-position: 50% -220px !important; }
+        .hero-animated-bg {
+          background-position: 50% 0 !important;
+          max-height: 100vh !important;
+          background-attachment: scroll !important;
+        }
       }
     `}</style>
 
@@ -201,8 +205,10 @@ export function HomePageClient() {
           backgroundImage: 'url(/hero-background.jpg)',
           backgroundColor: "#07101d",
           backgroundSize: "cover",
-          backgroundPosition: "center",
+          backgroundPosition: "center top",
+          backgroundAttachment: "fixed",
           minHeight: "100vh",
+          maxHeight: "100vh",
           display: "flex",
           flexDirection: "column",
         }}
