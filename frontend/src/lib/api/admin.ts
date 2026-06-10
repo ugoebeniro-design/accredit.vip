@@ -593,18 +593,6 @@ export type DataRequest = {
   resolved_at: string | null;
 };
 
-export async function getPendingReviewEvents(review_status?: string): Promise<EventReviewRecord[]> {
-  const params = new URLSearchParams();
-  if (review_status) params.set("review_status", review_status);
-  return apiClient(`/admin/events/pending-review?${params}`);
-}
-
-export async function reviewEvent(eventId: number, status: string, note?: string): Promise<{ message: string; event_id: number }> {
-  const params = new URLSearchParams({ status });
-  if (note) params.set("note", note);
-  return apiClient(`/admin/events/${eventId}/review?${params}`, { method: "PATCH" });
-}
-
 export async function getDataGroups(is_active?: boolean): Promise<DataGroup[]> {
   const params = new URLSearchParams();
   if (is_active !== undefined) params.set("is_active", String(is_active));

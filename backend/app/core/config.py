@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     TWILIO_WHATSAPP_FROM: str = ""
     WHATSAPP_CLOUD_TOKEN: str = ""
     WHATSAPP_CLOUD_PHONE_ID: str = ""
+    WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = ""
     SMTP_HOST: str = ""
     SMTP_PORT: int = 465
     SMTP_USERNAME: str = ""

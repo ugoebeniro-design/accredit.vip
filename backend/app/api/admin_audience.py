@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 import csv
 import io
 import json
+import secrets
 
 from app.core.database import get_db
 from app.core.security import get_current_user, verify_password
@@ -54,7 +55,6 @@ async def audience_verify_password(
     if not verify_password(password, admin.password_hash):
         await log_action(db, admin.id, "audience_auth_failed", "audience", description="Failed audience password verification")
         raise HTTPException(status_code=403, detail="Invalid password")
-    import secrets
     token = secrets.token_urlsafe(32)
     expires = datetime.now(timezone.utc) + AUDIENCE_SESSION_TTL
     request.app.state.__dict__[AUDIENCE_SESSION_PREFIX + str(admin.id)] = {
@@ -222,8 +222,6 @@ async def audience_export(
 
     filter_desc = f"search={search}, source={source}, is_hvp={is_hvp}, gender={gender}, age_bracket={age_bracket}"
     hdr = f"Exported by: {admin.full_name} ({admin.email}) at {datetime.now(timezone.utc).isoformat()}"
-    watermarked_rows = []
-
     if fmt == "json":
         data = [
             {

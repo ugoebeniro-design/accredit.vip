@@ -87,7 +87,7 @@ export default function AdminPage() {
       setDashboardData(overview);
       setRecentEvents(events);
     } catch (err) {
-      console.error("Failed to fetch dashboard data:", err);
+      // silently handled
     } finally {
       setDataLoading(false);
     }

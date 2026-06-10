@@ -182,7 +182,8 @@ export default function AdminAudiencePage() {
     setVerifying(true);
     try {
       const res = await apiClient<{ token: string; expires_at: string }>(
-        `/admin/audience/verify-password?password=${encodeURIComponent(password)}`
+        `/admin/audience/verify-password?password=${encodeURIComponent(password)}`,
+        { method: "POST" }
       );
       localStorage.setItem(AUDIENCE_TOKEN_KEY, res.token);
       localStorage.setItem(AUDIENCE_EXPIRES_KEY, res.expires_at);
@@ -201,7 +202,7 @@ export default function AdminAudiencePage() {
       await fetchStats();
       await fetchDemographics();
     } catch (err) {
-      console.error("Sync failed:", err);
+      /* silent */
     }
     setDataLoading(false);
   };
@@ -228,7 +229,7 @@ export default function AdminAudiencePage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("Export failed:", err);
+      /* silent */
     }
   };
 

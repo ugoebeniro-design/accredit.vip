@@ -1,6 +1,6 @@
 """Comprehensive admin dashboard for monitoring all activities."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
@@ -63,11 +63,11 @@ async def get_dashboard_overview(
     total_guests = total_guests.scalar() or 0
     
     active_events = await db.execute(
-        select(func.count(Event.id)).where(Event.event_date >= datetime.now().date())
+        select(func.count(Event.id)).where(Event.event_date >= datetime.now(timezone.utc).date())
     )
     active_events = active_events.scalar() or 0
     
-    week_ago = datetime.now() - timedelta(days=7)
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
     new_users = await db.execute(
         select(func.count(User.id)).where(User.created_at >= week_ago)
     )
@@ -112,7 +112,7 @@ async def list_all_clients(
         active_result = await db.execute(
             select(func.count(Event.id)).where(
                 Event.organizer_id == user.id,
-                Event.event_date >= datetime.now().date()
+                Event.event_date >= datetime.now(timezone.utc).date()
             )
         )
         active_events = active_result.scalar() or 0

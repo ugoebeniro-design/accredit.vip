@@ -58,7 +58,7 @@ async def whatsapp_webhook_verify(req: Request):
     mode = req.query_params.get("hub.mode")
     token = req.query_params.get("hub.verify_token")
     challenge = req.query_params.get("hub.challenge")
-    if mode == "subscribe" and token == "accredit_webhook_2024":
+    if mode == "subscribe" and token == settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN:
         return int(challenge)
     return {"error": "Verification failed"}
 
