@@ -108,7 +108,7 @@ export function EventsCarousel() {
         <div className="absolute right-0 top-0 bottom-0 z-20 flex items-center pr-4">
           <Link
             href="/attend"
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white shadow-md border border-[#E91E8C] hover:bg-[#fff1f8] transition-all no-underline group"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white shadow-md border border-[#E91E8C] hover:bg-[#fff1f8] transition-all no-underline group animate-bounce"
           >
             <span className="text-sm font-black text-[#E91E8C] tracking-wider whitespace-nowrap">SEE MORE</span>
             <svg className="w-5 h-5 text-[#E91E8C] group-hover:translate-x-1 transition-transform flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">

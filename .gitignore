@@ -48,6 +48,34 @@ test-create-flow.js
 frontend/test-create-flow.js
 frontend/screenshot-*.png
 
+# Root documentation (project-specific guides, not repo docs)
+/DASHBOARD_FIXES_SUMMARY.md
+/IMPLEMENTATION_COMPLETE.md
+/IMPLEMENTATION_GUIDE.md
+/PHONE_VALIDATION_GUIDE.md
+/QUICK_START_SECURITY.md
+/SECURITY_COMPLETION_SUMMARY.md
+/SECURITY_DEPLOYMENT_CHECKLIST.md
+/SECURITY_HARDENING_GUIDE.md
+/SECURITY_IMPLEMENTATION_COMPLETE.md
+/SECURITY_IMPLEMENTATION_ROADMAP.md
+/SECURITY_PATCHES.md
+/TRIAL_ABUSE_PREVENTION_GUIDE.md
+/TRIAL_ENFORCEMENT_SUMMARY.md
+/TRIAL_IMPLEMENTATION_FRONTEND.md
+
+# Root scripts
+/*.sh
+
+# Root images
+/*.png
+
+# Root logs
+/*.log
+
+# Deploy helpers
+/deploy/
+
 # Backend specific
 backend/app/__pycache__/
 backend/.venv/
