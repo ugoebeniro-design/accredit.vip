@@ -12,10 +12,24 @@ def generate_ticket_qr(
     ticket_reference: str,
     event_title: str,
     event_date: str,
+    image_data: bytes | None = None,
 ) -> str:
-    """Generate QR code for ticket and return as base64 image"""
+    """Generate QR code for ticket and return as base64 image.
+
+    If image_data is provided, generates styled QR with embedded image.
+    Otherwise falls back to simple black/white QR.
+    """
     qr_data = f"TICKET|{ticket_reference}|{event_title}|{event_date}"
 
+    # Try styled QR if image data available
+    if image_data:
+        try:
+            from app.services.qr_generator import generate_styled_qr
+            return generate_styled_qr(qr_data, image_data, size=300)
+        except Exception as e:
+            print(f"Warning: Failed to generate styled QR for ticket: {e}")
+
+    # Fallback to simple QR
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,

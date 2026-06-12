@@ -1,4 +1,4 @@
-import secrets, hmac, hashlib, json, io
+import secrets, hmac, hashlib, json, io, os
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
@@ -117,10 +117,23 @@ async def purchase_ticket(
         # Send ticket via email
         if purchase.buyer_email and event:
             try:
+                # Read event cover image for styled QR
+                image_data = None
+                if event.cover_image:
+                    try:
+                        upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
+                        image_path = os.path.join(upload_dir, os.path.basename(event.cover_image))
+                        if os.path.exists(image_path):
+                            with open(image_path, 'rb') as f:
+                                image_data = f.read()
+                    except Exception:
+                        pass
+
                 qr_code = generate_ticket_qr(
                     ticket_reference=reference,
                     event_title=event.title,
                     event_date=str(event.event_date),
+                    image_data=image_data,
                 )
                 await send_ticket_email(
                     buyer_email=purchase.buyer_email,
@@ -183,10 +196,23 @@ async def purchase_ticket(
         # Send free event ticket via email
         if purchase.buyer_email and event:
             try:
+                # Read event cover image for styled QR
+                image_data = None
+                if event.cover_image:
+                    try:
+                        upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
+                        image_path = os.path.join(upload_dir, os.path.basename(event.cover_image))
+                        if os.path.exists(image_path):
+                            with open(image_path, 'rb') as f:
+                                image_data = f.read()
+                    except Exception:
+                        pass
+
                 qr_code = generate_ticket_qr(
                     ticket_reference=reference,
                     event_title=event.title,
                     event_date=str(event.event_date),
+                    image_data=image_data,
                 )
                 await send_ticket_email(
                     buyer_email=purchase.buyer_email,
@@ -306,10 +332,23 @@ async def purchase_webhook(
         # Send ticket via email
         if purchase.buyer_email and event:
             try:
+                # Read event cover image for styled QR
+                image_data = None
+                if event.cover_image:
+                    try:
+                        upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
+                        image_path = os.path.join(upload_dir, os.path.basename(event.cover_image))
+                        if os.path.exists(image_path):
+                            with open(image_path, 'rb') as f:
+                                image_data = f.read()
+                    except Exception:
+                        pass
+
                 qr_code = generate_ticket_qr(
                     ticket_reference=reference,
                     event_title=event.title,
                     event_date=str(event.event_date),
+                    image_data=image_data,
                 )
                 await send_ticket_email(
                     buyer_email=purchase.buyer_email,
