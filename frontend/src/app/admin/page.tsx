@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts/auth-context";
@@ -68,7 +68,26 @@ export default function AdminPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
+  const [recovering, setRecovering] = useState(false);
+  const recoveredRef = useRef(false);
   const itemsPerPage = 10;
+
+  // Attempt recovery if user was lost mid-session
+  useEffect(() => {
+    if (!authLoading && !user && !recoveredRef.current) {
+      recoveredRef.current = true;
+      setRecovering(true);
+      apiClient<Record<string, unknown>>("/auth/me")
+        .then((u) => {
+          if (u.role === "admin" || u.role === "super_admin") {
+            localStorage.setItem("user_data", JSON.stringify(u));
+            window.location.reload();
+          }
+        })
+        .catch(() => {})
+        .finally(() => setRecovering(false));
+    }
+  }, [authLoading, user]);
 
   // Fetch admin dashboard data
   useEffect(() => {
@@ -115,7 +134,7 @@ export default function AdminPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || recovering) {
     return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fc]"><Loader className="w-8 h-8 animate-spin text-[#E91E8C]" /></div>;
   }
   if (user?.role === "admin" || user?.role === "super_admin") {

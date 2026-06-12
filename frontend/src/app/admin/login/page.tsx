@@ -45,7 +45,7 @@ export default function AdminLoginPage() {
       {/* Logo */}
       <Link href="/" className="mb-8 hover:opacity-80 transition-opacity">
         <Image
-          src="/logo-dark-trim.png"
+          src="/logo-trim.png"
           alt="accredit.vip"
           width={4071}
           height={761}
@@ -138,7 +138,7 @@ export default function AdminLoginPage() {
           <div className="mt-6 pt-6 border-t border-[#e8edf2] text-center">
             <p className="text-xs text-[#94a3b8]">
               Not an admin?{" "}
-              <Link href="/auth/login" className="font-bold text-[#E91E8C] hover:underline">
+              <Link href="/login" className="font-bold text-[#E91E8C] hover:underline">
                 User Login
               </Link>
             </p>

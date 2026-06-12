@@ -125,8 +125,47 @@ async def send_guest_invitation(
     host_name: str,
     rsvp_link: str,
     custom_message: Optional[str] = None,
+    dress_code: Optional[str] = None,
+    male_dress_code: Optional[str] = None,
+    female_dress_code: Optional[str] = None,
 ):
     """Send invitation email to guest with RSVP link."""
+    from datetime import datetime as _dt
+    # Format date nicely
+    try:
+        d = _dt.strptime(event_date.strip(), "%Y-%m-%d")
+        event_date = d.strftime("%A %B %d, %Y")
+    except (ValueError, TypeError, AttributeError):
+        pass
+    # Format time with timezone
+    tz_str = ""
+    for t in ["WAT", "UTC", "GMT", "EST", "PST"]:
+        if t in event_time:
+            tz_str = f" ({t})"
+            event_time = event_time.replace(t, "").strip()
+            break
+    try:
+        t = _dt.strptime(event_time.strip(), "%H:%M:%S")
+        hour, minute = t.hour, t.minute
+    except (ValueError, TypeError):
+        try:
+            t = _dt.strptime(event_time.strip(), "%H:%M")
+            hour, minute = t.hour, t.minute
+        except (ValueError, TypeError):
+            hour, minute = 0, 0
+    ampm = "AM" if hour < 12 else "PM"
+    h12 = hour if 1 <= hour <= 12 else (hour - 12 if hour > 12 else 12)
+    m_str = f":{minute:02d}" if minute else ""
+    event_time = f"{h12}{m_str} {ampm}{tz_str}"
+
+    dress_rows = ""
+    if dress_code:
+        dress_rows += f'<div class="detail-row"><span class="detail-label">👔 Dress Code:</span><span class="detail-value">{dress_code}</span></div>'
+    if male_dress_code:
+        dress_rows += f'<div class="detail-row"><span class="detail-label">👔 Men:</span><span class="detail-value">{male_dress_code}</span></div>'
+    if female_dress_code:
+        dress_rows += f'<div class="detail-row"><span class="detail-label">👗 Women:</span><span class="detail-value">{female_dress_code}</span></div>'
+
     html_content = f"""
     <html>
         <head>
@@ -142,10 +181,22 @@ async def send_guest_invitation(
                 .cta-button {{ display: inline-block; background: #E91E8C; color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; margin-top: 20px; font-weight: bold; font-size: 16px; }}
                 .footer {{ text-align: center; color: #94a3b8; font-size: 12px; margin-top: 30px; }}
                 .custom-message {{ background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }}
+                @keyframes accredit-text {{ 0%,10% {{ opacity:1; }} 20%,70% {{ opacity:1; }} 85%,100% {{ opacity:0; }} }}
+                @keyframes accredit-btn {{ 0%,35% {{ opacity:1; }} 45%,70% {{ opacity:1; }} 85%,100% {{ opacity:0; }} }}
+                @keyframes accredit-pulse {{ 0%,100% {{ box-shadow:0 0 0 0 rgba(233,30,140,0.3); }} 50% {{ box-shadow:0 0 0 12px rgba(233,30,140,0); }} }}
             </style>
         </head>
         <body>
             <div class="container">
+                <div style="background: linear-gradient(135deg, #E91E8C, #C4166F); padding: 28px 24px; text-align: center; border-radius: 12px; margin-bottom: 20px; min-height: 105px;">
+                    <div style="animation: accredit-text 6s ease-in-out infinite;">
+                        <p style="margin: 0; color: #fff; font-size: 20px; font-weight: bold; letter-spacing: 1px; font-family: Georgia, serif;">Accredit.vip</p>
+                    </div>
+                    <div style="animation: accredit-btn 6s ease-in-out infinite; margin-top: 14px;">
+                        <a href="https://accredit.vip" style="animation: accredit-pulse 2s infinite; display: inline-block; background: #ffffff; color: #E91E8C; padding: 12px 36px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 13px; font-family: Arial, sans-serif; letter-spacing: 1px;">Register Now</a>
+                    </div>
+                </div>
+
                 <div class="header">
                     <h1 style="margin: 0;">You're Invited!</h1>
                     <p style="margin: 10px 0 0 0; opacity: 0.9;">Join us for {event_title}</p>
@@ -169,6 +220,7 @@ async def send_guest_invitation(
                             <span class="detail-label">📍 Venue:</span>
                             <span class="detail-value">{venue}</span>
                         </div>
+                        {dress_rows}
                     </div>
 
                     {f'''<div class="custom-message">

@@ -116,9 +116,48 @@ class FileUploadSecurityService:
         """Generate a safe filename for storage"""
         import uuid
 
-        # Extract extension
         _, ext = os.path.splitext(original_filename)
-
-        # Generate safe filename with user ID and UUID
         safe_name = f"{user_id}_{uuid.uuid4().hex}{ext.lower()}"
         return safe_name
+
+
+def resize_and_save(image_data: bytes, filepath: str, max_dim: int = 1200) -> str | None:
+    """Resize image to max_dim on longest side, maintaining aspect ratio, then save.
+    Re-encodes as JPEG for consistency. Returns filepath on success."""
+    try:
+        from PIL import Image
+        import io
+        img = Image.open(io.BytesIO(image_data))
+        img = img.convert("RGB")
+        w, h = img.size
+        if w > max_dim or h > max_dim:
+            if w > h:
+                new_w = max_dim
+                new_h = int(h * max_dim / w)
+            else:
+                new_h = max_dim
+                new_w = int(w * max_dim / h)
+            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=85, optimize=True)
+        out.seek(0)
+        # Change extension to .jpg
+        import os
+        base, _ = os.path.splitext(filepath)
+        jpg_path = base + ".jpg"
+        with open(jpg_path, "wb") as f:
+            f.write(out.getvalue())
+        if jpg_path != filepath:
+            try:
+                os.remove(filepath)
+            except OSError:
+                pass
+        return jpg_path
+    except Exception:
+        # Fallback: save original
+        try:
+            with open(filepath, "wb") as f:
+                f.write(image_data)
+            return filepath
+        except Exception:
+            return None

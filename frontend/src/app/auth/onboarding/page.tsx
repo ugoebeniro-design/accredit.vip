@@ -184,7 +184,7 @@ function OnboardingContent() {
                   Create an account to save your {trialEvent?.mode === "invite" ? "invitation" : "event"} and send to more people
                 </p>
                 <Link
-                  href="/auth/signup"
+                  href="/register"
                   className="block w-full py-3 rounded-xl bg-[#E91E8C] text-white font-bold text-center hover:bg-[#C4166F] transition-colors"
                 >
                   Create Account
@@ -213,7 +213,7 @@ function OnboardingContent() {
                   Login to access your {trialEvent?.mode === "invite" ? "invitation" : "event"} and dashboard
                 </p>
                 <Link
-                  href="/auth/login"
+                  href="/login"
                   className="block w-full py-3 rounded-xl bg-[#E91E8C] text-white font-bold text-center hover:bg-[#C4166F] transition-colors"
                 >
                   Login

@@ -11,6 +11,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
+from app.services.file_upload_security import resize_and_save
 
 logger = logging.getLogger(__name__)
 
@@ -113,9 +114,9 @@ async def migrate_trial_events(
                         img_data = img_data.split(",")[1]
                     decoded = base64.b64decode(img_data)
                     img_filename = f"trial_upload_{event.id}.png"
-                    with open(os.path.join(upload_dir, img_filename), "wb") as f:
-                        f.write(decoded)
-                    event.cover_image = f"/uploads/{img_filename}"
+                    saved = resize_and_save(decoded, os.path.join(upload_dir, img_filename))
+                    if saved:
+                        event.cover_image = f"/uploads/{os.path.basename(saved)}"
                 except Exception as img_err:
                     logger.warning("Failed to save trial image for event %s: %s", event.id, img_err)
 

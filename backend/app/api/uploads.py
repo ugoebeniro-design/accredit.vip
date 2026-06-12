@@ -8,7 +8,7 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
 from app.models.flier import FlierAsset
-from app.services.file_upload_security import FileUploadSecurityService, MAX_UPLOAD_SIZE
+from app.services.file_upload_security import FileUploadSecurityService, MAX_UPLOAD_SIZE, resize_and_save
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +45,11 @@ async def upload_cover(
     filepath = os.path.join(UPLOAD_DIR, filename)
 
     content = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(content)
+    saved_path = resize_and_save(content, filepath)
+    if not saved_path:
+        raise HTTPException(status_code=500, detail="Failed to save image")
 
-    url = f"/uploads/{filename}"
+    url = f"/uploads/{os.path.basename(saved_path)}"
     event.cover_image = url
     await db.commit()
 
@@ -80,10 +81,11 @@ async def upload_flier(
     filepath = os.path.join(UPLOAD_DIR, filename)
 
     content = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(content)
+    saved_path = resize_and_save(content, filepath)
+    if not saved_path:
+        raise HTTPException(status_code=500, detail="Failed to save image")
 
-    url = f"/uploads/{filename}"
+    url = f"/uploads/{os.path.basename(saved_path)}"
     asset = FlierAsset(event_id=event.id, variant=variant, url=url)
     db.add(asset)
     await db.commit()

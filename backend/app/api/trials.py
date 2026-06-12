@@ -4,6 +4,7 @@ import json
 import os
 from datetime import datetime
 
+from datetime import date, time, datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -11,15 +12,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_optional_current_user
+from app.models.event import Event
+from app.models.guest import Guest
 from app.models.trial_usage import TrialUsage
 from app.models.user import User
-from app.services.email_service import send_email, send_email_with_images
-from app.services.ai_service import generate_flier_image
+from app.services.email_service import send_email
 from app.services.whatsapp_service import send_whatsapp
 from app.services.sms_service import send_sms
-from app.services.qr_service import qr_gif_to_base64, qr_gif_to_url
+from app.services.qr_service import qr_to_base64, qr_to_url
 from app.services.trial_enforcement import TrialEnforcementService
+from app.services.file_upload_security import resize_and_save
 
 router = APIRouter()
 
@@ -44,6 +47,123 @@ def _client_hash(request: Request) -> str:
     ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
     ua = request.headers.get("user-agent", "unknown")
     return _hash(f"{ip}:{ua}")
+
+
+def _parse_date(val: str | None) -> date | None:
+    if not val:
+        return None
+    try:
+        return datetime.strptime(val.strip(), "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        pass
+    try:
+        return datetime.strptime(val.strip(), "%m/%d/%Y").date()
+    except (ValueError, TypeError):
+        pass
+    try:
+        return datetime.strptime(val.strip(), "%B %d, %Y").date()
+    except (ValueError, TypeError):
+        pass
+    try:
+        return datetime.strptime(val.strip(), "%d %B %Y").date()
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
+def _format_date(val: str | None) -> str:
+    parsed = _parse_date(val)
+    if parsed:
+        return parsed.strftime("%A %B %d, %Y")
+    return val or "TBD"
+
+
+def _dress_code_rows(payload: dict) -> str:
+    """Return HTML <tr> rows for dress code(s)."""
+    dc = payload.get("dress_code") or ""
+    mdc = payload.get("male_dress_code") or ""
+    fdc = payload.get("female_dress_code") or ""
+    rows = ""
+    if dc:
+        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>DRESS CODE</td><td style='padding:8px 0;font-size:14px;font-weight:bold'>{dc}</td></tr>"
+    if mdc:
+        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>MEN</td><td style='padding:8px 0;font-size:14px;font-weight:bold'>{mdc}</td></tr>"
+    if fdc:
+        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>WOMEN</td><td style='padding:8px 0;font-size:14px;font-weight:bold'>{fdc}</td></tr>"
+    return rows
+
+
+def _format_time(val: str | None, tz: str | None = None) -> str:
+    if not val:
+        return "TBD"
+    try:
+        t = datetime.strptime(val.strip(), "%H:%M").time()
+    except (ValueError, TypeError):
+        try:
+            t = datetime.strptime(val.strip(), "%I:%M %p").time()
+        except (ValueError, TypeError):
+            return (val or "TBD") + (f" ({tz})" if tz else "")
+    hour = t.hour
+    minute = t.minute
+    ampm = "AM" if hour < 12 else "PM"
+    h12 = hour if 1 <= hour <= 12 else (hour - 12 if hour > 12 else 12)
+    m_str = f":{minute:02d}" if minute else ""
+    return f"{h12}{m_str} {ampm}" + (f" ({tz})" if tz else "")
+
+
+def _parse_time(val: str | None) -> time | None:
+    if not val:
+        return None
+    try:
+        return datetime.strptime(val.strip(), "%H:%M").time()
+    except (ValueError, TypeError):
+        pass
+    try:
+        return datetime.strptime(val.strip(), "%I:%M %p").time()
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
+async def _maybe_create_event(req: TrialUseRequest, user: User, flyer_url: str | None, db: AsyncSession) -> int | None:
+    p = req.payload
+    ed = _parse_date(p.get("event_date"))
+    et = _parse_time(p.get("event_time"))
+    event = Event(
+        organizer_id=user.id,
+        title=p.get("title") or "Untitled Event",
+        event_type=p.get("event_type") or p.get("category") or "other",
+        host_name=p.get("host_name") or "",
+        event_date=ed or date.today(),
+        event_time=et or time(0, 0),
+        venue=p.get("venue") or "TBD",
+        city=p.get("city") or "",
+        state=p.get("state") or "",
+        country=p.get("country") or "Nigeria",
+        description=p.get("description") or "",
+        dress_code=p.get("dress_code") or "",
+        guest_count_range=p.get("guest_count") or p.get("guest_count_range") or "1-50",
+        status="draft",
+        cover_image=flyer_url or "",
+    )
+    if p.get("pass_packages"):
+        event.pass_packages = p.get("pass_packages")
+    if p.get("lineup"):
+        event.lineup = p.get("lineup")
+    db.add(event)
+    await db.flush()
+    test_email = p.get("test_email") or ""
+    test_phone = p.get("test_phone") or ""
+    if req.trial_type == "invite" and test_email:
+        guest = Guest(
+            event_id=event.id,
+            name=p.get("guest_name") or p.get("host_name") or "Guest",
+            email=test_email,
+            phone=test_phone,
+            rsvp_status="pending",
+        )
+        db.add(guest)
+    return event.id
 
 
 def _payload_summary(payload: dict) -> str:
@@ -85,6 +205,7 @@ async def use_trial(
     req: TrialUseRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_optional_current_user),
 ):
     if req.trial_type not in ALLOWED_TRIAL_TYPES:
         raise HTTPException(status_code=400, detail="Invalid trial type")
@@ -107,6 +228,7 @@ async def use_trial(
         "allowed": False,
         "message": "Trial used. Create an account to continue.",
     }
+    event_id = None
 
     # Handle invite trial - generate and send flyer via all channels
     if req.trial_type == "invite":
@@ -116,7 +238,7 @@ async def use_trial(
             raise HTTPException(status_code=400, detail="Email address required for invite test")
 
         title = req.payload.get("title", "Our Special Event")
-        host_name = req.payload.get("host_name", "The Host")
+        host_name = req.payload.get("host_name", "") or ""
         event_date = req.payload.get("event_date", "TBD")
         event_time = req.payload.get("event_time", "TBD")
         description = req.payload.get("description", "Join us for an unforgettable experience!")
@@ -124,63 +246,93 @@ async def use_trial(
         guest_count = req.payload.get("guest_count", "100+")
         invite_template = req.payload.get("invite_template")
         qr_delivery = req.payload.get("qr_delivery", "with_qr")
-        qr_style = req.payload.get("qr_style", "pulsing")
+        # Support client-uploaded flier (base64 data URL)
+        uploaded_image_data = req.payload.get("uploaded_image_data") or req.payload.get("uploadedImageData") or ""
+        invitation_message_text = req.payload.get("invitation_message") or description
 
-        # Define template-specific prompts
-        template_prompts = {
-            "elegant": f'Elegant, sophisticated invitation flyer for "{title}" hosted by {host_name}. Date: {event_date} at {event_time}. Refined fonts, classic colors, luxury aesthetic. Professional and classy design.',
-            "bold": f'Bold, eye-catching invitation for "{title}". Vibrant colors, modern typography, energetic design. Make it stand out!',
-            "minimal": f'Minimalist invitation for "{title}". Clean, simple design with plenty of white space. Professional and modern.',
-            "vibrant": f'Colorful and fun invitation for "{title}". Playful design, vibrant colors, joyful atmosphere.',
-            "corporate": f'Professional corporate invitation for "{title}". Business-ready style, clean layout, formal appearance.',
-        }
+        # Save client-uploaded flier if provided
+        flyer_url = None
+        if uploaded_image_data and "," in uploaded_image_data:
+            try:
+                import base64 as b64
+                import re
+                header, data = uploaded_image_data.split(",", 1)
+                ext_match = re.search(r"image/(\w+)", header)
+                ext = ext_match.group(1) if ext_match else "png"
+                img_data = b64.b64decode(data)
+                upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "fliers")
+                os.makedirs(upload_dir, exist_ok=True)
+                fname = f"trial_flier_{int(datetime.now().timestamp())}.{ext}"
+                fpath = os.path.join(upload_dir, fname)
+                saved = resize_and_save(img_data, fpath)
+                flyer_url = f"/uploads/fliers/{os.path.basename(saved)}" if saved else None
+            except Exception:
+                flyer_url = None
 
-        # Use template prompt if selected, otherwise use default
-        if invite_template and invite_template in template_prompts:
-            prompt = template_prompts[invite_template]
-        else:
-            prompt = f'Premium invitation flyer for "{title}" hosted by {host_name}. Date: {event_date} at {event_time}. Beautiful design optimized for mobile phones.'
-
-        prompt += f" Include all event details visible at a glance. Message: {description}"
-
-        # Generate invitation flyer image based on template (non-blocking)
-        flyer_url = await generate_flier_image(prompt)
-
-        # Generate animated QR code if QR delivery is enabled
+        # Generate QR code with event flyer overlay
         animated_qr_url = None
         if qr_delivery in ["with_qr", "qr_later"]:
             qr_data = f"accredit://invite/test/{int(datetime.now().timestamp())}"
-            base_url = qr_gif_to_url(qr_data, size=250, style=qr_style)
+            flyer_path = None
+            if flyer_url:
+                flyer_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), flyer_url.lstrip("/"))
+            base_url = qr_to_url(qr_data, image_path=flyer_path, size=250)
             if base_url:
                 animated_qr_url = base_url
             else:
-                animated_qr_url = qr_gif_to_base64(qr_data, size=250, style=qr_style)
+                animated_qr_url = qr_to_base64(qr_data)
 
         # Send test invite flyer via all selected channels
         sent_channels = []
 
-        # Send via email - embed flyer + QR as inline images (works in all email clients)
+        # Send via email - use public URLs for images
         if "email" in delivery_channels:
-            upload_base = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
-            email_images = []
-            qr_cid = ""
             qr_section = ""
             if animated_qr_url:
-                qr_cid = "qr_code"
-                qr_path = os.path.join(upload_base, "qrs", os.path.basename(animated_qr_url.rstrip("/").split("/")[-1]))
+                absolute_qr = f"{settings.BACKEND_URL}{animated_qr_url}" if animated_qr_url.startswith("/") else animated_qr_url
                 qr_section = f"""
                 <div style="text-align: center; padding: 20px; background: #f0f0f0; border-top: 2px solid #E91E8C;">
                     <p style="color: #666; font-size: 14px; margin: 0 0 15px 0; font-weight: bold;">YOUR UNIQUE ENTRY CODE</p>
-                    <img src="cid:{qr_cid}" alt="Entry QR Code" style="width: 250px; height: 250px;" />
+                    <img src="{absolute_qr}" alt="Entry QR Code" style="width: 250px; height: 250px;" />
                     <p style="color: #999; font-size: 12px; margin: 15px 0 0 0;">Show this code at the gate to enter</p>
                 </div>
                 """
-                email_images.append((qr_cid, qr_path))
+
+            # Build guest section (mocks what real invites show)
+            formatted_date = _format_date(event_date)
+            tz = req.payload.get("timezone", "")
+            if "|" in tz:
+                tz = tz.split("|")[1].strip()
+            formatted_time = _format_time(event_time, tz or None)
+            dc_rows = _dress_code_rows(req.payload)
+            guest_section = f"""
+                <div style="padding:32px 28px;background:#ffffff">
+                    <p style="font-size:13px;color:#888;text-transform:uppercase;letter-spacing:2px;margin:0 0 4px">You are cordially invited to</p>
+                    <h1 style="font-size:28px;color:#07182f;margin:0 0 16px;line-height:1.2">{title}</h1>
+                    <p style="font-size:15px;color:#555;line-height:1.6;margin:0 0 20px">{invitation_message_text}</p>
+                    <table style="width:100%;border-collapse:collapse;margin:0 0 24px">
+                        <tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">DATE</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{formatted_date}</td></tr>
+                        <tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">TIME</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{formatted_time}</td></tr>
+                        {"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>HOST</td><td style='padding:8px 0;font-size:14px;font-weight:bold'>" + host_name + "</td></tr>" if host_name else ""}
+                        {dc_rows}
+                    </table>
+                    <div style="text-align:center;margin:24px 0">
+                        <a href="{settings.FRONTEND_URL}" style="display:inline-block;background:#E91E8C;color:#fff;padding:14px 40px;border-radius:50px;text-decoration:none;font-weight:bold;font-size:15px;font-family:Arial,sans-serif">RSVP NOW</a>
+                    </div>
+                    {qr_section}
+                </div>
+            """
+
+            def _brand_banner():
+                return f"""<div style="background:linear-gradient(135deg,#E91E8C,#C4166F);padding:28px 24px;text-align:center;min-height:105px">
+                    <div style="animation:accredit-text 6s ease-in-out infinite"><p style="margin:0;color:#fff;font-size:20px;font-weight:bold;letter-spacing:1px;font-family:Georgia,serif">Accredit.vip</p></div>
+                    <div style="animation:accredit-btn 6s ease-in-out infinite;margin-top:14px"><a href="https://accredit.vip" style="animation:accredit-pulse 2s infinite;display:inline-block;background:#ffffff;color:#E91E8C;padding:12px 36px;border-radius:50px;text-decoration:none;font-weight:bold;font-size:13px;font-family:Arial,sans-serif;letter-spacing:1px">Register Now</a></div>
+                </div>"""
+
+            brand_html = _brand_banner()
 
             if flyer_url:
-                flyer_cid = "flyer"
-                flyer_path = os.path.join(upload_base, "fliers", os.path.basename(flyer_url.rstrip("/").split("/")[-1]))
-                email_images.insert(0, (flyer_cid, flyer_path))
+                absolute_flyer = f"{settings.BACKEND_URL}{flyer_url}" if flyer_url.startswith("/") else flyer_url
                 html = f"""
                 <html>
                 <head>
@@ -189,12 +341,16 @@ async def use_trial(
                         .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
                         .flyer {{ width: 100%; max-width: 500px; display: block; }}
                         .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #999; background: #f8f9fc; }}
+                        @keyframes accredit-text {{ 0%,10% {{ opacity:1; }} 20%,70% {{ opacity:1; }} 85%,100% {{ opacity:0; }} }}
+                        @keyframes accredit-btn {{ 0%,35% {{ opacity:1; }} 45%,70% {{ opacity:1; }} 85%,100% {{ opacity:0; }} }}
+                        @keyframes accredit-pulse {{ 0%,100% {{ box-shadow:0 0 0 0 rgba(233,30,140,0.3); }} 50% {{ box-shadow:0 0 0 12px rgba(233,30,140,0); }} }}
                     </style>
                 </head>
                 <body>
                     <div class="container">
-                        <img src="cid:{flyer_cid}" alt="{title}" class="flyer" />
-                        {qr_section}
+                        {brand_html}
+                        <img src="{absolute_flyer}" alt="{title}" class="flyer" />
+                        {guest_section}
                         <div class="footer">
                             <p><strong>This is a TEST invitation preview</strong></p>
                             <p>This is exactly how your guests will see your invitation when you send it for real.</p>
@@ -211,24 +367,16 @@ async def use_trial(
                     <style>
                         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
                         .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-                        .content {{ padding: 30px; }}
                         .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #999; background: #f8f9fc; }}
-                        h2 {{ color: #E91E8C; margin: 0 0 10px; }}
-                        .details {{ color: #23466f; line-height: 1.8; }}
+                        @keyframes accredit-text {{ 0%,10% {{ opacity:1; }} 20%,70% {{ opacity:1; }} 85%,100% {{ opacity:0; }} }}
+                        @keyframes accredit-btn {{ 0%,35% {{ opacity:1; }} 45%,70% {{ opacity:1; }} 85%,100% {{ opacity:0; }} }}
+                        @keyframes accredit-pulse {{ 0%,100% {{ box-shadow:0 0 0 0 rgba(233,30,140,0.3); }} 50% {{ box-shadow:0 0 0 12px rgba(233,30,140,0); }} }}
                     </style>
                 </head>
                 <body>
                     <div class="container">
-                        <div class="content">
-                            <h2>{title}</h2>
-                            <p class="details">
-                                <strong>Host:</strong> {host_name}<br />
-                                <strong>Date:</strong> {event_date}<br />
-                                <strong>Time:</strong> {event_time}<br />
-                                <strong>Description:</strong> {description}
-                            </p>
-                            {qr_section}
-                        </div>
+                        {brand_html}
+                        {guest_section}
                         <div class="footer">
                             <p><strong>This is a TEST invitation preview</strong></p>
                             <p>Create an account at Accredit.vip to send real invitations to your guest list.</p>
@@ -237,16 +385,13 @@ async def use_trial(
                 </body>
                 </html>
                 """
-            if email_images:
-                asyncio.create_task(send_email_with_images(test_email, f"Your Test Invitation: {title}", html, email_images))
-            else:
-                asyncio.create_task(send_email(test_email, f"Your Test Invitation: {title}", html))
+            asyncio.create_task(send_email(test_email, f"Your Test Invitation: {title}", html))
             sent_channels.append("Email")
 
         # Send via WhatsApp - try with media image, fallback to text-only
         if "whatsapp" in delivery_channels:
             send_to = test_phone or test_email
-            whatsapp_msg = f"🎉 {title}\n\nYou're invited by {host_name}!\n{event_date} at {event_time}\n\n— Test preview by Accredit.vip"
+            whatsapp_msg = f"🎉 {title}\n\n{host_name + ' invites you!' if host_name else 'You are invited!'}\n{event_date} at {event_time}\n\n— Test preview by Accredit.vip"
             if flyer_url:
                 ok = await send_whatsapp(send_to, whatsapp_msg, media_url=flyer_url)
                 if not ok:
@@ -274,23 +419,38 @@ async def use_trial(
         if animated_qr_url:
             response["has_qr"] = True
 
-    # Handle event trial - generate flier preview
+    # Handle event trial - use uploaded flier or skip
     elif req.trial_type == "event":
         title = req.payload.get("title", "Upcoming Event")
         venue = req.payload.get("venue", "TBD")
         category = req.payload.get("category", "Event")
         event_date = req.payload.get("event_date", "TBD")
 
-        # Generate flier prompt
-        flier_prompt = f'Event poster for "{title}". Category: {category}. Location: {venue}. Date: {event_date}. Professional event marketing design.'
+        # Use client-uploaded flier if available
+        flyer_url = None
+        uploaded_image_data = req.payload.get("uploaded_image_data") or req.payload.get("uploadedImageData") or ""
+        if uploaded_image_data and "," in uploaded_image_data:
+            try:
+                import base64 as b64
+                import re
+                header, data = uploaded_image_data.split(",", 1)
+                ext_match = re.search(r"image/(\w+)", header)
+                ext = ext_match.group(1) if ext_match else "png"
+                img_data = b64.b64decode(data)
+                upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "fliers")
+                os.makedirs(upload_dir, exist_ok=True)
+                fname = f"trial_flier_{int(datetime.now().timestamp())}.{ext}"
+                fpath = os.path.join(upload_dir, fname)
+                saved = resize_and_save(img_data, fpath)
+                flyer_url = f"/uploads/fliers/{os.path.basename(saved)}" if saved else None
+                if flyer_url:
+                    response["flier_url"] = flyer_url
+            except Exception:
+                pass
 
-        # Generate flier image
-        flier_url = await generate_flier_image(flier_prompt)
-        if flier_url:
-            response["flier_url"] = flier_url
-        else:
-            # Fallback if image generation fails
-            response["message"] = "Event preview generated. Image generation is currently unavailable, but you can see the event details above."
+    # Create Event + Guest records if user is authenticated
+    if user:
+        event_id = await _maybe_create_event(req, user, flyer_url, db)
 
     # SECURITY: Detect multi-account abuse
     abuse = await TrialEnforcementService.detect_multi_account_abuse(
@@ -311,5 +471,8 @@ async def use_trial(
     )
     db.add(usage)
     await db.commit()
+
+    if event_id:
+        response["event_id"] = event_id
 
     return response

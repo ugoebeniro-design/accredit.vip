@@ -7,11 +7,12 @@ import { ChevronDown, MapPin, Calendar } from "lucide-react";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { apiClient } from "@/lib/api-client";
-import { aiChat, generateFlier, parseFlier } from "@/lib/api/ai";
+import { generateFlier } from "@/lib/api/ai";
 import { TrialStore } from "@/lib/trial-store";
 import { CURRENCIES, getCurrencySymbol } from "@/lib/event-form-options";
 import { formatCurrencyAmount } from "@/lib/currencies";
 import { VenueInput } from "@/components/shared/venue-input";
+import Tesseract from "tesseract.js";
 
 const DRAFT_KEY = "accredit_event_draft";
 const DRAFT_KEYS: Record<string, string> = { invite: "accredit_draft_invite", event: "accredit_draft_event" };
@@ -48,13 +49,12 @@ const DEFAULT_FORM = {
   uploaded_image_name: "",
   image_prompt: "",
   custom_category: "",
+  custom_event_type: "",
   generated_image_ready: false,
   generated_image_url: "",
   description: "",
   qr_message: "",
   invite_template: "elegant" as InviteTemplate | null,
-  qr_style: "pulsing" as QRStyle,
-  event_template: null as EventTemplate,
 };
 
 type Mode = "invite" | "event";
@@ -62,8 +62,6 @@ type Channel = "email" | "whatsapp" | "sms";
 type QrDeliveryOption = "with_qr" | "without_qr" | "qr_later";
 type SocialPlatform = "instagram" | "x" | "facebook" | "tiktok" | "linkedin" | "website" | "other";
 type InviteTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate";
-type QRStyle = "pulsing" | "rotating" | "gradient" | "neon" | "bounce" | "scanner" | "ripple" | "sparkle" | "custom";
-type EventTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate" | null;
 type SocialHandle = { platform: SocialPlatform; handle: string };
 type PassPackage = { name: string; price: string };
 type LineupPerson = {
@@ -190,107 +188,7 @@ const inviteTemplates: Array<{
   },
 ];
 
-const qrStyles: Array<{ value: string; label: string; description: string; bestFor: string; icon: (props: any) => React.ReactNode }> = [
-  {
-    value: "pulsing",
-    label: "Pulsing",
-    description: "Subtle glow with pulsing animation",
-    bestFor: "Elegant, premium feel",
-    icon: ({ className }: any) => (
-      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-  {
-    value: "rotating",
-    label: "Rotating",
-    description: "Spinning QR with rotation effect",
-    bestFor: "Dynamic, attention-grabbing",
-    icon: ({ className }: any) => (
-      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-    ),
-  },
-  {
-    value: "gradient",
-    label: "Gradient",
-    description: "Color shift animation",
-    bestFor: "Modern, vibrant events",
-    icon: ({ className }: any) => (
-      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-      </svg>
-    ),
-  },
-  {
-    value: "neon",
-    label: "Neon",
-    description: "Bright neon glow effect",
-    bestFor: "Nightlife, parties, concerts",
-    icon: ({ className }: any) => (
-      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-  },
-  {
-    value: "bounce",
-    label: "Bounce",
-    description: "Bouncing/scaling animation",
-    bestFor: "Fun, playful events",
-    icon: ({ className }: any) => (
-      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-      </svg>
-    ),
-  },
-  {
-    value: "scanner",
-    label: "Scanner",
-    description: "Scanning beam moving top-to-bottom",
-    bestFor: "Tech, futuristic events",
-    icon: ({ className }: any) => (
-      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    value: "ripple",
-    label: "Ripple",
-    description: "Expanding circular ripple from center",
-    bestFor: "Concert, festival vibes",
-    icon: ({ className }: any) => (
-      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M20 12a8 8 0 11-16 0 8 8 0 0116 0zM12 10a2 2 0 100 4 2 2 0 000-4z" />
-      </svg>
-    ),
-  },
-  {
-    value: "sparkle",
-    label: "Sparkle",
-    description: "Sparkling dots across the QR",
-    bestFor: "Luxury, premium events",
-    icon: ({ className }: any) => (
-      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-      </svg>
-    ),
-  },
-  {
-    value: "custom",
-    label: "Use My Own",
-    description: "Upload your custom QR code",
-    bestFor: "Branded, unique design",
-    icon: ({ className }: any) => (
-      <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-      </svg>
-    ),
-  },
-];
+
 
 const guestRanges = [
   { label: "1 - 100", min: 1, max: 100, units: 1 },
@@ -490,33 +388,24 @@ const templateStyles: Record<string, { headerBg: string; bodyBg: string; fontCla
   corporate: { headerBg: "#0D1B2A", bodyBg: "#fff", fontClass: "font-sans", accent: "#0D1B2A", textColor: "#ffffff" },
 };
 
-const qrStyleConfig: Record<string, { wrapper: string; square: string }> = {
-  pulsing: { wrapper: "animate-pulse", square: "" },
-  rotating: { wrapper: "animate-spin [animation-duration:3s]", square: "" },
-  gradient: { wrapper: "", square: "bg-gradient-to-br from-[#E91E8C] to-[#07182f]" },
-  neon: { wrapper: "", square: "bg-[#00ff88] shadow-[0_0_6px_#00ff88]" },
-  bounce: { wrapper: "", square: "animate-bounce" },
-  scanner: { wrapper: "animate-pulse", square: "bg-[#E91E8C]" },
-  ripple: { wrapper: "", square: "bg-gradient-to-br from-[#E91E8C] to-[#7C3AED] animate-ping" },
-  sparkle: { wrapper: "animate-pulse", square: "bg-[#FFD700] shadow-[0_0_4px_#FFD700]" },
-};
+
 
 export default function CreateEventPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode | null>(null);
   const [step, setStep] = useState(0);
   const [formPage, setFormPage] = useState(0);
-  const totalFormPages = 3;
+  const totalFormPages = 2;
   const [fingerprint, setFingerprint] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [usedTrials, setUsedTrials] = useState<Record<Mode, boolean>>({ invite: false, event: false });
   const [submitting, setSubmitting] = useState(false);
-  const [aiGenerating, setAiGenerating] = useState(false);
   const [aiImageGenerating, setAiImageGenerating] = useState(false);
   const [uploadedImagePreviewUrl, setUploadedImagePreviewUrl] = useState<string | null>(null);
   const [uploadedImageData, setUploadedImageData] = useState<string | null>(null);
   const [locationData, setLocationData] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
   const [trialComplete, setTrialComplete] = useState(false);
+  const [trialEventId, setTrialEventId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [form, setForm] = useState({ ...DEFAULT_FORM });
@@ -544,11 +433,8 @@ export default function CreateEventPage() {
   // Controlled open state for collapsible details
   const [inviteTemplateOpen, setInviteTemplateOpen] = useState(false);
   const [qrDetailsOpen, setQrDetailsOpen] = useState(false);
-  const [eventTemplateOpen, setEventTemplateOpen] = useState(false);
-
   // AI generation errors
   const [aiImageError, setAiImageError] = useState("");
-  const [aiGenerateError, setAiGenerateError] = useState("");
 
   // Flier upload / parse state
   const [flierParsing, setFlierParsing] = useState(false);
@@ -579,42 +465,71 @@ export default function CreateEventPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setFingerprint(getTrialFingerprint());
-
-      const lastMode = localStorage.getItem("accredit_last_mode") as Mode | null;
-      if (lastMode && ["invite", "event"].includes(lastMode)) {
-        setMode(lastMode);
-        const savedDraft = localStorage.getItem(DRAFT_KEYS[lastMode]);
-        if (savedDraft) {
-          try {
-            const draft = JSON.parse(savedDraft);
-            setForm({ ...DEFAULT_FORM, ...(draft.form || {}) });
-            setPassPackages(draft.passPackages || [{ name: "Regular", price: "" }]);
-            setSocialHandles(draft.socialHandles || [{ platform: "instagram", handle: "" }]);
-            setLineup(draft.lineup || [{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
-            setUploadedImageData(draft.uploadedImageData || null);
-          } catch {}
-        }
-        const lastStep = localStorage.getItem("accredit_create_step");
-        if (lastStep) setStep(parseInt(lastStep, 10));
-        const lastFormPage = localStorage.getItem("accredit_create_formPage");
-        if (lastFormPage) setFormPage(parseInt(lastFormPage, 10));
-      }
-
       setHydrated(true);
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
+  // Restore draft from localStorage on mount
+  useEffect(() => {
+    const lastMode = localStorage.getItem("accredit_last_mode") as Mode | null;
+    if (!lastMode) return;
+    const saved = localStorage.getItem(DRAFT_KEYS[lastMode]);
+    if (!saved) return;
+    try {
+      const draft = JSON.parse(saved);
+      if (draft && draft.form) {
+        setMode(lastMode);
+        setForm(draft.form || DEFAULT_FORM);
+        setPassPackages(draft.passPackages || [{ name: "Regular", price: "" }]);
+        setSocialHandles(draft.socialHandles || [{ platform: "instagram", handle: "" }]);
+        setLineup(draft.lineup || [{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
+        if (draft.uploadedImageData) {
+          setUploadedImageData(draft.uploadedImageData);
+          setUploadedImagePreviewUrl(draft.uploadedImageData);
+          setFlierPreview(draft.uploadedImageData);
+        }
+        if (draft.flierParsed) setFlierParsed(true);
+        const lastStep = localStorage.getItem("accredit_create_step");
+        if (lastStep) setStep(parseInt(lastStep, 10)); else setStep(1);
+        const lastFormPage = localStorage.getItem("accredit_create_formPage");
+        if (lastFormPage) setFormPage(parseInt(lastFormPage, 10));
+      }
+    } catch {
+      localStorage.removeItem(DRAFT_KEYS[lastMode]);
+    }
+  }, []);
+
+  const saveDraft = useCallback((overrideForm?: typeof DEFAULT_FORM, overrideMode?: Mode) => {
+    const m = overrideMode ?? mode;
+    if (!m) return;
+    const data = {
+      form: overrideForm || form,
+      passPackages,
+      socialHandles,
+      lineup,
+      flierParsed,
+      uploadedImageData,
+    };
+    try {
+      localStorage.setItem(DRAFT_KEYS[m], JSON.stringify(data));
+    } catch {
+      // Quota exceeded — retry without bulky image data
+      try {
+        localStorage.setItem(DRAFT_KEYS[m], JSON.stringify({ ...data, uploadedImageData: null }));
+      } catch {}
+    }
+    localStorage.setItem("accredit_last_mode", m);
+    localStorage.setItem("accredit_create_step", String(step));
+    localStorage.setItem("accredit_create_formPage", String(formPage));
+  }, [form, passPackages, socialHandles, lineup, flierParsed, uploadedImageData, mode, step, formPage]);
+
+  // Auto-save draft on meaningful state changes
   useEffect(() => {
     if (!hydrated || !mode) return;
-    const timer = setTimeout(() => {
-      localStorage.setItem(DRAFT_KEYS[mode], JSON.stringify({ form, passPackages, socialHandles, lineup, uploadedImageData }));
-      localStorage.setItem("accredit_last_mode", mode as string);
-      localStorage.setItem("accredit_create_step", String(step));
-      localStorage.setItem("accredit_create_formPage", String(formPage));
-    }, 300);
+    const timer = setTimeout(() => saveDraft(), 300);
     return () => clearTimeout(timer);
-  }, [form, passPackages, socialHandles, lineup, uploadedImageData, mode, step, formPage, hydrated]);
+  }, [form, passPackages, socialHandles, lineup, flierParsed, mode, step, formPage, hydrated]);
 
   useEffect(() => {
     return () => {
@@ -672,6 +587,204 @@ export default function CreateEventPage() {
     updateLineup(index, { headshotSource: "ai", generatedHeadshot: true, attachHeadshot: true });
   };
 
+  function regexParseFlier(text: string): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+
+    // Pre-clean OCR artifacts: pipes between words, stray special chars, normalize whitespace
+    const clean = text
+      .replace(/[|]/g, " ")
+      .replace(/[–—]/g, " ")
+      .replace(/[‎‏]/g, "")
+      .replace(/[ \t]+/g, " ")
+      .trim();
+
+    const lines = clean.split("\n").map((l) => l.trim()).filter(Boolean);
+
+    // Date: try label-based first, then free-form
+    const dateLabels = /\b(?:date|event date|event day)\s*[:.]?\s*(.*)/i;
+    for (const line of lines) {
+      const m = line.match(dateLabels);
+      if (m) {
+        const d = extractDate(m[1]);
+        if (d) { result.event_date = d; break; }
+      }
+    }
+    if (!result.event_date) {
+      const d = extractDate(clean);
+      if (d) result.event_date = d;
+    }
+
+    // Time: try label-based first, then free-form
+    const timeLabels = /(?:time|hour|starts?|by)\s*[:.]?\s*(.*)/i;
+    for (const line of lines) {
+      const m = line.match(timeLabels);
+      if (m) {
+        const t = extractTime(m[1]);
+        if (t) { result.event_time = t; break; }
+      }
+    }
+    if (!result.event_time) {
+      const t = extractTime(clean);
+      if (t) result.event_time = t;
+    }
+
+    // Venue: try label-based first, then fallback
+    const venueLabels = /(?:venue|location|place|address|at)\s*[:.]?\s*(.*)/i;
+    for (const line of lines) {
+      const m = line.match(venueLabels);
+      if (m) {
+        const v = m[1].replace(/[,;].*$/, "").trim();
+        if (v.length > 2 && v.length < 80) { result.venue = v; break; }
+      }
+    }
+    if (!result.venue) {
+      // Fallback: look for a mostly-uppercase line of 2+ words near the bottom
+      const upperLines = lines.filter((l) => {
+        const letters = l.replace(/[^A-Za-z]/g, "");
+        const uppers = l.replace(/[^A-Z]/g, "").length;
+        return letters.length > 5 && uppers / letters.length > 0.6 && l.split(/\s+/).length >= 2;
+      });
+      if (upperLines.length >= 1) result.venue = upperLines[upperLines.length - 1].replace(/\s+[a-z]{2,}$/, "").trim();
+    }
+    if (!result.venue) {
+      const sepMatch = clean.match(/(?:\b(?:at|@|venue|location)\s+)([A-Za-z][A-Za-z .'-]{3,70})/i);
+      if (sepMatch) result.venue = sepMatch[1].trim();
+    }
+
+    // Title: score each line by how "title-like" it is
+    const EVENT_KEYWORDS = /invite|invitation|wedding|celebration|party|birthday|anniversary|concert|festival|show|gala|ball|fundraiser|reunion|ceremony|reception|banquet|conference|summit|workshop|seminar|launch|premiere|opening|exhibition|fair|market/i;
+    const WATERMARK = /chatgpt|gpt.?image|dall.?e|generated.?by|midjourney|screenshot|image \d|prompt|ai.?generated|stable.?diffusion/i;
+    const COMMON_CAPS = new Set(["INVITE","YOU","TO","THE","AND","FOR","YOUR","OUR","ARE","ALL","CAN","HAS","HAD","WAS","WERE","THIS","THAT","WITH","FROM","THEY","WILL","BEEN","HAVE","HERE","WHAT","WHEN","WHERE","WHICH","THERE","THEIR","COME","JOIN","RSVP","CELEBRATE","WEDDING","BIRTHDAY","PARTY","EVENT","SHOW","FOUR","FIVE","SIX","SEVEN","EIGHT","NINE","TEN","ELEVEN","TWELVE","ONE","TWO","THREE"]);
+    function isNameWord(w: string) {
+      return w.length >= 4 && w === w.toUpperCase() && /[A-Z]/.test(w) && /[AEIOU]/.test(w) && !COMMON_CAPS.has(w);
+    }
+    let bestScore = 0;
+    // Special case: adjacent lines each with an all-caps name → "NAME and NAME"
+    for (let i = 0; i < lines.length - 1; i++) {
+      const w1 = lines[i].trim().split(/\s+/).filter(isNameWord);
+      const w2 = lines[i + 1].trim().split(/\s+/).filter(isNameWord);
+      if (w1.length >= 1 && w2.length >= 1) {
+        result.title = w1[0] + " and " + w2[0];
+        bestScore = 999;
+        break;
+      }
+    }
+    // Fallback: score remaining lines
+    if (!result.title) {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].replace(/[#*"'_`^~°|]/g, "").trim();
+        if (line.length < 2 || line.length > 100) continue;
+        if (WATERMARK.test(line)) continue;
+
+        // Try combining this line with the next if both look like name fragments
+        const candidate = (() => {
+          const next = i + 1 < lines.length ? lines[i + 1].replace(/[#*"'_`^~°|]/g, "").trim() : "";
+          const combined = line + " " + next;
+          const allCapsWords = combined.split(/\s+/).filter((w) => w.length >= 3 && w === w.toUpperCase() && /[A-Z]/.test(w));
+          const lowerWords = combined.split(/\s+/).filter((w) => w.length >= 2 && w !== w.toUpperCase());
+          if (allCapsWords.length >= 2) {
+            const garbled = lowerWords.filter((w) => w.length >= 3 && !/^(?:and|&|the|for|of|at|in|on|to|by)$/i.test(w));
+            if (garbled.length <= 1) return combined;
+          }
+          return line;
+        })();
+
+        const cleanLine = candidate;
+        if (cleanLine.length < 4 || cleanLine.length > 100) continue;
+        if (/^\d/.test(cleanLine)) continue;
+        const alpha = cleanLine.replace(/[^A-Za-z ]/g, "").length;
+        if (alpha / cleanLine.length < 0.5) continue;
+        const words = cleanLine.split(/\s+/).filter(Boolean);
+        const realWords = words.filter((w) => {
+          if (w.length < 2) return false;
+          const letters = w.replace(/[^A-Za-z]/g, "").length;
+          return letters / w.length > 0.5;
+        });
+        const avgWordLen = realWords.length ? realWords.reduce((s, w) => s + w.length, 0) / realWords.length : 0;
+        if (avgWordLen < 2.5 || realWords.length < 1) continue;
+        let score = realWords.length + Math.round(avgWordLen);
+        if (EVENT_KEYWORDS.test(cleanLine)) score += 8;
+        // Bonus for actual name-like words (excludes common English words like INVITE, YOU, TO, etc.)
+        const nameWords = words.filter(isNameWord);
+        score += nameWords.length * 3;
+        const lower = cleanLine.toLowerCase();
+        if (/^(?:date|time|venue|location|address)/i.test(cleanLine)) score -= 6;
+        if (score > bestScore) {
+          bestScore = score;
+          result.title = cleanLine;
+        }
+      }
+    }
+    if (!result.title) {
+      const t = clean.replace(/\s+/g, " ").trim();
+      if (t.length > 1) result.title = t;
+    }
+
+    return result;
+  }
+
+  function extractDate(s: string): string | null {
+    // Strip common OCR artifacts
+    const txt = s.replace(/[|°^~*_`]/g, " ").replace(/\s+/g, " ").trim();
+    // "18 September 2027" or "30th August, 2025"
+    const m = txt.match(/(\d{1,2})\s*(?:st|nd|rd|th)?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)[a-z]*\s*,?\s*(\d{2,4})/i);
+    if (m) {
+      const months: Record<string, string> = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
+      const mn = m[2].slice(0, 3).toLowerCase();
+      const month = months[mn] || "01";
+      const day = String(parseInt(m[1], 10)).padStart(2, "0");
+      const year = m[3].length === 2 ? "20" + m[3] : m[3];
+      return `${year}-${month}-${day}`;
+    }
+    // "September 18, 2027" or "Saturday, September 18, 2027"
+    const mAlt = txt.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)[a-z]*\s+(\d{1,2})\s*,?\s*(\d{2,4})/i);
+    if (mAlt) {
+      const months: Record<string, string> = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
+      const mn = mAlt[1].slice(0, 3).toLowerCase();
+      const month = months[mn] || "01";
+      const day = String(parseInt(mAlt[2], 10)).padStart(2, "0");
+      const year = mAlt[3].length === 2 ? "20" + mAlt[3] : mAlt[3];
+      return `${year}-${month}-${day}`;
+    }
+    // "18/09/2027" or "05-15-2027"
+    const m2 = txt.match(/(\d{1,2})\s*[/.-]\s*(\d{1,2})\s*[/.-]\s*(\d{2,4})/);
+    if (m2) {
+      const month = String(parseInt(m2[1], 10)).padStart(2, "0");
+      const day = String(parseInt(m2[2], 10)).padStart(2, "0");
+      const year = m2[3].length === 2 ? "20" + m2[3] : m2[3];
+      return `${year}-${month}-${day}`;
+    }
+    return null;
+  }
+
+  const NUMBERS: Record<string, string> = {
+    twelve: "12", eleven: "11", ten: "10", nine: "9", eight: "8", seven: "7",
+    six: "6", five: "5", four: "4", three: "3", two: "2", one: "1",
+    noon: "12", midnight: "12",
+  };
+
+  function extractTime(s: string): string | null {
+    const txt = s.replace(/[|°^~*_`]/g, " ").replace(/\s+/g, " ").trim();
+    // "4:00 PM"
+    let tm = txt.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i);
+    if (tm) return tm[1] + ":" + tm[2] + " " + tm[3].toUpperCase();
+    // "4 PM"
+    tm = txt.match(/(\d{1,2})\s*(AM|PM|am|pm)/i);
+    if (tm) return tm[1] + ":00 " + tm[2].toUpperCase();
+    // "four o'clock in the afternoon" or "four o'clock"
+    const wordHour = txt.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|noon|midnight)\b/i);
+    if (wordHour) {
+      const hour = NUMBERS[wordHour[1].toLowerCase()] || "12";
+      let period = "AM";
+      if (/afternoon|evening|night|pm/i.test(txt)) period = "PM";
+      if (/morning|am/i.test(txt)) period = "AM";
+      if (/noon|midnight/i.test(txt)) period = /midnight/i.test(txt) ? "AM" : "PM";
+      const minute = /half\s+past/i.test(txt) ? "30" : /quarter\s+past/i.test(txt) ? "15" : /quarter\s+to/i.test(txt) ? "45" : "00";
+      return hour.padStart(2, "0") + ":" + minute + " " + period;
+    }
+    return null;
+  }
+
   const handleFlierUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -686,106 +799,56 @@ export default function CreateEventPage() {
       setUploadedImageData(dataUrl);
       setForm((prev) => ({ ...prev, media_source: "upload", uploaded_image_name: file.name }));
       setFlierParsing(true);
+
+      let allText = "";
       try {
-        const result = await parseFlier(dataUrl, file.type) as Record<string, unknown>;
+        const { data } = await Tesseract.recognize(dataUrl, "eng", {
+          logger: () => {},
+        });
+        allText = data.text;
+      } catch (ocrErr) {
+        console.warn("OCR failed:", ocrErr);
+      }
+
+      // Always also parse the filename as a fallback
+      const fileNameText = file.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
+      if (!allText.trim()) allText = fileNameText;
+
+      setTimeout(() => {
+        const result = regexParseFlier(allText);
+        console.log("OCR text:", JSON.stringify(allText), "Parsed:", result);
 
         const str = (v: unknown) => (typeof v === "string" ? v : "");
-        const num = (v: unknown) => (typeof v === "number" ? v : 0);
+        const nextForm = {
+          ...form,
+          title: str(result.title) || form.title,
+          host_name: str(result.host_name) || form.host_name,
+          venue: str(result.venue) || form.venue,
+        };
 
-        setForm((prev) => ({
-          ...prev,
-          title: str(result.title) || prev.title,
-          host_name: str(result.host_name) || prev.host_name,
-          venue: str(result.venue) || prev.venue,
-          male_dress_code: str(result.dress_code) || prev.male_dress_code,
-          description: str(result.description) || prev.description,
-          category: str(result.category) || prev.category,
-          gate_fee: num(result.ticket_price) > 0 ? String(result.ticket_price) : prev.gate_fee,
-          event_time: str(result.event_time) || prev.event_time,
-          after_party_enabled: !!(result.after_party_location) || prev.after_party_enabled,
-          after_party_location: str(result.after_party_location) || prev.after_party_location,
-          after_party_time: str(result.after_party_time) || prev.after_party_time,
-        }));
+        setForm(nextForm);
 
-        // Sync date parts if a date was extracted
         const rawDate = str(result.event_date);
         if (rawDate) {
           const parts = parseDateParts(rawDate);
           const d = String(parseInt(parts.day || "0", 10));
           if (d && d !== "0") { setDayPart(d); setMonthPart(parts.month); setYearPart(parts.year); }
-          setForm((prev) => ({ ...prev, event_date: rawDate }));
+          nextForm.event_date = rawDate;
         }
 
-        if (Array.isArray(result.lineup) && result.lineup.length > 0) {
-          setLineup(result.lineup.map((p: { role?: string; name?: string }) => ({
-            role: p.role || "", name: p.name || "",
-            attachHeadshot: false, headshotSource: "upload" as const, headshotFileName: "", generatedHeadshot: false,
-          })));
-        }
-        if (Array.isArray(result.pass_packages) && result.pass_packages.length > 0) {
-          setPassPackages(result.pass_packages.map((p: { name?: string; price?: string }) => ({
-            name: p.name || "", price: p.price || "",
-          })));
+        const rawTime = str(result.event_time);
+        if (rawTime) {
+          nextForm.event_time = rawTime;
         }
 
         setFlierParsed(true);
-        if (!mode) setMode("event");
-      } catch {
-        setFlierParseError("Could not read your flier. Fill in the details below manually.");
-        if (!mode) setMode("event");
-      } finally {
+        const nextMode = mode || "event";
+        setMode(nextMode);
         setFlierParsing(false);
-      }
+        saveDraft(nextForm, nextMode);
+      }, 500);
     };
     reader.readAsDataURL(file);
-  };
-
-  const generateMessage = async () => {
-    if (!hydrated || !mode) return;
-    setAiGenerateError("");
-    setAiGenerating(true);
-    try {
-      const dateLine = detailsToBeCommunicated ? "to be communicated" : formatDisplayDate(form.event_date) || "your selected date";
-      const timeLine = detailsToBeCommunicated ? "to be communicated" : form.event_time || "your selected time";
-      const venueLine = detailsToBeCommunicated ? "to be communicated" : form.venue || "the venue";
-      const title = form.title || (mode === "event" ? "our upcoming event" : "our special celebration");
-      const host = form.host_name || "the host";
-      const passText = visiblePassPackages.length
-        ? ` Passes: ${visiblePassPackages.map((item) => `${item.name || "Pass"} ${item.price || ""}`.trim()).join(", ")}.`
-        : "";
-      const lineupText = visibleLineup.length
-        ? ` Featuring ${visibleLineup.map((item) => `${item.role || "Guest"}: ${item.name || "Name"}`).join("; ")}.`
-        : "";
-      const afterPartyText =
-        mode === "event" && form.after_party_enabled && form.after_party_location
-          ? ` After party at ${form.after_party_location}${form.after_party_time ? ` by ${form.after_party_time}` : ""}.`
-          : "";
-      const socialText = visibleSocialHandles.length
-        ? ` Follow ${visibleSocialHandles
-            .map((item) => {
-              const platform = socialPlatforms.find((social) => social.value === item.platform)?.label || "Social";
-              return `${platform}: ${item.handle}`;
-            })
-            .join(", ")} for updates.`
-        : "";
-
-      if (mode === "event") {
-        const categoryText = form.category ? ` Category: ${form.category}.` : "";
-        const dressText = form.male_dress_code ? ` Dress code: ${form.male_dress_code}.` : "";
-        const context = `Write a compelling event description for a public listing: ${title} hosted by ${host}.${categoryText}${passText}${lineupText}${afterPartyText}${socialText}${dressText}`;
-        const reply = await aiChat([{ role: "user", text: `Generate a 2-4 sentence event description for a public listing. NEVER include the date, time, venue, ticket prices, or dress code — those are shown separately. Focus only on atmosphere, highlights, and what makes this event special. Context for reference only (do NOT write it): Date: ${dateLine}, Time: ${timeLine}, Venue: ${venueLine}.\n\n${context}` }]);
-        setForm((current) => ({ ...current, description: reply }));
-      } else {
-        const context = `Write a warm invitation message for a private invite: ${title} hosted by ${host}.${passText}${lineupText}${afterPartyText}${socialText}`;
-        const reply = await aiChat([{ role: "user", text: `Write ONLY the warm welcome paragraph of an invitation from ${host}. Use their actual name — no placeholders like [Host's Name] or [Guest Name]. Address the reader as "you". NEVER include the date, time, venue, or dress code — those are shown separately. Focus purely on atmosphere, what makes this event special, and the feeling of being invited. Details for context only (do NOT write them): Date: ${dateLine}, Time: ${timeLine}. Venue: ${venueLine}.\n\n${context}` }]);
-        setForm((current) => ({ ...current, description: reply }));
-      }
-    } catch {
-      setAiGenerateError("Auto-generation is unavailable right now. Please write your message manually.");
-      setForm((current) => ({ ...current, description: "Unable to generate message. Please write manually." }));
-    } finally {
-      setAiGenerating(false);
-    }
   };
 
   const generateImage = async () => {
@@ -846,7 +909,7 @@ export default function CreateEventPage() {
     setEmailModalOpen(false);
 
     try {
-      const result = await apiClient<{ flier_url?: string; sent_to?: string; sent_via?: string; flyer_url?: string }>("/trials/use", {
+      const result = await apiClient<{ flier_url?: string; sent_to?: string; sent_via?: string; flyer_url?: string; event_id?: number }>("/trials/use", {
         method: "POST",
         body: {
           trial_type: mode,
@@ -861,6 +924,7 @@ export default function CreateEventPage() {
             guest_count: selectedGuestRange.max,
             test_email: mode === "invite" ? testEmail : undefined,
             test_phone: mode === "invite" ? testPhone || undefined : undefined,
+            uploaded_image_data: uploadedImageData || undefined,
           },
         },
       });
@@ -869,6 +933,7 @@ export default function CreateEventPage() {
       setUsedTrials((current) => ({ ...current, [mode]: true }));
       localStorage.removeItem(DRAFT_KEY);
       setTrialComplete(true);
+      setTrialEventId(result.event_id ?? null);
 
       if (mode === "event" && result.flier_url) {
         setEventPreviewUrl(result.flier_url);
@@ -928,7 +993,7 @@ export default function CreateEventPage() {
           description: form.description,
           guest_count_range: form.guest_range,
           event_type: form.event_type || "concert",
-          category: form.category,
+          category: form.category === "__other__" ? form.custom_category : form.category,
           ticket_price: form.gate_fee ? Number(form.gate_fee) : undefined,
           currency: form.currency,
           pass_packages: passPackages,
@@ -977,7 +1042,18 @@ export default function CreateEventPage() {
     <div className="flex min-h-screen flex-col bg-white">
       <Navbar variant="light" />
 
-      <main className="flex-1">
+      <main className="flex-1 relative">
+        {/* Mobile back to home button */}
+        <Link
+          href="/"
+          className="md:hidden fixed top-24 left-4 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#4a6280] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all hover:bg-[#f8f9fc] active:scale-95 border border-[#e8edf2]"
+          aria-label="Back to home"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </Link>
+
         <section className="px-4 py-3 sm:py-6 sm:px-6 lg:px-8 bg-white border-b border-[#e8edf2]">
           <div className="mx-auto grid max-w-6xl gap-6 lg:gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             {step === 0 && (
@@ -1166,20 +1242,18 @@ export default function CreateEventPage() {
                 </div>
               </div>
 
-              {/* Flier upload - INVITE only */}
-              {mode === "invite" && (
+              {/* Flier upload - shared by both modes */}
               <div className="mb-6">
                 {flierParsing ? (
                   <div className="flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] px-4 py-3">
                     <div className="w-4 h-4 rounded-full border-2 border-[#E91E8C] border-t-transparent animate-spin flex-shrink-0" />
-                    <p className="text-sm font-semibold text-[#0D1B2A]">AI is reading your flier and filling the form…</p>
+                    <p className="text-sm font-semibold text-[#0D1B2A]">Uploading image…</p>
                   </div>
                 ) : flierParsed ? (
                   <div className="flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] px-4 py-3">
-                    {flierPreview && <img src={flierPreview} alt="Flier" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />}
                     <div className="flex-1">
-                      <p className="text-sm font-bold text-emerald-600">Flier parsed - form pre-filled below</p>
-                      <p className="text-xs text-[#94a3b8] mt-0.5">Review each field and make any corrections before testing</p>
+                      <p className="text-sm font-bold text-emerald-600">Image uploaded — fill in the details below</p>
+                      <p className="text-xs text-[#94a3b8] mt-0.5">Basic info may be extracted from the filename</p>
                     </div>
                     <label className="cursor-pointer text-xs font-bold text-[#E91E8C] hover:underline flex-shrink-0">
                       Change
@@ -1194,8 +1268,8 @@ export default function CreateEventPage() {
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-[#0D1B2A]">Have a flier? Upload it to auto-fill this form</p>
-                      <p className="text-xs text-[#94a3b8] mt-0.5">AI extracts title, date, venue, lineup, tickets, dress code and more</p>
+                      <p className="text-sm font-bold text-[#0D1B2A]">Upload image/flyer</p>
+                      <p className="text-xs text-[#94a3b8] mt-0.5">Instantly extract title, date, and venue from your image</p>
                     </div>
                     <span className="flex-shrink-0 rounded-lg border border-[#E91E8C] px-3 py-1.5 text-xs font-bold text-[#E91E8C] group-hover:bg-[#fff1f8] transition-colors">
                       Upload
@@ -1207,98 +1281,8 @@ export default function CreateEventPage() {
                   <p className="mt-2 text-xs font-medium text-amber-600">{flierParseError}</p>
                 )}
               </div>
-              )}
 
-              {/* Flier upload strip — POST EVENT only */}
-              {mode === "event" && (
-                <div className="mb-6">
-                  {flierParsing ? (
-                    <div className="flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] px-4 py-3">
-                      <div className="w-4 h-4 rounded-full border-2 border-[#E91E8C] border-t-transparent animate-spin flex-shrink-0" />
-                      <p className="text-sm font-semibold text-[#0D1B2A]">AI is reading your flier and filling the form…</p>
-                    </div>
-                  ) : flierParsed ? (
-                    <div className="flex items-center gap-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] px-4 py-3">
-                      {flierPreview && <img src={flierPreview} alt="Flier" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />}
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-emerald-600">Flier parsed - form pre-filled below</p>
-                        <p className="text-xs text-[#94a3b8] mt-0.5">Review each field and make any corrections before testing</p>
-                      </div>
-                      <label className="cursor-pointer text-xs font-bold text-[#E91E8C] hover:underline flex-shrink-0">
-                        Change
-                        <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
-                      </label>
-                    </div>
-                  ) : (
-                    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#d9e2ec] bg-[#f8f9fc] px-4 py-3 hover:border-[#E91E8C] transition-colors group">
-                      <div className="w-9 h-9 rounded-xl bg-white border border-[#e8edf2] flex items-center justify-center flex-shrink-0 group-hover:border-[#E91E8C] transition-colors">
-                        <svg className="w-4 h-4 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-[#0D1B2A]">Have a flier? Upload it to auto-fill this form</p>
-                        <p className="text-xs text-[#94a3b8] mt-0.5">AI extracts title, date, venue, lineup, tickets, dress code and more</p>
-                      </div>
-                      <span className="flex-shrink-0 rounded-lg border border-[#E91E8C] px-3 py-1.5 text-xs font-bold text-[#E91E8C] group-hover:bg-[#fff1f8] transition-colors">
-                        Upload
-                      </span>
-                      <input type="file" accept="image/*" className="sr-only" onChange={handleFlierUpload} />
-                    </label>
-                  )}
-                  {flierParseError && (
-                    <p className="mt-2 text-xs font-medium text-amber-600">{flierParseError}</p>
-                  )}
-                </div>
-              )}
 
-              {/* Event template selection — POST EVENT only */}
-              {mode === "event" && (
-                <details open={eventTemplateOpen} className="rounded-xl border border-[#d9e2ec] p-4 group">
-                  <summary onClick={(e) => { e.preventDefault(); setEventTemplateOpen(!eventTemplateOpen); }} className="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
-                    <span className="px-2">Event flyer style</span>
-                    <svg className={`w-4 h-4 text-[#94a3b8] transition-transform ${eventTemplateOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </summary>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                    {inviteTemplates.filter(t => t.value !== null).map((template) => (
-                      <div
-                        key={String(template.value)}
-                        onClick={() => { setForm({ ...form, event_template: form.event_template === template.value ? null : (template.value as EventTemplate) }); setEventTemplateOpen(false); }}
-                        className={`flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 transition-all ${
-                          form.event_template === template.value
-                            ? "border-[#E91E8C] bg-pink-50 ring-2 ring-[#E91E8C]/20"
-                            : "border-[#edf2f7] bg-white hover:border-[#E91E8C]/50"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3 flex-1">
-                            {typeof template.icon === 'function' && (
-                              <div className="h-8 w-8 text-[#E91E8C] flex-shrink-0">
-                                {template.icon({ className: "w-full h-full" })}
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-bold text-[#23466f]">{template.label}</p>
-                              <p className="text-xs text-[#64748b] leading-4 mt-1">{template.description}</p>
-                            </div>
-                          </div>
-                          <input
-                            type="radio"
-                            checked={form.event_template === template.value}
-                            onChange={() => {}}
-                            className="h-4 w-4 accent-[#E91E8C] flex-shrink-0 mt-1"
-                          />
-                        </div>
-                        <p className="text-xs font-semibold text-[#E91E8C] px-2 py-1.5 bg-pink-100/50 rounded-lg">
-                          Best for: {template.bestFor}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2">
@@ -1330,7 +1314,7 @@ export default function CreateEventPage() {
                     <span className="text-sm font-semibold text-[#23466f]">Category</span>
                     <SelectDropdown
                       value={form.category}
-                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      onChange={(e) => setForm({ ...form, category: e.target.value, custom_category: e.target.value !== "__other__" ? "" : form.custom_category })}
                       className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
                     >
                       <option value="concert">Concert</option>
@@ -1342,14 +1326,19 @@ export default function CreateEventPage() {
                       <option value="house_party">House Party</option>
                       <option value="games_night">Games Night</option>
                       <option value="beach_party">Beach Party</option>
-                      <option value="__other__">Others (custom)</option>
+                      <option value="seminar">Seminar</option>
+                      <option value="comedy_show">Comedy Show</option>
+                      <option value="magic_show">Magic Show</option>
+                      <option value="__other__">Others</option>
                     </SelectDropdown>
                     {form.category === "__other__" && (
                       <input
+                        type="text"
                         value={form.custom_category || ""}
                         onChange={(e) => setForm({ ...form, custom_category: e.target.value })}
                         className="mt-2 h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
                         placeholder="Type your category..."
+                        autoFocus
                         required
                       />
                     )}
@@ -1359,7 +1348,7 @@ export default function CreateEventPage() {
                     <span className="text-sm font-semibold text-[#23466f]">Event type</span>
                     <SelectDropdown
                       value={form.event_type}
-                      onChange={(e) => setForm({ ...form, event_type: e.target.value })}
+                      onChange={(e) => setForm({ ...form, event_type: e.target.value, custom_event_type: e.target.value !== "others" ? "" : form.custom_event_type })}
                       className="h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
                     >
                       <option value="wedding">Wedding</option>
@@ -1368,7 +1357,23 @@ export default function CreateEventPage() {
                       <option value="religious">Religious event</option>
                       <option value="vip">VIP gathering</option>
                       <option value="conference">Conference</option>
+                      <option value="seminar">Seminar</option>
+                      <option value="exhibition">Exhibition</option>
+                      <option value="comedy_show">Comedy Show</option>
+                      <option value="magic_show">Magic Show</option>
+                      <option value="others">Others</option>
                     </SelectDropdown>
+                    {form.event_type === "others" && (
+                      <input
+                        type="text"
+                        value={form.custom_event_type}
+                        onChange={(e) => setForm({ ...form, custom_event_type: e.target.value })}
+                        placeholder="Type your event type..."
+                        className="mt-2 h-11 w-full rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C]"
+                        autoFocus
+                        required
+                      />
+                    )}
                   </label>
                 )}
 
@@ -1548,9 +1553,9 @@ export default function CreateEventPage() {
               </div>
               </>)}
 
-              {formPage === 1 && mode === 'invite' && (<>
-              {mode === "invite" && (
+              {formPage === 1 && (<>
                 <div className="mt-5 space-y-5">
+                {mode === "invite" && (<>
                   <fieldset className="rounded-xl border border-[#d9e2ec] p-4">
                     <legend className="px-2 text-sm font-semibold text-[#23466f]">Delivery channels</legend>
                     <div className="grid gap-3 sm:grid-cols-3">
@@ -1569,7 +1574,7 @@ export default function CreateEventPage() {
                     </div>
                   </fieldset>
 
-                  {/* Venue & Dress Code - moved up */}
+                  {/* Venue & Dress Code */}
                   <div className="space-y-2">
                     <span className="text-sm font-semibold text-[#23466f]">Venue</span>
                     <VenueInput
@@ -1605,53 +1610,8 @@ export default function CreateEventPage() {
                     </label>
                   </div>
 
-                  <details open={inviteTemplateOpen} className="rounded-xl border border-[#d9e2ec] p-4 group">
-                    <summary onClick={(e) => { e.preventDefault(); setInviteTemplateOpen(!inviteTemplateOpen); }} className="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
-                      <span className="px-2">Invitation template style</span>
-                      <svg className={`w-4 h-4 text-[#94a3b8] transition-transform ${inviteTemplateOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </summary>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                      {inviteTemplates.map((template) => (
-                        <div
-                          key={String(template.value)}
-                          onClick={() => { setForm({ ...form, invite_template: form.invite_template === template.value ? null : (template.value as InviteTemplate | null) }); setInviteTemplateOpen(false); }}
-                          className={`flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 transition-all ${
-                            form.invite_template === template.value
-                              ? "border-[#E91E8C] bg-pink-50 ring-2 ring-[#E91E8C]/20"
-                              : "border-[#edf2f7] bg-white hover:border-[#E91E8C]/50"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3 flex-1">
-                              {typeof template.icon === 'function' && (
-                                <div className="h-8 w-8 text-[#E91E8C] flex-shrink-0">
-                                  {template.icon({ className: "w-full h-full" })}
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold text-[#23466f]">{template.label}</p>
-                                <p className="text-xs text-[#64748b] leading-4 mt-1">{template.description}</p>
-                              </div>
-                            </div>
-                            <input
-                              type="radio"
-                              checked={form.invite_template === template.value}
-                              onChange={() => {}}
-                              className="h-4 w-4 accent-[#E91E8C] flex-shrink-0 mt-1"
-                            />
-                          </div>
-                          <p className="text-xs font-semibold text-[#E91E8C] px-2 py-1.5 bg-pink-100/50 rounded-lg">
-                            Best for: {template.bestFor}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-
                   {/* QR code option - collapsible */}
-                    <details open={qrDetailsOpen} className="rounded-xl border border-[#d9e2ec] group">
+                  <details open={qrDetailsOpen} className="rounded-xl border border-[#d9e2ec] group">
                     <summary onClick={(e) => { e.preventDefault(); setQrDetailsOpen(!qrDetailsOpen); }} className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
                       <span>QR code option</span>
                       <svg className={`w-4 h-4 text-[#94a3b8] transition-transform ${qrDetailsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -1676,42 +1636,15 @@ export default function CreateEventPage() {
                       ))}
                       </div>
 
-                    {/* Animated QR style - ONLY when "With QR" is selected */}
                     {form.qr_delivery === "with_qr" && (
-                      <>
-                        <div className="mt-4 rounded-xl bg-pink-50 border border-[#E91E8C]/20 p-3">
-                          <p className="text-xs font-semibold text-[#E91E8C] mb-3">Choose your animated QR style:</p>
-                          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-5">
-                            {qrStyles.map((style) => (
-                              <div
-                                key={style.value}
-                                onClick={() => { setForm({ ...form, qr_style: form.qr_style === style.value ? "pulsing" : (style.value as QRStyle) }); setQrDetailsOpen(false); }}
-                                className={`flex cursor-pointer flex-col gap-2 rounded-xl border-2 p-3 text-sm transition-all ${
-                                  form.qr_style === style.value
-                                    ? "border-[#E91E8C] bg-white ring-2 ring-[#E91E8C]/20"
-                                    : "border-[#edf2f7] bg-white hover:border-[#E91E8C]/50"
-                                }`}
-                              >
-                                <div className="h-8 w-8 text-[#E91E8C]">
-                                  {style.icon({ className: "w-full h-full" })}
-                                </div>
-                                <p className="font-bold text-[#23466f] text-xs">{style.label}</p>
-                                <p className="text-xs text-[#64748b] leading-3">{style.description}</p>
-                                <p className="text-xs font-semibold text-[#E91E8C]">{style.bestFor}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="mt-4">
-                          <textarea
-                            value={form.qr_message}
-                            onChange={(e) => setForm({ ...form, qr_message: e.target.value })}
-                            className="min-h-20 w-full resize-none rounded-xl border border-[#d9e2ec] bg-white px-3 py-3 text-sm outline-none focus:border-[#E91E8C]"
-                            placeholder="Optional message to accompany the QR code (e.g. 'Attached to this invite is your QR code. Kindly present it at the event for entry.')"
-                          />
-                        </div>
-                      </>
+                      <div className="mt-4">
+                        <textarea
+                          value={form.qr_message}
+                          onChange={(e) => setForm({ ...form, qr_message: e.target.value })}
+                          className="min-h-20 w-full resize-none rounded-xl border border-[#d9e2ec] bg-white px-3 py-3 text-sm outline-none focus:border-[#E91E8C]"
+                          placeholder="Optional message to accompany the QR code (e.g. 'Attached to this invite is your QR code. Kindly present it at the event for entry.')"
+                        />
+                      </div>
                     )}
 
                     {form.qr_delivery === "qr_later" && (
@@ -1774,16 +1707,10 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                       </div>
                     )}
                   </div>
-                </details>
-                </div>
-              )}
-              </>)}
+                  </details>
+                </>)}
 
-              {formPage === 2 && (<>
-              {mode === "event" ? (
-                <>
-                {/* Note: Venue and Dress Code are now in the invite-specific section above for both CREATE INVITE and POST EVENT modes */}
-                <div className="mt-5 space-y-5">
+                {mode === "event" && (<>
                   <details className="rounded-xl border border-[#d9e2ec] group">
                     <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-bold text-[#23466f] [&::-webkit-details-marker]:hidden">
                       <span>Gate fee / pass packages</span>
@@ -1965,45 +1892,25 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                       </div>
                     )}
                   </fieldset>
-                </div>
-                </>
-              ) : (
-                <div className="mt-4"></div>
-              )}
+                </>)}
 
-
-              <div className="mt-4 space-y-2">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                {/* Description / message for both modes */}
+                <div className="space-y-2">
                   <span className="text-sm font-semibold text-[#23466f]">
                     {mode === "event" ? "Event description" : "Invite message"}
                   </span>
-                  <button
-                    type="button"
-                    onClick={generateMessage}
-                    disabled={aiGenerating}
-                    className="cursor-pointer rounded-xl bg-[#E91E8C] px-4 py-3 text-xs font-black uppercase tracking-widest text-white shadow-[0_10px_24px_rgba(233,30,140,0.26)] transition hover:bg-[#C4166F] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {aiGenerating ? "Generating..." : "Auto Generate"}
-                  </button>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    className="min-h-32 w-full resize-none rounded-xl border border-[#d9e2ec] px-3 py-3 text-sm outline-none focus:border-[#E91E8C]"
+                    placeholder={mode === "event" ? "Describe the event for public discovery." : "Write the message your guests should receive."}
+                    required
+                  />
                 </div>
-                {aiGenerateError && (
-                  <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-red-700">
-                    {aiGenerateError}
-                  </p>
-                )}
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="min-h-32 w-full resize-none rounded-xl border border-[#d9e2ec] px-3 py-3 text-sm outline-none focus:border-[#E91E8C]"
-                  placeholder={mode === "event" ? "Describe the event for public discovery." : "Write the message your guests should receive."}
-                  required
-                />
-              </div>
+                </div>
+              </>)}
 
-              </>
-              )}
-              </>
-              )}
+
 
               {/* Mobile error + success message - shown after trial */}
               {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
@@ -2016,8 +1923,6 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     onClick={() => {
                       if (formPage === 0) {
                         setStep(0); setMode(null);
-                      } else if (mode === "event" && formPage === 2) {
-                        setFormPage(0);
                       } else {
                         setFormPage(formPage - 1);
                       }
@@ -2037,8 +1942,6 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                       if (!form?.reportValidity()) return;
                       if (formPage === totalFormPages - 1) {
                         setStep(2);
-                      } else if (mode === "event" && formPage === 0) {
-                        setFormPage(2);
                       } else {
                         setFormPage(formPage + 1);
                       }
@@ -2052,6 +1955,8 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     </svg>
                   </button>
                 </div>
+              )}
+              </>
               )}
             </form>
 
@@ -2102,7 +2007,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     )}
                     <div className="overflow-hidden rounded-xl bg-white text-[#07182f]">
                       {(() => {
-                        const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
+                        const activeTemplate = mode === "invite" ? form.invite_template : null;
                         const styles = activeTemplate ? templateStyles[activeTemplate] : null;
                         const headerText = styles ? styles.textColor : "white";
                         return (
@@ -2131,6 +2036,13 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                               <p className="mt-1 text-sm text-[#64748b]">{form.host_name || "Host name"}</p>
                               {mode === "event" ? (
                                 <>
+                                  <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                                    {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
+                                      ? (form.description || "").split(/\n{2,}/).map((para, i) => (
+                                          <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                                        ))
+                                      : <p className="italic text-[#94a3b8]">Your event description will appear here in the preview.</p>}
+                                  </div>
                                   <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                                     <div className="rounded-lg bg-[#f8fafc] p-2">
                                       <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
@@ -2145,18 +2057,21 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                                       <dd className="mt-1 font-semibold">{form.venue || "Event venue"}</dd>
                                     </div>
                                   </div>
-                                  <div className="mt-4 space-y-3 text-sm text-[#23466f]">
-                                    {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
-                                      ? (form.description || "").split(/\n{2,}/).map((para, i) => (
-                                          <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
-                                        ))
-                                      : <p>Your event description will appear here in the preview.</p>}
-                                  </div>
                                 </>
                               ) : (
                                 <>
                                   <div className="mt-4 space-y-3 text-sm text-[#23466f]">
                                     <p className="font-semibold">Dear <span className="text-[#E91E8C]">[Guest Name]</span>,</p>
+                                    {(() => {
+                                      const desc = form.description || "";
+                                      const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
+                                      if (paragraphs.length === 0) {
+                                        return <p className="italic text-[#94a3b8]">Your message will appear here in the preview.</p>;
+                                      }
+                                      return paragraphs.map((para, i) => (
+                                        <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                                      ));
+                                    })()}
                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                       <div className="rounded-lg bg-[#f8fafc] p-2">
                                         <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
@@ -2182,16 +2097,6 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                                           <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
                                         </div>
                                       </div>
-                                    {(() => {
-                                      const desc = form.description || "";
-                                      const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
-                                      if (paragraphs.length === 0) {
-                                        return <p className="mt-3">Your message will appear here in the preview.</p>;
-                                      }
-                                      return paragraphs.map((para, i) => (
-                                        <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
-                                      ));
-                                    })()}
                                   </div>
                                 </>
                               )}
@@ -2206,16 +2111,12 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                         {(form.qr_message || form.qr_delivery === "with_qr") && (
                           <p className="mt-2 text-sm text-[#23466f]">{form.qr_message || "Attached to this invite is your QR code. Kindly present it at the event for entry."}</p>
                         )}
-                        <div className={`mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)] ${qrStyleConfig[form.qr_style]?.wrapper || "animate-pulse"}`}>
-                          {form.qr_style === "custom" ? (
-                            <div className="col-span-5 flex items-center justify-center text-[10px] text-gray-400 text-center">Your custom QR design</div>
-                          ) : (
-                            Array.from({ length: 25 }).map((_, index) => (
-                              <span key={index}
-                                className={`rounded-sm ${qrStyleConfig[form.qr_style]?.square || ""} ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
-                              />
-                            ))
-                          )}
+                        <div className="mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)]">
+                          {Array.from({ length: 25 }).map((_, index) => (
+                            <span key={index}
+                              className={`rounded-sm ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
+                            />
+                          ))}
                         </div>
                       </div>
                     )}
@@ -2283,7 +2184,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                     )}
                     <div className="overflow-hidden rounded-xl bg-white text-[#07182f]">
                       {(() => {
-                        const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
+                        const activeTemplate = mode === "invite" ? form.invite_template : null;
                         const styles = activeTemplate ? templateStyles[activeTemplate] : null;
                         const headerText = styles ? styles.textColor : "white";
                         return (
@@ -2312,18 +2213,35 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                       <p className="mt-1 text-sm text-[#64748b]">{form.host_name || "Host name"}</p>
                         {mode === "event" ? (
                         <>
+                          <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                            {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
+                              ? (form.description || "").split(/\n{2,}/).map((para, i) => (
+                                  <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                                ))
+                              : <p className="italic text-[#94a3b8]">Your event description will appear here in the test preview.</p>}
+                          </div>
+                          {visibleLineup.length > 0 && (
+                            <p className="mt-3 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
+                              Featuring: {visibleLineup.map((p) => p.name).filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                          {form.after_party_enabled && (
+                            <p className="mt-2 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
+                              After party at {form.after_party_location || "TBD"}{form.after_party_time ? ` by ${form.after_party_time}` : ""}
+                            </p>
+                          )}
                           <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                             <div className="rounded-lg bg-[#f8fafc] p-2">
                               <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
-                              <dd className="mt-1 font-semibold">{formatDisplayDate(form.event_date) || "Event date"}</dd>
+                              <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : formatDisplayDate(form.event_date) || "Event date"}</dd>
                             </div>
                             <div className="rounded-lg bg-[#f8fafc] p-2">
                               <dt className="font-bold uppercase tracking-widest text-[#475569]">Time</dt>
-                              <dd className="mt-1 font-semibold">{form.event_time || "Event time"}</dd>
+                              <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.event_time || "Event time"}</dd>
                             </div>
                             <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
                               <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
-                              <dd className="mt-1 font-semibold">{form.venue || "Event venue"}</dd>
+                              <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.venue || "Event venue"}</dd>
                             </div>
                             <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
                               <dt className="font-bold uppercase tracking-widest text-[#475569]">
@@ -2357,28 +2275,21 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                               </div>
                             )}
                           </div>
-                          <div className="mt-4 space-y-3 text-sm text-[#23466f]">
-                            {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
-                              ? (form.description || "").split(/\n{2,}/).map((para, i) => (
-                                  <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
-                                ))
-                              : <p>Your event description will appear here in the test preview.</p>}
-                          </div>
-                          {visibleLineup.length > 0 && (
-                            <p className="mt-3 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
-                              Featuring: {visibleLineup.map((p) => p.name).filter(Boolean).join(" · ")}
-                            </p>
-                          )}
-                          {form.after_party_enabled && (
-                            <p className="mt-2 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
-                              After party at {form.after_party_location || "TBD"}{form.after_party_time ? ` by ${form.after_party_time}` : ""}
-                            </p>
-                          )}
                         </>
                       ) : (
                         <>
                           <div className="mt-4 space-y-3 text-sm text-[#23466f]">
                             <p className="font-semibold">Dear <span className="text-[#E91E8C]">[Guest Name]</span>,</p>
+                            {(() => {
+                              const desc = form.description || "";
+                              const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
+                              if (paragraphs.length === 0) {
+                                return <p className="italic text-[#94a3b8]">Your AI-generated or edited message will appear here in the test preview.</p>;
+                              }
+                              return paragraphs.map((para, i) => (
+                                <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                              ));
+                            })()}
                             <div className="grid grid-cols-2 gap-2 text-xs">
                               <div className="rounded-lg bg-[#f8fafc] p-2">
                                 <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
@@ -2390,30 +2301,20 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                               </div>
                               <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
                                 <dt className="font-bold uppercase tracking-widest text-[#475569]">Venue</dt>
-                                          <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.venue || "Event venue"}</dd>
-                                        </div>
-                                        <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
-                                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
-                                        </div>
-                                        <div className="rounded-lg bg-[#f8fafc] p-2">
-                                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
-                                          <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
-                                        </div>
-                                        <div className="rounded-lg bg-[#f8fafc] p-2">
-                                          <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
-                                          <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
-                                        </div>
-                                      </div>
-                                    {(() => {
-                                      const desc = form.description || "";
-                                      const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
-                                      if (paragraphs.length === 0) {
-                                        return <p className="mt-3">Your AI-generated or edited message will appear here in the test preview.</p>;
-                              }
-                              return paragraphs.map((para, i) => (
-                                <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
-                              ));
-                            })()}
+                                <dd className="mt-1 font-semibold">{detailsToBeCommunicated ? "To be communicated" : form.venue || "Event venue"}</dd>
+                              </div>
+                              <div className="col-span-2 rounded-lg bg-[#f8fafc] p-2">
+                                <dt className="font-bold uppercase tracking-widest text-[#475569]">Dress code</dt>
+                              </div>
+                              <div className="rounded-lg bg-[#f8fafc] p-2">
+                                <dt className="font-bold uppercase tracking-widest text-[#475569]">Female</dt>
+                                <dd className="mt-1 font-semibold">{form.female_dress_code || "Not specified"}</dd>
+                              </div>
+                              <div className="rounded-lg bg-[#f8fafc] p-2">
+                                <dt className="font-bold uppercase tracking-widest text-[#475569]">Male</dt>
+                                <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
+                              </div>
+                            </div>
                           </div>
                         </>
                       )}
@@ -2428,17 +2329,13 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                         {(form.qr_message || form.qr_delivery === "with_qr") && (
                           <p className="mt-2 text-sm text-[#23466f]">{form.qr_message || "Attached to this invite is your QR code. Kindly present it at the event for entry."}</p>
                         )}
-                        <div className={`mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)] ${qrStyleConfig[form.qr_style]?.wrapper || "animate-pulse"}`}>
-                          {form.qr_style === "custom" ? (
-                            <div className="col-span-5 flex items-center justify-center text-[10px] text-gray-400 text-center">Your custom QR design</div>
-                          ) : (
-                            Array.from({ length: 25 }).map((_, index) => (
-                              <span
-                                key={index}
-                                className={`rounded-sm ${qrStyleConfig[form.qr_style]?.square || ""} ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
-                              />
-                            ))
-                          )}
+                        <div className="mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)]">
+                          {Array.from({ length: 25 }).map((_, index) => (
+                            <span
+                              key={index}
+                              className={`rounded-sm ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
+                            />
+                          ))}
                         </div>
                       </div>
                     )}
@@ -2466,14 +2363,24 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                             </p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={handleTestAndSignup}
-                          disabled={submitting}
-                          className="mt-5 flex h-14 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-base font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed bounce-button"
-                        >
-                          {submitting ? "Setting up..." : "Would you like to continue with your invite?"}
-                        </button>
+                        {trialEventId ? (
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/dashboard/events/${trialEventId}`)}
+                            className="mt-5 flex h-14 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-base font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F]"
+                          >
+                            View in Dashboard →
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleTestAndSignup}
+                            disabled={submitting}
+                            className="mt-5 flex h-14 w-full items-center justify-center rounded-xl bg-[#E91E8C] px-6 text-base font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed animate-bounce"
+                          >
+                            {submitting ? "Setting up..." : "Would you like to continue with your invite?"}
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <button
@@ -2583,18 +2490,34 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
               </div>
 
               {/* CTA */}
-              <button
-                type="button"
-                onClick={handleTestAndSignup}
-                disabled={submitting}
-                className="w-full h-14 rounded-xl bg-[#E91E8C] px-6 text-lg font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? "Setting up..." : "Would you like to continue with your invite?"}
-              </button>
+              {trialEventId ? (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/dashboard/events/${trialEventId}`)}
+                  className="w-full h-14 rounded-xl bg-[#E91E8C] px-6 text-lg font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F]"
+                >
+                  View in Dashboard →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleTestAndSignup}
+                  disabled={submitting}
+                  className="w-full h-14 rounded-xl bg-[#E91E8C] px-6 text-lg font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed animate-bounce"
+                >
+                  {submitting ? "Setting up..." : "Would you like to continue with your invite?"}
+                </button>
+              )}
 
-              <p className="text-xs text-center text-[#94a3b8]">
-                Create an account to send real invites to your guest list
-              </p>
+              {trialEventId ? (
+                <p className="text-xs text-center text-[#94a3b8]">
+                  Your event has been saved as a draft. Add guests, edit details, or publish from the dashboard.
+                </p>
+              ) : (
+                <p className="text-xs text-center text-[#94a3b8]">
+                  Create an account to send real invites to your guest list
+                </p>
+              )}
             </div>
           </div>
         </div>

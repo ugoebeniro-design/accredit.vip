@@ -18,6 +18,7 @@ import {
 } from "@/lib/event-form-options";
 import { formatCurrencyAmount } from "@/lib/currencies";
 import { INVITE_EVENT_TYPES, EVENT_EVENT_TYPES } from "@/lib/event-types";
+import Tesseract from "tesseract.js";
 import { VenueInput } from "@/components/shared/venue-input";
 
 type Mode = "invite" | "event";
@@ -25,8 +26,7 @@ type Channel = "email" | "whatsapp" | "sms";
 type QrDeliveryOption = "with_qr" | "without_qr" | "qr_later";
 type SocialPlatform = "instagram" | "x" | "facebook" | "tiktok" | "linkedin" | "website" | "other";
 type InviteTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate";
-type QRStyle = "pulsing" | "rotating" | "gradient" | "neon" | "bounce" | "scanner" | "ripple" | "sparkle" | "custom";
-type EventTemplate = "elegant" | "bold" | "minimal" | "vibrant" | "corporate" | null;
+
 type SocialHandle = { platform: SocialPlatform; handle: string };
 type PassPackage = { name: string; price: string };
 type LineupPerson = {
@@ -66,25 +66,9 @@ const inviteTemplates: Array<{ value: InviteTemplate | null; label: string; desc
   { value: "corporate", label: "Corporate", description: "Professional, business-ready", bestFor: "Business meetings, professional events", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5.217m0 0a9.01 9.01 0 00-5.566 0m5.566 0A8.973 8.973 0 0019 21m0 0h2" /></svg>) },
 ];
 
-const eventTemplates: Array<{ value: EventTemplate; label: string; description: string; bestFor: string; icon: (props: any) => React.ReactNode }> = [
-  { value: "elegant", label: "Elegant", description: "Classic, sophisticated, timeless", bestFor: "Weddings, formal galas", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2.293-2.293a1 1 0 00-1.414 0L10 12.586 5.707 8.293a1 1 0 00-1.414 0L2 10.586V19a2 2 0 002 2h16a2 2 0 002-2V7z" /></svg>) },
-  { value: "bold", label: "Bold", description: "Vibrant, energetic, eye-catching", bestFor: "Concerts, festivals", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>) },
-  { value: "minimal", label: "Minimal", description: "Clean, simple", bestFor: "Corporate events, conferences", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" /></svg>) },
-  { value: "vibrant", label: "Vibrant", description: "Fun, colorful, modern", bestFor: "Celebrations", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>) },
-  { value: "corporate", label: "Corporate", description: "Professional, business-ready", bestFor: "Business events", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5.217m0 0a9.01 9.01 0 00-5.566 0m5.566 0A8.973 8.973 0 0019 21m0 0h2" /></svg>) },
-];
 
-const qrStyles: Array<{ value: string; label: string; description: string; bestFor: string; icon: (props: any) => React.ReactNode }> = [
-  { value: "pulsing", label: "Pulsing", description: "Subtle glow with pulsing animation", bestFor: "Elegant, premium feel", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>) },
-  { value: "rotating", label: "Rotating", description: "Spinning QR with rotation effect", bestFor: "Dynamic, attention-grabbing", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>) },
-  { value: "gradient", label: "Gradient", description: "Color shift animation", bestFor: "Modern, vibrant events", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>) },
-  { value: "neon", label: "Neon", description: "Bright neon glow effect", bestFor: "Nightlife, parties, concerts", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>) },
-  { value: "bounce", label: "Bounce", description: "Bouncing/scaling animation", bestFor: "Fun, playful events", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>) },
-  { value: "scanner", label: "Scanner", description: "Scanning beam moving top-to-bottom", bestFor: "Tech, futuristic events", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>) },
-  { value: "ripple", label: "Ripple", description: "Expanding circular ripple from center", bestFor: "Concert, festival vibes", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 12a8 8 0 11-16 0 8 8 0 0116 0zM12 10a2 2 0 100 4 2 2 0 000-4z" /></svg>) },
-  { value: "sparkle", label: "Sparkle", description: "Sparkling dots across the QR", bestFor: "Luxury, premium events", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>) },
-  { value: "custom", label: "Use My Own", description: "Upload your custom QR code", bestFor: "Branded, unique design", icon: ({ className }: any) => (<svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>) },
-];
+
+
 
 const guestRanges = [
   { label: "1 - 100", min: 1, max: 100, units: 1 },
@@ -137,6 +121,193 @@ function parseDateParts(isoDate: string) {
   return { day: d || "", month: m || "", year: y || "" };
 }
 
+function dashboardRegexParseFlier(text: string): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  // Pre-clean OCR artifacts: pipes between words, stray special chars, normalize whitespace
+  const clean = text
+    .replace(/[|]/g, " ")
+    .replace(/[–—]/g, " ")
+    .replace(/[‎‏]/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+
+  const lines = clean.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  const dateLabels = /(?:date|day|when)\s*[:.]?\s*(.*)/i;
+  for (const line of lines) {
+    const m = line.match(dateLabels);
+    if (m) {
+      const dt = extractDashboardDate(m[1]);
+      if (dt) { result.event_date = dt; break; }
+    }
+  }
+  if (!result.event_date) {
+    const dt = extractDashboardDate(clean);
+    if (dt) result.event_date = dt;
+  }
+
+  const timeLabels = /(?:time|hour|starts?|by)\s*[:.]?\s*(.*)/i;
+  for (const line of lines) {
+    const m = line.match(timeLabels);
+    if (m) {
+      const tm = extractDashboardTime(m[1]);
+      if (tm) { result.event_time = tm; break; }
+    }
+  }
+  if (!result.event_time) {
+    const tm = extractDashboardTime(clean);
+    if (tm) result.event_time = tm;
+  }
+
+  const venueLabels = /(?:venue|location|place|address|at)\s*[:.]?\s*(.*)/i;
+  for (const line of lines) {
+    const m = line.match(venueLabels);
+    if (m) {
+      const v = m[1].replace(/[,;].*$/, "").trim();
+      if (v.length > 2 && v.length < 80) { result.venue = v; break; }
+    }
+  }
+  if (!result.venue) {
+    // Fallback: look for a mostly-uppercase line of 2+ words near the bottom
+    const upperLines = lines.filter((l) => {
+      const letters = l.replace(/[^A-Za-z]/g, "");
+      const uppers = l.replace(/[^A-Z]/g, "").length;
+      return letters.length > 5 && uppers / letters.length > 0.6 && l.split(/\s+/).length >= 2;
+    });
+    if (upperLines.length >= 1) result.venue = upperLines[upperLines.length - 1].replace(/\s+[a-z]{2,}$/, "").trim();
+  }
+  if (!result.venue) {
+    const sepMatch = clean.match(/(?:\b(?:at|@|venue|location)\s+)([A-Za-z][A-Za-z .'-]{3,70})/i);
+    if (sepMatch) result.venue = sepMatch[1].trim();
+  }
+
+  // Title: score each line by how "title-like" it is
+  const EVENT_KEYWORDS = /invite|invitation|wedding|celebration|party|birthday|anniversary|concert|festival|show|gala|ball|fundraiser|reunion|ceremony|reception|banquet|conference|summit|workshop|seminar|launch|premiere|opening|exhibition|fair|market/i;
+  const WATERMARK = /chatgpt|gpt.?image|dall.?e|generated.?by|midjourney|screenshot|image \d|prompt|ai.?generated|stable.?diffusion/i;
+  const COMMON_CAPS = new Set(["INVITE","YOU","TO","THE","AND","FOR","YOUR","OUR","ARE","ALL","CAN","HAS","HAD","WAS","WERE","THIS","THAT","WITH","FROM","THEY","WILL","BEEN","HAVE","HERE","WHAT","WHEN","WHERE","WHICH","THERE","THEIR","COME","JOIN","RSVP","CELEBRATE","WEDDING","BIRTHDAY","PARTY","EVENT","SHOW","FOUR","FIVE","SIX","SEVEN","EIGHT","NINE","TEN","ELEVEN","TWELVE","ONE","TWO","THREE"]);
+  function isNameWord(w: string) {
+    return w.length >= 4 && w === w.toUpperCase() && /[A-Z]/.test(w) && /[AEIOU]/.test(w) && !COMMON_CAPS.has(w);
+  }
+  let bestScore = 0;
+  // Special case: adjacent lines each with an all-caps name → "NAME and NAME"
+  for (let i = 0; i < lines.length - 1; i++) {
+    const w1 = lines[i].trim().split(/\s+/).filter(isNameWord);
+    const w2 = lines[i + 1].trim().split(/\s+/).filter(isNameWord);
+    if (w1.length >= 1 && w2.length >= 1) {
+      result.title = w1[0] + " and " + w2[0];
+      bestScore = 999;
+      break;
+    }
+  }
+  // Fallback: score remaining lines
+  if (!result.title) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].replace(/[#*"'_`^~°|]/g, "").trim();
+      if (line.length < 2 || line.length > 100) continue;
+      if (WATERMARK.test(line)) continue;
+
+      // Try combining this line with the next if both look like name fragments
+      const candidate = (() => {
+        const next = i + 1 < lines.length ? lines[i + 1].replace(/[#*"'_`^~°|]/g, "").trim() : "";
+        const combined = line + " " + next;
+        const allCapsWords = combined.split(/\s+/).filter((w) => w.length >= 3 && w === w.toUpperCase() && /[A-Z]/.test(w));
+        const lowerWords = combined.split(/\s+/).filter((w) => w.length >= 2 && w !== w.toUpperCase());
+        if (allCapsWords.length >= 2) {
+          const garbled = lowerWords.filter((w) => w.length >= 3 && !/^(?:and|&|the|for|of|at|in|on|to|by)$/i.test(w));
+          if (garbled.length <= 1) return combined;
+        }
+        return line;
+      })();
+
+      const cleanLine = candidate;
+      if (cleanLine.length < 4 || cleanLine.length > 100) continue;
+      if (/^\d/.test(cleanLine)) continue;
+      const alpha = cleanLine.replace(/[^A-Za-z ]/g, "").length;
+      if (alpha / cleanLine.length < 0.5) continue;
+      const words = cleanLine.split(/\s+/).filter(Boolean);
+      const realWords = words.filter((w) => {
+        if (w.length < 2) return false;
+        const letters = w.replace(/[^A-Za-z]/g, "").length;
+        return letters / w.length > 0.5;
+      });
+      const avgWordLen = realWords.length ? realWords.reduce((s, w) => s + w.length, 0) / realWords.length : 0;
+      if (avgWordLen < 2.5 || realWords.length < 1) continue;
+      let score = realWords.length + Math.round(avgWordLen);
+      if (EVENT_KEYWORDS.test(cleanLine)) score += 8;
+      const nameWords = words.filter(isNameWord);
+      score += nameWords.length * 3;
+      const lower = cleanLine.toLowerCase();
+      if (/^(?:date|time|venue|location|address)/i.test(cleanLine)) score -= 6;
+      if (score > bestScore) {
+        bestScore = score;
+        result.title = cleanLine;
+      }
+    }
+  }
+  if (!result.title) {
+    const t = clean.replace(/\s+/g, " ").trim();
+    if (t.length > 1) result.title = t;
+  }
+
+  return result;
+}
+
+function extractDashboardDate(s: string): string | null {
+  const txt = s.replace(/[|°^~*_`]/g, " ").replace(/\s+/g, " ").trim();
+  const m = txt.match(/(\d{1,2})\s*(?:st|nd|rd|th)?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)[a-z]*\s*,?\s*(\d{2,4})/i);
+  if (m) {
+    const months: Record<string, string> = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
+    const mn = m[2].slice(0, 3).toLowerCase();
+    const month = months[mn] || "01";
+    const day = String(parseInt(m[1], 10)).padStart(2, "0");
+    const year = m[3].length === 2 ? "20" + m[3] : m[3];
+    return `${year}-${month}-${day}`;
+  }
+  const mAlt = txt.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)[a-z]*\s+(\d{1,2})\s*,?\s*(\d{2,4})/i);
+  if (mAlt) {
+    const months: Record<string, string> = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
+    const mn = mAlt[1].slice(0, 3).toLowerCase();
+    const month = months[mn] || "01";
+    const day = String(parseInt(mAlt[2], 10)).padStart(2, "0");
+    const year = mAlt[3].length === 2 ? "20" + mAlt[3] : mAlt[3];
+    return `${year}-${month}-${day}`;
+  }
+  const m2 = txt.match(/(\d{1,2})\s*[/.-]\s*(\d{1,2})\s*[/.-]\s*(\d{2,4})/);
+  if (m2) {
+    const month = String(parseInt(m2[1], 10)).padStart(2, "0");
+    const day = String(parseInt(m2[2], 10)).padStart(2, "0");
+    const year = m2[3].length === 2 ? "20" + m2[3] : m2[3];
+    return `${year}-${month}-${day}`;
+  }
+  return null;
+}
+
+const DASH_NUMBERS: Record<string, string> = {
+  twelve: "12", eleven: "11", ten: "10", nine: "9", eight: "8", seven: "7",
+  six: "6", five: "5", four: "4", three: "3", two: "2", one: "1",
+  noon: "12", midnight: "12",
+};
+
+function extractDashboardTime(s: string): string | null {
+  const txt = s.replace(/[|°^~*_`]/g, " ").replace(/\s+/g, " ").trim();
+  let tm = txt.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i);
+  if (tm) return tm[1] + ":" + tm[2] + " " + tm[3].toUpperCase();
+  tm = txt.match(/(\d{1,2})\s*(AM|PM|am|pm)/i);
+  if (tm) return tm[1] + ":00 " + tm[2].toUpperCase();
+  const wordHour = txt.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|noon|midnight)\b/i);
+  if (wordHour) {
+    const hour = DASH_NUMBERS[wordHour[1].toLowerCase()] || "12";
+    let period = "AM";
+    if (/afternoon|evening|night|pm/i.test(txt)) period = "PM";
+    if (/morning|am/i.test(txt)) period = "AM";
+    if (/noon|midnight/i.test(txt)) period = /midnight/i.test(txt) ? "AM" : "PM";
+    const minute = /half\s+past/i.test(txt) ? "30" : /quarter\s+past/i.test(txt) ? "15" : /quarter\s+to/i.test(txt) ? "45" : "00";
+    return hour.padStart(2, "0") + ":" + minute + " " + period;
+  }
+  return null;
+}
+
 function dataUriToBlob(dataUri: string): Blob {
   const [meta, base64] = dataUri.split(",");
   const mime = meta?.match(/:(.*?);/)?.[1] || "image/png";
@@ -176,16 +347,7 @@ const templateStyles: Record<string, { headerBg: string; bodyBg: string; fontCla
   corporate: { headerBg: "#0D1B2A", bodyBg: "#fff", fontClass: "font-sans", accent: "#0D1B2A", textColor: "#ffffff" },
 };
 
-const qrStyleConfig: Record<string, { wrapper: string; square: string }> = {
-  pulsing: { wrapper: "animate-pulse", square: "" },
-  rotating: { wrapper: "animate-spin [animation-duration:3s]", square: "" },
-  gradient: { wrapper: "", square: "bg-gradient-to-br from-[#E91E8C] to-[#07182f]" },
-  neon: { wrapper: "", square: "bg-[#00ff88] shadow-[0_0_6px_#00ff88]" },
-  bounce: { wrapper: "animate-bounce", square: "" },
-  scanner: { wrapper: "animate-pulse", square: "bg-[#E91E8C]" },
-  ripple: { wrapper: "", square: "bg-gradient-to-br from-[#E91E8C] to-[#7C3AED] animate-ping" },
-  sparkle: { wrapper: "animate-pulse", square: "bg-[#FFD700] shadow-[0_0_4px_#FFD700]" },
-};
+
 
 const DEFAULT_FORM = {
   title: "",
@@ -224,8 +386,6 @@ const DEFAULT_FORM = {
   description: "",
   qr_message: "",
   invite_template: null as InviteTemplate | null,
-  qr_style: "pulsing" as QRStyle,
-  event_template: null as EventTemplate,
 };
 
 function TimeDropdown({ value, onChange, disabled, id }: { value: string; onChange: (v: string) => void; disabled?: boolean; id: string }) {
@@ -279,7 +439,7 @@ export default function CreateEventPage() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [step, setStep] = useState(0);
   const [formPage, setFormPage] = useState(0);
-  const totalFormPages = 3;
+  const totalFormPages = 2;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -296,7 +456,6 @@ export default function CreateEventPage() {
   const [yearPart, setYearPart] = useState("");
   const [inviteTemplateOpen, setInviteTemplateOpen] = useState(false);
   const [qrDetailsOpen, setQrDetailsOpen] = useState(false);
-  const [eventTemplateOpen, setEventTemplateOpen] = useState(false);
   const [aiImageError, setAiImageError] = useState("");
   const [aiGenerateError, setAiGenerateError] = useState("");
 
@@ -326,7 +485,7 @@ export default function CreateEventPage() {
       try {
         const draft = JSON.parse(savedDraft);
         // Only restore if there's real data (not just defaults)
-        if (draft && draft.form && draft.form.title) {
+        if (draft && draft.form) {
           setMode(lastMode);
           setForm(draft.form || DEFAULT_FORM);
           setPassPackages(draft.passPackages || [{ name: "Regular", price: "" }]);
@@ -334,12 +493,14 @@ export default function CreateEventPage() {
           setLineup(draft.lineup || [{ role: "", name: "", attachHeadshot: true, headshotSource: "upload", headshotFileName: "", generatedHeadshot: false }]);
           setUploadedImageData(draft.uploadedImageData || null);
           const lastStep = localStorage.getItem("accredit_dashboard_step");
-          if (lastStep) setStep(parseInt(lastStep, 10));
+          if (lastStep) setStep(parseInt(lastStep, 10)); else setStep(1);
           const lastFormPage = localStorage.getItem("accredit_dashboard_formPage");
           if (lastFormPage) setFormPage(parseInt(lastFormPage, 10));
           initialRestoreDone.current = true;
         }
-      } catch {}
+      } catch {
+        localStorage.removeItem(`accredit_draft_${lastMode}`);
+      }
     }
   }, [loading]);
 
@@ -367,15 +528,26 @@ export default function CreateEventPage() {
     }
   }, [mode]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      localStorage.setItem("accredit_draft_" + mode, JSON.stringify({ form, passPackages, socialHandles, lineup, uploadedImageData }));
-      localStorage.setItem("accredit_last_dashboard_mode", mode as string);
-      localStorage.setItem("accredit_dashboard_step", String(step));
-      localStorage.setItem("accredit_dashboard_formPage", String(formPage));
-    }, 300);
-    return () => clearTimeout(timer);
+  const saveDraft = useCallback((overrideForm?: typeof DEFAULT_FORM) => {
+    if (!mode) return;
+    const data = { form: overrideForm || form, passPackages, socialHandles, lineup, uploadedImageData };
+    try {
+      localStorage.setItem("accredit_draft_" + mode, JSON.stringify(data));
+    } catch {
+      try {
+        localStorage.setItem("accredit_draft_" + mode, JSON.stringify({ ...data, uploadedImageData: null }));
+      } catch {}
+    }
+    localStorage.setItem("accredit_last_dashboard_mode", mode);
+    localStorage.setItem("accredit_dashboard_step", String(step));
+    localStorage.setItem("accredit_dashboard_formPage", String(formPage));
   }, [form, passPackages, socialHandles, lineup, uploadedImageData, mode, step, formPage]);
+
+  useEffect(() => {
+    if (!mode) return;
+    const timer = setTimeout(() => saveDraft(), 300);
+    return () => clearTimeout(timer);
+  }, [form, passPackages, socialHandles, lineup, mode, step, formPage]);
 
   useEffect(() => {
     return () => { if (uploadedImagePreviewUrl) URL.revokeObjectURL(uploadedImagePreviewUrl); };
@@ -440,32 +612,40 @@ export default function CreateEventPage() {
         setFlierPreview(dataUrl);
         setFlierParsing(true);
         try {
-          const result = await apiClient<Record<string, unknown>>("/ai/parse-flier", {
-            method: "POST",
-            body: { image_data: dataUrl, mime_type: file.type },
-          });
+          let allText = "";
+          try {
+            const { data } = await Tesseract.recognize(dataUrl, "eng", { logger: () => {} });
+            allText = data.text;
+          } catch (ocrErr) {
+            console.warn("OCR failed:", ocrErr);
+            allText = file.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
+          }
+
+          const result = dashboardRegexParseFlier(allText);
+          console.log("OCR text:", allText, "Parsed result:", result);
           const str = (v: unknown) => (typeof v === "string" ? v : "");
           const num = (v: unknown) => (typeof v === "number" ? v : 0);
-          setForm((prev) => ({
-            ...prev,
-            title: str(result.title) || prev.title,
-            host_name: str(result.host_name) || prev.host_name,
-            venue: str(result.venue) || prev.venue,
-            male_dress_code: str(result.dress_code) || prev.male_dress_code,
-            description: str(result.description) || prev.description,
-            category: str(result.category) || prev.category,
-            gate_fee: num(result.ticket_price) > 0 ? String(result.ticket_price) : prev.gate_fee,
-            event_time: str(result.event_time) || prev.event_time,
-            after_party_enabled: !!(result.after_party_location) || prev.after_party_enabled,
-            after_party_location: str(result.after_party_location) || prev.after_party_location,
-            after_party_time: str(result.after_party_time) || prev.after_party_time,
-          }));
+          const nextForm = {
+            ...form,
+            title: str(result.title) || form.title,
+            host_name: str(result.host_name) || form.host_name,
+            venue: str(result.venue) || form.venue,
+            male_dress_code: str(result.dress_code) || form.male_dress_code,
+            description: str(result.description) || form.description,
+            category: str(result.category) || form.category,
+            gate_fee: num(result.ticket_price) > 0 ? String(result.ticket_price) : form.gate_fee,
+            event_time: str(result.event_time) || form.event_time,
+            after_party_enabled: !!(result.after_party_location) || form.after_party_enabled,
+            after_party_location: str(result.after_party_location) || form.after_party_location,
+            after_party_time: str(result.after_party_time) || form.after_party_time,
+          };
+          setForm(nextForm);
           const rawDate = str(result.event_date);
           if (rawDate) {
             const parts = parseDateParts(rawDate);
             const d = String(parseInt(parts.day || "0", 10));
             if (d && d !== "0") { setDayPart(d); setMonthPart(parts.month); setYearPart(parts.year); }
-            setForm((prev) => ({ ...prev, event_date: rawDate }));
+            nextForm.event_date = rawDate;
           }
           if (Array.isArray(result.lineup) && result.lineup.length > 0) {
             setLineup(result.lineup.map((p: { role?: string; name?: string }) => ({
@@ -478,6 +658,7 @@ export default function CreateEventPage() {
           }
           setFlierParsed(true);
           if (!mode) setMode("event");
+          saveDraft(nextForm);
         } catch {
           setFlierParseError("Could not read your flier. Fill in the details below manually.");
           if (!mode) setMode("event");
@@ -567,7 +748,6 @@ export default function CreateEventPage() {
         after_party_location: form.after_party_location || undefined,
         after_party_time: form.after_party_time ? parseTimeInputTo24Hour(form.after_party_time) : undefined,
         qr_delivery: form.qr_delivery || undefined,
-        qr_style: form.qr_style || undefined,
         qr_message: form.qr_message || undefined,
         country: "Nigeria",
       });
@@ -608,7 +788,6 @@ export default function CreateEventPage() {
         is_public: false,
         event_type: "private",
         qr_delivery: form.qr_delivery || undefined,
-        qr_style: form.qr_style || undefined,
         qr_message: form.qr_message || undefined,
         country: "Nigeria",
       });
@@ -835,8 +1014,7 @@ export default function CreateEventPage() {
             <div className="flex items-center gap-2 text-xs font-semibold">
               {[
                 { index: 0, label: mode === "event" ? "Event type & template" : "Template & style" },
-                { index: 1, label: "Details & pricing" },
-                { index: 2, label: "Lineup, pass & message" },
+                { index: 1, label: "Details, media & message" },
               ].map((item) => (
                 <button key={item.index} type="button"
                   onClick={() => { if (item.index <= formPage + 1) { const form = document.getElementById('create-event-form') as HTMLFormElement; if (item.index > formPage && form && !form.reportValidity()) return; setFormPage(item.index); } }}
@@ -909,36 +1087,6 @@ export default function CreateEventPage() {
                         )}
                         {flierParseError && <p className="mt-2 text-xs text-amber-600 font-medium">{flierParseError}</p>}
                       </div>
-                    )}
-
-                    {/* Event template (event mode) */}
-                    {mode === "event" && (
-                      <details open={eventTemplateOpen} className="rounded-xl border border-[#d9e2ec] p-4 group"
-                        onToggle={(e) => setEventTemplateOpen((e.target as HTMLDetailsElement).open)}>
-                        <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-[#23466f] [&::-webkit-details-marker]:hidden">
-                          <span className="flex items-center gap-2">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                            <span>Event flyer style</span>
-                          </span>
-                          <svg className={`w-4 h-4 text-[#94a3b8] transition-transform ${eventTemplateOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                        </summary>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          {eventTemplates.map((template) => (
-                            <label key={String(template.value)} className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 transition-all ${form.event_template === template.value ? "border-[#E91E8C] bg-[#fff1f8]" : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50"}`}>
-                              <input type="radio" name="event-template" className="sr-only" checked={form.event_template === template.value}
-                                onChange={() => setForm({ ...form, event_template: template.value })} />
-                              <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                                style={{ color: form.event_template === template.value ? "#E91E8C" : "#94a3b8", background: form.event_template === template.value ? "rgba(233,30,140,0.08)" : "#f8fafc" }}>
-                                {template.icon({ className: "w-4 h-4" })}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="font-bold text-[#23466f]">{template.label}</p>
-                                <p className="text-xs text-[#64748b] leading-4 mt-1">{template.description}</p>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      </details>
                     )}
 
                     {/* Invite template (invite mode) */}
@@ -1155,25 +1303,12 @@ export default function CreateEventPage() {
                             </label>
                           ))}
                           {form.qr_delivery !== "without_qr" && (
-                            <>
-                              <p className="text-xs font-semibold text-[#E91E8C] mb-2">Choose your animated QR style:</p>
-                              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                                {qrStyles.map((style) => (
-                                  <label key={style.value} className={`flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 p-2 transition-all ${form.qr_style === style.value ? "border-[#E91E8C] bg-[#fff1f8]" : "border-[#e2e8f0] bg-white hover:border-[#E91E8C]/50"}`}>
-                                    <input type="radio" name="qr-style" className="sr-only" checked={form.qr_style === style.value}
-                                      onChange={() => setForm({ ...form, qr_style: style.value as QRStyle })} />
-                                    <span className={form.qr_style === style.value ? "text-[#E91E8C]" : "text-[#94a3b8]"}>{style.icon({ className: "w-5 h-5" })}</span>
-                                    <span className="text-[10px] font-bold text-center" style={{ color: form.qr_style === style.value ? "#E91E8C" : "#64748b" }}>{style.label}</span>
-                                  </label>
-                                ))}
-                              </div>
-                              <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-[#23466f]">QR message (optional)</label>
-                                <textarea value={form.qr_message} onChange={(e) => setForm({ ...form, qr_message: e.target.value })}
-                                  className="w-full rounded-xl border border-[#d9e2ec] px-3 py-3 text-sm outline-none focus:border-[#E91E8C] min-h-[60px] resize-none"
-                                  placeholder="Message to accompany QR code, e.g. instructions for the guest..." />
-                              </div>
-                            </>
+                            <div className="space-y-1.5">
+                              <label className="text-sm font-semibold text-[#23466f]">QR message (optional)</label>
+                              <textarea value={form.qr_message} onChange={(e) => setForm({ ...form, qr_message: e.target.value })}
+                                className="w-full rounded-xl border border-[#d9e2ec] px-3 py-3 text-sm outline-none focus:border-[#E91E8C] min-h-[60px] resize-none"
+                                placeholder="Message to accompany QR code, e.g. instructions for the guest..." />
+                            </div>
                           )}
                           {form.qr_delivery === "qr_later" && (
                             <div className="rounded-xl border border-[#e8edf2] bg-[#f8f9fc] p-4 space-y-3">
@@ -1315,11 +1450,7 @@ export default function CreateEventPage() {
                         </div>
                       </details>
                     )}
-                  </div>
-                )}
 
-                {formPage === 2 && (
-                  <div className="space-y-5">
                     {/* Image finalization / AI generation */}
                     <div className="space-y-1.5">
                       <span className="text-sm font-semibold text-[#23466f]">Event Image</span>
@@ -1429,7 +1560,7 @@ export default function CreateEventPage() {
 
                   <div className="mt-6 overflow-hidden rounded-xl bg-white text-[#07182f] border border-[#e8edf2]">
                     {(() => {
-                      const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
+                      const activeTemplate = mode === "invite" ? form.invite_template : null;
                       const styles = activeTemplate ? templateStyles[activeTemplate] : null;
                       const headerText = styles ? styles.textColor : "white";
                       return (
@@ -1462,7 +1593,7 @@ export default function CreateEventPage() {
                 </div>
 
                 {/* Live Preview Button - only on final page */}
-                {formPage === 2 && (
+                {formPage === 1 && (
                   <button type="button" onClick={() => document.querySelector('[data-live-preview-mobile]')?.scrollIntoView({ behavior: 'smooth' })}
                     className="w-full mt-5 h-12 rounded-xl font-black text-sm border-2 border-[#E91E8C] text-[#E91E8C] transition-all hover:bg-[#fff1f8] bounce-button lg:hidden">
                     Preview Before {mode === "event" ? "Posting" : "Creating"}
@@ -1470,7 +1601,7 @@ export default function CreateEventPage() {
                 )}
 
                 {/* Payment method toggle - invite mode only */}
-                {formPage === 2 && mode === "invite" && (
+                {formPage === 1 && mode === "invite" && (
                   <div className="mt-4 flex gap-2 rounded-xl border border-[#e8edf2] p-1">
                     <button
                       type="button"
@@ -1498,7 +1629,7 @@ export default function CreateEventPage() {
                 )}
 
                 {/* Submit button - only on final page */}
-                {formPage === 2 && (
+                {formPage === 1 && (
                   <button type="submit" disabled={submitting}
                     className="w-full mt-3 h-12 rounded-xl font-black text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed bounce-button"
                     style={{ background: submitting ? "#94a3b8" : "linear-gradient(135deg, #E91E8C, #C4166F)", boxShadow: submitting ? "none" : "0 6px 20px rgba(233,30,140,0.35)" }}>
@@ -1514,7 +1645,7 @@ export default function CreateEventPage() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                     {formPage === 0 ? "Back to modes" : "Previous"}
                   </button>
-                  {formPage < 2 && (
+                  {formPage < 1 && (
                     <button type="button" onClick={() => { const form = document.getElementById('create-event-form') as HTMLFormElement; if (form && !form.reportValidity()) return; setFormPage(formPage + 1); }}
                       className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 bounce-button"
                       style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}>
@@ -1573,7 +1704,7 @@ export default function CreateEventPage() {
                   )}
                   <div className="overflow-hidden rounded-xl bg-white text-[#07182f]">
                     {(() => {
-                      const activeTemplate = mode === "invite" ? form.invite_template : form.event_template;
+                      const activeTemplate = mode === "invite" ? form.invite_template : null;
                       const styles = activeTemplate ? templateStyles[activeTemplate] : null;
                       const headerText = styles ? styles.textColor : "white";
                       return (
@@ -1602,6 +1733,23 @@ export default function CreateEventPage() {
                             <p className="mt-1 text-sm text-[#64748b]">{form.host_name || "Host name"}</p>
                             {mode === "event" ? (
                               <>
+                                <div className="mt-4 space-y-3 text-sm text-[#23466f]">
+                                  {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
+                                    ? (form.description || "").split(/\n{2,}/).map((para, i) => (
+                                        <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                                      ))
+                                    : <p className="italic text-[#94a3b8]">Your event description will appear here in the preview.</p>}
+                                </div>
+                                {visibleLineup.length > 0 && (
+                                  <p className="mt-3 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
+                                    Featuring: {visibleLineup.map((p) => p.name).filter(Boolean).join(" · ")}
+                                  </p>
+                                )}
+                                {form.after_party_enabled && (
+                                  <p className="mt-2 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
+                                    After party at {form.after_party_location || "TBD"}{form.after_party_time ? ` by ${form.after_party_time}` : ""}
+                                  </p>
+                                )}
                                 <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                                   <div className="rounded-lg bg-[#f8fafc] p-2">
                                     <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
@@ -1647,28 +1795,21 @@ export default function CreateEventPage() {
                                     </div>
                                   )}
                                 </div>
-                                <div className="mt-4 space-y-3 text-sm text-[#23466f]">
-                                  {(form.description || "").split(/\n{2,}/).filter((p) => p.trim()).length > 0
-                                    ? (form.description || "").split(/\n{2,}/).map((para, i) => (
-                                        <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
-                                      ))
-                                    : <p>Your event description will appear here in the preview.</p>}
-                                </div>
-                                {visibleLineup.length > 0 && (
-                                  <p className="mt-3 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
-                                    Featuring: {visibleLineup.map((p) => p.name).filter(Boolean).join(" · ")}
-                                  </p>
-                                )}
-                                {form.after_party_enabled && (
-                                  <p className="mt-2 rounded-lg bg-[#fff1f8] p-3 text-sm font-semibold text-[#C4166F]">
-                                    After party at {form.after_party_location || "TBD"}{form.after_party_time ? ` by ${form.after_party_time}` : ""}
-                                  </p>
-                                )}
                               </>
                             ) : (
                               <>
                                 <div className="mt-4 space-y-3 text-sm text-[#23466f]">
                                   <p className="font-semibold">Dear <span className="text-[#E91E8C]">[Guest Name]</span>,</p>
+                                  {(() => {
+                                    const desc = form.description || "";
+                                    const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
+                                    if (paragraphs.length === 0) {
+                                      return <p className="italic text-[#94a3b8]">Your message will appear here in the preview.</p>;
+                                    }
+                                    return paragraphs.map((para, i) => (
+                                      <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
+                                    ));
+                                  })()}
                                   <div className="grid grid-cols-2 gap-2 text-xs">
                                     <div className="rounded-lg bg-[#f8fafc] p-2">
                                       <dt className="font-bold uppercase tracking-widest text-[#475569]">Date</dt>
@@ -1694,16 +1835,6 @@ export default function CreateEventPage() {
                                       <dd className="mt-1 font-semibold">{form.male_dress_code || "Not specified"}</dd>
                                     </div>
                                   </div>
-                                  {(() => {
-                                    const desc = form.description || "";
-                                    const paragraphs = desc.split(/\n{2,}/).filter((p) => p.trim());
-                                    if (paragraphs.length === 0) {
-                                      return <p className="mt-3">Your message will appear here in the preview.</p>;
-                                    }
-                                    return paragraphs.map((para, i) => (
-                                      <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\n/g, "<br />") }} />
-                                    ));
-                                  })()}
                                 </div>
                               </>
                             )}
@@ -1718,17 +1849,13 @@ export default function CreateEventPage() {
                       {(form.qr_message || form.qr_delivery === "with_qr") && (
                         <p className="mt-2 text-sm text-[#23466f]">{form.qr_message || "Attached to this invite is your QR code. Kindly present it at the event for entry."}</p>
                       )}
-                      <div className={`mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)] ${qrStyleConfig[form.qr_style]?.wrapper || "animate-pulse"}`}>
-                        {form.qr_style === "custom" ? (
-                          <div className="col-span-5 flex items-center justify-center text-[10px] text-gray-400 text-center">Your custom QR design</div>
-                        ) : (
-                          Array.from({ length: 25 }).map((_, index) => (
-                            <span
-                              key={index}
-                              className={`rounded-sm ${qrStyleConfig[form.qr_style]?.square || ""} ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
-                            />
-                          ))
-                        )}
+                      <div className="mt-3 grid h-24 w-24 grid-cols-5 gap-1 rounded-lg bg-[#f8fafc] p-2 shadow-[0_0_0_4px_rgba(233,30,140,0.08)]">
+                        {Array.from({ length: 25 }).map((_, index) => (
+                          <span
+                            key={index}
+                            className={`rounded-sm ${[0, 1, 2, 5, 10, 12, 14, 18, 20, 21, 22, 24].includes(index) ? "bg-[#07182f]" : "bg-white"}`}
+                          />
+                        ))}
                       </div>
                     </div>
                   )}

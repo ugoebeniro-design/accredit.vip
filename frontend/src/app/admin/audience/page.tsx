@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/contexts/auth-context";
 import { apiClient } from "@/lib/api-client";
@@ -66,17 +65,6 @@ function maskEmail(email: string) {
 
 export default function AdminAudiencePage() {
   const { user, loading: authLoading, logout } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        router.push("/admin/login");
-      } else if (user.role !== "super_admin") {
-        router.replace("/admin");
-      }
-    }
-  }, [user, authLoading, router]);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);

@@ -1,5 +1,7 @@
+import os
 from openai import AsyncOpenAI
 from app.core.config import settings
+from app.services.file_upload_security import resize_and_save
 
 client = None
 
@@ -252,9 +254,10 @@ async def generate_flier_image(prompt: str) -> str | None:
                 filename = f"flier_{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}.png"
                 filepath = os.path.join(upload_dir, filename)
                 img_bytes = base64.b64decode(data.b64_json)
-                with open(filepath, "wb") as f:
-                    f.write(img_bytes)
-                return f"{app_settings.BACKEND_URL}/uploads/fliers/{filename}"
+                saved = resize_and_save(img_bytes, filepath)
+                if saved:
+                    return f"{app_settings.BACKEND_URL}/uploads/fliers/{os.path.basename(saved)}"
+                return None
         except Exception as e:
             logger.error("generate_flier_image(%s) failed: %s", model, e)
     return None

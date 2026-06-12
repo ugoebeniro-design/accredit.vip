@@ -83,6 +83,9 @@ async def send_invites(
                         host_name=event.host_name,
                         rsvp_link=rsvp_link,
                         custom_message=req.custom_message,
+                        dress_code=event.dress_code,
+                        male_dress_code=event.male_dress_code,
+                        female_dress_code=event.female_dress_code,
                     )
                     guest.invite_sent = True
                     guest.invite_attempts += 1

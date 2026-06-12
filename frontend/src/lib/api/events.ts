@@ -87,7 +87,7 @@ export type CreateEventInput = {
   after_party_location?: string;
   after_party_time?: string;
   qr_delivery?: string;
-  qr_style?: string;
+
   qr_message?: string;
 };
 

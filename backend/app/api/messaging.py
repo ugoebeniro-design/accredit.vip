@@ -16,11 +16,11 @@ from app.models.flier import FlierAsset
 from app.models.invite import InviteBatch, InviteMessage
 from app.models.payment import Payment
 from app.api.qr_codes import get_or_create_guest_qr
-from app.services.email_service import send_email, send_email_with_images
+from app.services.email_service import send_email
 from app.services.sms_service import send_sms
 from app.services.whatsapp_service import send_whatsapp
 from app.services.whatsapp_cloud_service import send_whatsapp_cloud
-from app.services.qr_service import qr_gif_to_url
+from app.services.qr_service import qr_to_url
 
 RESEND_PRICE_PER_GUEST = 500  # NGN per guest for re-sending
 
@@ -49,7 +49,7 @@ async def _send_whatsapp(to: str, message: str, media_url: str | None = None) ->
 
 
 def _format_date(date_val) -> str:
-    """Convert date to format like 'Monday 20th July, 2026'."""
+    """Convert date to format like 'Saturday May 15, 2027'."""
     from datetime import date
     if isinstance(date_val, str):
         try:
@@ -58,9 +58,7 @@ def _format_date(date_val) -> str:
             return date_val
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-    day = date_val.day
-    suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
-    return f"{days[date_val.weekday()]} {day}{suffix} {months[date_val.month - 1]}, {date_val.year}"
+    return f"{days[date_val.weekday()]} {months[date_val.month - 1]} {date_val.day}, {date_val.year}"
 
 
 def _format_time(time_val, tz: str = "WAT") -> str:
@@ -112,10 +110,10 @@ def _build_invite_message(
 ) -> tuple[str, str, str]:
     rsvp_link = f"{settings.FRONTEND_URL}/rsvp/{guest.rsvp_token}"
     subject = f"You're Invited: {event.title}"
-    description = event.description or "You are cordially invited."
+    invitation_text = event.description or "You are cordially invited."
     body = (
         f"Dear {guest.name},\n\n"
-        f"{description}\n\n"
+        f"{invitation_text}\n\n"
         f"Event Details:\n"
         f"Date: {event.event_date}\n"
         f"Time: {event.event_time}\n"
@@ -124,18 +122,19 @@ def _build_invite_message(
         f"RSVP: {rsvp_link}\n"
         f"{f'Your unique QR code: {qr_url}\n' if qr_url else ''}"
         f"\n"
-        f"Warm regards,\n{event.host_name or 'The Host'}"
+        f"{f'Warm regards,\n{event.host_name}' if event.host_name else ''}"
     )
     from datetime import date as dt_date, time as dt_time
     formatted_date = _format_date(event.event_date)
     formatted_time = _format_time(event.event_time, event.timezone or "WAT")
-    description_html = f"<p>{event.description}</p>" if event.description else ""
     qr_html = ""
     if qr_image_url:
-        qr_html = f"""
+        absolute_qr = _absolute_url(qr_image_url)
+        if absolute_qr:
+            qr_html = f"""
         <div style="text-align:center;padding:16px;background:#f8f9fc;border-radius:12px;margin:16px 0">
             <p style="color:#23466f;font-size:13px;font-weight:bold;margin:0 0 12px">YOUR UNIQUE ENTRY CODE</p>
-            <img src="cid:qr_code" alt="Entry QR Code" style="width:180px;height:180px;display:block;margin:0 auto" />
+            <img src="{absolute_qr}" alt="Entry QR Code" style="width:180px;height:180px;display:block;margin:0 auto" />
             <p style="color:#94a3b8;font-size:11px;margin:8px 0 0">Show this code at the venue entrance</p>
         </div>"""
     elif qr_url:
@@ -144,9 +143,17 @@ def _build_invite_message(
         )
     flyer_html = ""
     if flyer_url:
-        flyer_html = f'<img src="cid:flyer" alt="{event.title}" style="width:100%;max-width:600px;display:block;border-radius:0" />'
+        absolute_flyer = _absolute_url(flyer_url)
+        if absolute_flyer:
+            flyer_html = f'<img src="{absolute_flyer}" alt="{event.title}" style="width:100%;max-width:600px;display:block;border-radius:0" />'
+    host_section = f'<p style="margin:0 0 4px;font-size:14px;font-weight:bold;color:#fff">Hosted by {event.host_name}</p>' if event.host_name else ''
     html = (
         '<div style="max-width:600px;margin:0 auto;font-family:Georgia,serif;color:#1a1a2e">'
+        '<style>@keyframes accredit-text{0%,10%{opacity:1}20%,70%{opacity:1}85%,100%{opacity:0}}@keyframes accredit-btn{0%,35%{opacity:1}45%,70%{opacity:1}85%,100%{opacity:0}}@keyframes accredit-pulse{0%,100%{box-shadow:0 0 0 0 rgba(233,30,140,0.3)}50%{box-shadow:0 0 0 12px rgba(233,30,140,0)}}</style>'
+        '<div style="background:linear-gradient(135deg,#E91E8C,#C4166F);padding:28px 24px;text-align:center;min-height:105px">'
+        '<div style="animation:accredit-text 6s ease-in-out infinite"><p style="margin:0;color:#fff;font-size:20px;font-weight:bold;letter-spacing:1px;font-family:Georgia,serif">Accredit.vip</p></div>'
+        '<div style="animation:accredit-btn 6s ease-in-out infinite;margin-top:14px"><a href="https://accredit.vip" style="animation:accredit-pulse 2s infinite;display:inline-block;background:#ffffff;color:#E91E8C;padding:12px 36px;border-radius:50px;text-decoration:none;font-weight:bold;font-size:13px;font-family:Arial,sans-serif;letter-spacing:1px">Register Now</a></div>'
+        '</div>'
         f'{flyer_html}'
         '<div style="padding:32px 28px;background:#ffffff">'
         f'<p style="font-size:13px;color:#888;text-transform:uppercase;letter-spacing:2px;margin:0 0 4px">You are cordially invited to</p>'
@@ -156,7 +163,9 @@ def _build_invite_message(
         f'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">DATE</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{formatted_date}</td></tr>'
         f'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">TIME</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{formatted_time}</td></tr>'
         f'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">VENUE</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{event.venue}</td></tr>'
-        f'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">DRESS CODE</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{event.dress_code or "Any"}</td></tr>'
+        {'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">DRESS CODE</td><td style="padding:8px 0;font-size:14px;font-weight:bold">' + (event.dress_code or "Any") + '</td></tr>' if event.dress_code else ''}
+        {'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">MEN</td><td style="padding:8px 0;font-size:14px;font-weight:bold">' + event.male_dress_code + '</td></tr>' if getattr(event, 'male_dress_code', None) else ''}
+        {'<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">WOMEN</td><td style="padding:8px 0;font-size:14px;font-weight:bold">' + event.female_dress_code + '</td></tr>' if getattr(event, 'female_dress_code', None) else ''}
         '</table>'
         f'<div style="text-align:center;margin:24px 0">'
         f'<a href="{rsvp_link}" style="display:inline-block;background:#E91E8C;color:#fff;padding:14px 40px;border-radius:50px;text-decoration:none;font-weight:bold;font-size:15px;font-family:Arial,sans-serif">RSVP NOW</a>'
@@ -164,7 +173,7 @@ def _build_invite_message(
         f'{qr_html}'
         '</div>'
         '<div style="background:#07182f;color:#d9e8f7;padding:24px;text-align:center;font-size:12px;font-family:Arial,sans-serif">'
-        f'<p style="margin:0 0 4px;font-size:14px;font-weight:bold;color:#fff">Hosted by {event.host_name}</p>'
+        f'{host_section}'
         '<p style="margin:0;letter-spacing:1px">Accredit.vip — Premium Event Infrastructure</p>'
         '</div>'
         + (f'<img src="{settings.FRONTEND_URL}/api/v1/track/open/{message_id}" alt="" width="1" height="1" style="display:none" />' if message_id else '')
@@ -194,10 +203,8 @@ async def _send_to_guest(
     flyer = flyer_result.scalar_one_or_none()
     flyer_url = flyer.url if flyer else event.cover_image
 
-    qr_data = qr_token_url
-    qr_style = event.qr_style or "pulsing"
-    qr_image_url_obj = qr_gif_to_url(qr_data, size=250, style=qr_style)
-    qr_image_url = qr_image_url_obj if qr_image_url_obj else None
+    qr_image_path = _upload_path_from_url(flyer_url) if flyer_url else None
+    qr_image_url = qr_to_url(qr_token_url, image_path=qr_image_path, size=250)
 
     msg = InviteMessage(batch_id=batch_id, guest_id=guest.id, channel=channel)
     db.add(msg)
@@ -207,16 +214,8 @@ async def _send_to_guest(
 
     try:
         if channel == "email" and guest.email:
-            from_addr = f"{event.host_name} via Accredit.vip <noreply@wristbandsng.com>"
-            email_images = []
-            if flyer_url:
-                email_images.append(("flyer", _upload_path_from_url(flyer_url)))
-            if qr_image_url:
-                email_images.append(("qr_code", _upload_path_from_url(qr_image_url)))
-            if email_images:
-                ok = await asyncio.wait_for(send_email_with_images(guest.email, subject, html, email_images, from_addr=from_addr), timeout=15)
-            else:
-                ok = await asyncio.wait_for(send_email(guest.email, subject, html, from_addr=from_addr), timeout=15)
+            from_addr = f"{(event.host_name or 'Accredit.vip')} via Accredit.vip <noreply@wristbandsng.com>"
+            ok = await asyncio.wait_for(send_email(guest.email, subject, html, from_addr=from_addr), timeout=15)
         elif channel == "whatsapp" and guest.phone:
             media_to_send = _absolute_url(flyer_url) or _absolute_url(qr_image_url)
             ok = await _send_whatsapp(guest.phone, body, media_url=media_to_send)
@@ -255,9 +254,16 @@ def _build_qr_message(guest: Guest, event: Event, qr_image_url: str | None = Non
     )
     qr_img_html = ""
     if qr_image_url:
-        qr_img_html = f'<img src="cid:qr_code" alt="Entry QR Code" style="width:200px;height:200px;display:block;margin:0 auto" />'
+        absolute_qr = _absolute_url(qr_image_url)
+        if absolute_qr:
+            qr_img_html = f'<img src="{absolute_qr}" alt="Entry QR Code" style="width:200px;height:200px;display:block;margin:0 auto" />'
     html = (
         '<div style="max-width:600px;margin:0 auto;font-family:Georgia,serif;color:#1a1a2e">'
+        '<style>@keyframes accredit-text{0%,10%{opacity:1}20%,70%{opacity:1}85%,100%{opacity:0}}@keyframes accredit-btn{0%,35%{opacity:1}45%,70%{opacity:1}85%,100%{opacity:0}}@keyframes accredit-pulse{0%,100%{box-shadow:0 0 0 0 rgba(233,30,140,0.3)}50%{box-shadow:0 0 0 12px rgba(233,30,140,0)}}</style>'
+        '<div style="background:linear-gradient(135deg,#E91E8C,#C4166F);padding:28px 24px;text-align:center;min-height:105px">'
+        '<div style="animation:accredit-text 6s ease-in-out infinite"><p style="margin:0;color:#fff;font-size:20px;font-weight:bold;letter-spacing:1px;font-family:Georgia,serif">Accredit.vip</p></div>'
+        '<div style="animation:accredit-btn 6s ease-in-out infinite;margin-top:14px"><a href="https://accredit.vip" style="animation:accredit-pulse 2s infinite;display:inline-block;background:#ffffff;color:#E91E8C;padding:12px 36px;border-radius:50px;text-decoration:none;font-weight:bold;font-size:13px;font-family:Arial,sans-serif;letter-spacing:1px">Register Now</a></div>'
+        '</div>'
         '<div style="background:#07182f;color:#fff;padding:32px 28px;text-align:center">'
         '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#ffb4d9;margin-bottom:8px">QR Access Code</div>'
         f'<h1 style="margin:0 0 4px;font-size:30px;line-height:1.1;color:#fff">{event.title}</h1>'
@@ -286,9 +292,11 @@ async def _send_qr_to_guest(
     qr = await get_or_create_guest_qr(db, event.id, guest.id)
     qr_token_url = f"{settings.FRONTEND_URL}/api/v1/qr/{qr.token}"
 
-    qr_style = event.qr_style or "pulsing"
-    qr_image_url_obj = qr_gif_to_url(qr_token_url, size=250, style=qr_style)
-    qr_image_url = qr_image_url_obj if qr_image_url_obj else None
+    flyer_result = await db.execute(select(FlierAsset).where(FlierAsset.event_id == event.id).order_by(FlierAsset.created_at.desc()))
+    flyer = flyer_result.scalar_one_or_none()
+    flyer_url = flyer.url if flyer else event.cover_image
+    qr_image_path = _upload_path_from_url(flyer_url) if flyer_url else None
+    qr_image_url = qr_to_url(qr_token_url, image_path=qr_image_path, size=250)
 
     subject, body, html = _build_qr_message(guest, event, qr_image_url)
 
@@ -297,11 +305,8 @@ async def _send_qr_to_guest(
 
     try:
         if channel == "email" and guest.email:
-            from_addr = f"{event.host_name} via Accredit.vip <noreply@wristbandsng.com>"
-            if qr_image_url:
-                ok = await asyncio.wait_for(send_email_with_images(guest.email, subject, html, [("qr_code", _upload_path_from_url(qr_image_url))], from_addr=from_addr), timeout=15)
-            else:
-                ok = await asyncio.wait_for(send_email(guest.email, subject, html, from_addr=from_addr), timeout=15)
+            from_addr = f"{(event.host_name or 'Accredit.vip')} via Accredit.vip <noreply@wristbandsng.com>"
+            ok = await asyncio.wait_for(send_email(guest.email, subject, html, from_addr=from_addr), timeout=15)
         elif channel == "whatsapp" and guest.phone:
             ok = await _send_whatsapp(guest.phone, body, media_url=_absolute_url(qr_image_url))
         elif channel == "sms" and guest.phone:

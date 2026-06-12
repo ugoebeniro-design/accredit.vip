@@ -22,7 +22,6 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
-import { NotificationBell } from "@/components/notification-bell";
 import { getEvents, type EventData, type EventFilters } from "@/lib/api/events";
 import { apiClient } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
@@ -255,7 +254,6 @@ function DashboardContent() {
           </div>
 
           <div className="flex items-center gap-2">
-            <NotificationBell />
             <Link href="/dashboard/wallet" className="flex items-center gap-1.5 rounded-xl border border-[#e8edf2] bg-white px-3 py-1.5 text-xs font-bold text-[#0D1B2A] hover:border-pink-300 hover:text-pink-600 transition-colors">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />

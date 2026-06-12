@@ -34,7 +34,7 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     if (!authLoading && (!user || (user.role !== "admin" && user.role !== "super_admin"))) {
-      router.push("/admin/login");
+      router.push("/admin");
     }
   }, [user, authLoading, router]);
 
