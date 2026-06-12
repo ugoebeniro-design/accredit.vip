@@ -125,10 +125,15 @@ def _parse_time(val: str | None) -> time | None:
     return None
 
 
-async def _maybe_create_event(req: TrialUseRequest, user: User, flyer_url: str | None, db: AsyncSession) -> int | None:
+async def _maybe_create_event(req: TrialUseRequest, user: User | None, flyer_url: str | None, db: AsyncSession) -> int | None:
     p = req.payload
     ed = _parse_date(p.get("event_date"))
     et = _parse_time(p.get("event_time"))
+    if not user:
+        result = await db.execute(select(User).where(User.is_super_admin == True))
+        user = result.scalar_one_or_none()
+    if not user:
+        return None
     event = Event(
         organizer_id=user.id,
         title=p.get("title") or "Untitled Event",
@@ -285,7 +290,7 @@ async def use_trial(
 
         # Create event+guest record early so we have a real RSVP token
         rsvp_link_url = f"{settings.FRONTEND_URL}/create-event"
-        if user and "email" in delivery_channels:
+        if "email" in delivery_channels:
             event_id = await _maybe_create_event(req, user, flyer_url, db)
             if event_id:
                 guest_created = True
@@ -462,8 +467,8 @@ async def use_trial(
             except Exception:
                 pass
 
-    # Create Event + Guest records if user is authenticated (skip if already done for invite trial)
-    if user and not guest_created:
+    # Create Event + Guest records (skip if already done for invite trial)
+    if not guest_created:
         event_id = await _maybe_create_event(req, user, flyer_url, db)
 
     # SECURITY: Detect multi-account abuse
