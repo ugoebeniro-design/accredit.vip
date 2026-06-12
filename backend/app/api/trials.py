@@ -86,10 +86,10 @@ def _dress_code_rows(payload: dict) -> str:
     rows = ""
     if dc:
         rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>DRESS CODE</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{dc}</td></tr>"
-    if mdc:
-        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>MEN</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{mdc}</td></tr>"
     if fdc:
         rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>WOMEN</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{fdc}</td></tr>"
+    if mdc:
+        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>MEN</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{mdc}</td></tr>"
     return rows
 
 
