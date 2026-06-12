@@ -165,10 +165,10 @@ async def send_guest_invitation(
     dress_rows = ""
     if dress_code:
         dress_rows += f'<div class="detail-row"><span class="detail-label">👔 Dress Code:</span><span class="detail-value">{dress_code}</span></div>'
-    if male_dress_code:
-        dress_rows += f'<div class="detail-row"><span class="detail-label">👔 Men:</span><span class="detail-value">{male_dress_code}</span></div>'
     if female_dress_code:
         dress_rows += f'<div class="detail-row"><span class="detail-label">👗 Women:</span><span class="detail-value">{female_dress_code}</span></div>'
+    if male_dress_code:
+        dress_rows += f'<div class="detail-row"><span class="detail-label">👔 Men:</span><span class="detail-value">{male_dress_code}</span></div>'
 
     # Generate styled QR code if image data is available
     qr_code_html = ""
