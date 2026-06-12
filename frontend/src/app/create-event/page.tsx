@@ -2001,7 +2001,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                         <img
                           src={uploadedImagePreviewUrl || form.generated_image_url}
                           alt="Event image"
-                          className="w-full object-cover"
+                          className="w-full max-h-80 object-contain bg-gray-100"
                         />
                       </div>
                     )}
@@ -2178,7 +2178,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                         <img
                           src={uploadedImagePreviewUrl || form.generated_image_url}
                           alt="Event image"
-                          className="w-full object-cover"
+                          className="w-full max-h-80 object-contain bg-gray-100"
                         />
                       </div>
                     )}
@@ -2540,7 +2540,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
             </div>
             <div className="p-6 max-h-[70vh] overflow-y-auto">
               <p className="text-sm text-gray-600 mb-4">This beautiful flyer is exactly what your guests will see when you send them invitations. Everything they need is visible at a glance on their phone!</p>
-              <img src={inviteFlyer} alt="Invitation Flyer" className="w-full rounded-xl shadow-lg" />
+              <img src={inviteFlyer} alt="Invitation Flyer" className="w-full max-h-96 object-contain bg-gray-100 rounded-xl shadow-lg" />
             </div>
             <div className="p-6 border-t border-[#e8edf2] bg-[#f8f9fc]">
               <p className="text-sm text-gray-600 mb-4">Ready to send real invitations? Create an account to set up your guest list and start sending.</p>
@@ -2574,7 +2574,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
             </div>
             <div className="p-6 max-h-[70vh] overflow-y-auto">
               <p className="text-sm text-gray-600 mb-4">This is how your event will look on Discover Events once you create an account and publish it.</p>
-              <img src={eventPreviewUrl} alt="Event Preview" className="w-full rounded-xl" />
+              <img src={eventPreviewUrl} alt="Event Preview" className="w-full max-h-96 object-contain bg-gray-100 rounded-xl" />
             </div>
             <div className="p-6 border-t border-[#e8edf2] bg-[#f8f9fc]">
               <p className="text-sm text-gray-600 mb-4">Ready to publish this event? Create an account to save your settings and post to Discover Events.</p>
