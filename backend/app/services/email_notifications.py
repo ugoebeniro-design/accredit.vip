@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Optional
 from app.core.config import settings
 from app.services.email_service import send_email
+from app.services.qr_generator import generate_styled_qr
 
 async def send_payment_confirmation(
     user_email: str,
@@ -128,6 +129,7 @@ async def send_guest_invitation(
     dress_code: Optional[str] = None,
     male_dress_code: Optional[str] = None,
     female_dress_code: Optional[str] = None,
+    image_data: Optional[bytes] = None,
 ):
     """Send invitation email to guest with RSVP link."""
     from datetime import datetime as _dt
@@ -165,6 +167,25 @@ async def send_guest_invitation(
         dress_rows += f'<div class="detail-row"><span class="detail-label">👔 Men:</span><span class="detail-value">{male_dress_code}</span></div>'
     if female_dress_code:
         dress_rows += f'<div class="detail-row"><span class="detail-label">👗 Women:</span><span class="detail-value">{female_dress_code}</span></div>'
+
+    # Generate styled QR code if image data is available
+    qr_code_html = ""
+    if image_data:
+        try:
+            qr_base64 = generate_styled_qr(
+                qr_value=f"{event_title}-{event_date}-{host_name}",
+                image_data=image_data,
+                size=250,
+            )
+            qr_code_html = f'''
+                    <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f8f9fc; border-radius: 12px;">
+                        <p style="margin-top: 0; font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">YOUR UNIQUE ENTRY CODE</p>
+                        <img src="data:image/png;base64,{qr_base64}" alt="QR Code" style="width: 200px; height: 200px; border-radius: 12px; margin: 15px 0;">
+                        <p style="margin-bottom: 0; font-size: 12px; color: #64748b;">Show this code at the gate to enter</p>
+                    </div>
+            '''
+        except Exception as e:
+            print(f"Warning: Failed to generate QR code for email: {e}")
 
     html_content = f"""
     <html>
@@ -249,6 +270,8 @@ async def send_guest_invitation(
                     <p style="margin-top: 30px; color: #64748b;">
                         We look forward to seeing you!
                     </p>
+
+                    {qr_code_html}
                 </div>
 
                 <div class="footer">

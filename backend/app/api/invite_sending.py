@@ -1,5 +1,6 @@
 """Invite sending and delivery tracking API."""
 
+import os
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +17,8 @@ from app.models.guest import Guest
 from app.models.invite import InviteBatch, InviteMessage
 from app.services.email_notifications import send_guest_invitation
 from app.api.messaging import _send_to_guest
+
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
 
 router = APIRouter()
 
@@ -73,6 +76,18 @@ async def send_invites(
 
                 if channel == "email":
                     rsvp_link = f"{settings.FRONTEND_URL}/rsvp/{guest.rsvp_token}"
+
+                    # Read cover image if available
+                    image_data = None
+                    if event.cover_image:
+                        try:
+                            image_path = os.path.join(UPLOAD_DIR, os.path.basename(event.cover_image))
+                            if os.path.exists(image_path):
+                                with open(image_path, 'rb') as f:
+                                    image_data = f.read()
+                        except Exception as e:
+                            print(f"Warning: Failed to read cover image: {e}")
+
                     await send_guest_invitation(
                         guest_email=guest.email,
                         guest_name=guest.name,
@@ -86,6 +101,7 @@ async def send_invites(
                         dress_code=event.dress_code,
                         male_dress_code=event.male_dress_code,
                         female_dress_code=event.female_dress_code,
+                        image_data=image_data,
                     )
                     guest.invite_sent = True
                     guest.invite_attempts += 1
