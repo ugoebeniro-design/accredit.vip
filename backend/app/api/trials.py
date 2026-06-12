@@ -148,7 +148,7 @@ async def _maybe_create_event(req: TrialUseRequest, user: User | None, flyer_url
         description=p.get("description") or "",
         dress_code=p.get("dress_code") or "",
         guest_count_range=p.get("guest_count") or p.get("guest_count_range") or "1-50",
-        status="draft",
+        status="trial",
         cover_image=flyer_url or "",
     )
     if p.get("pass_packages"):
@@ -280,13 +280,30 @@ async def use_trial(
         if qr_delivery in ["with_qr", "qr_later"]:
             qr_data = f"accredit://invite/test/{int(datetime.now().timestamp())}"
             flyer_path = None
+            image_data = None
             if flyer_url:
                 flyer_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), flyer_url.lstrip("/"))
-            base_url = qr_to_url(qr_data, image_path=flyer_path, size=250)
-            if base_url:
-                animated_qr_url = base_url
-            else:
-                animated_qr_url = qr_to_base64(qr_data)
+                if os.path.exists(flyer_path):
+                    try:
+                        with open(flyer_path, 'rb') as f:
+                            image_data = f.read()
+                    except Exception:
+                        pass
+
+            # Use styled QR if image is available
+            if image_data:
+                from app.services.qr_service import styled_qr_to_url
+                styled_url = styled_qr_to_url(qr_data, image_data=image_data, size=250)
+                if styled_url:
+                    animated_qr_url = styled_url
+
+            # Fallback to old QR if styled failed
+            if not animated_qr_url:
+                base_url = qr_to_url(qr_data, image_path=flyer_path, size=250)
+                if base_url:
+                    animated_qr_url = base_url
+                else:
+                    animated_qr_url = qr_to_base64(qr_data)
 
         # Create event+guest record early so we have a real RSVP token
         rsvp_link_url = f"{settings.FRONTEND_URL}/create-event"
@@ -332,7 +349,7 @@ async def use_trial(
                     <table style="width:100%;border-collapse:collapse;margin:0 0 24px">
                         <tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">DATE</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{formatted_date}</td></tr>
                         <tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">TIME</td><td style="padding:8px 0;font-size:14px;font-weight:bold">{formatted_time}</td></tr>
-                        {"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>HOST</td><td style='padding:8px 0;font-size:14px;font-weight:bold'>" + host_name + "</td></tr>" if host_name else ""}
+                        {"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>VENUE</td><td style='padding:8px 0;font-size:14px;font-weight:bold'>" + req.payload.get("venue", "") + "</td></tr>" if req.payload.get("venue") else ""}
                         {dc_rows}
                     </table>
                     <div style="text-align:center;margin:24px 0">
