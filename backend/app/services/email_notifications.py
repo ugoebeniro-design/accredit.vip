@@ -188,12 +188,14 @@ async def send_guest_invitation(
         </head>
         <body>
             <div class="container">
-                <div style="background: linear-gradient(135deg, #E91E8C, #C4166F); padding: 28px 24px; text-align: center; border-radius: 12px; margin-bottom: 20px; min-height: 105px;">
-                    <div style="animation: accredit-text 6s ease-in-out infinite;">
-                        <p style="margin: 0; color: #fff; font-size: 20px; font-weight: bold; letter-spacing: 1px; font-family: Georgia, serif;">Accredit.vip</p>
+                <div style="background: linear-gradient(135deg, #E91E8C 0%, #C4166F 50%, #E91E8C 100%); padding: 32px 24px; text-align: center; border-radius: 12px; margin-bottom: 20px;">
+                    <div style="margin-bottom: 12px;">
+                        <p style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: 1px; font-family: Arial, sans-serif;">✓ accredit.vip</p>
+                        <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 500;">Premium Event Infrastructure</p>
                     </div>
-                    <div style="animation: accredit-btn 6s ease-in-out infinite; margin-top: 14px;">
-                        <a href="https://accredit.vip" style="animation: accredit-pulse 2s infinite; display: inline-block; background: #ffffff; color: #E91E8C; padding: 12px 36px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 13px; font-family: Arial, sans-serif; letter-spacing: 1px;">Register Now</a>
+                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
+                        <p style="margin: 8px 0; color: rgba(255,255,255,0.9); font-size: 13px;">Ready to host your own event?</p>
+                        <a href="{settings.FRONTEND_URL}/create-event" style="display: inline-block; background: #ffffff; color: #E91E8C; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px; font-family: Arial, sans-serif; letter-spacing: 0.5px; margin-top: 8px;">Create Your Event</a>
                     </div>
                 </div>
 

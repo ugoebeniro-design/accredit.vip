@@ -12,6 +12,7 @@ import { TrialStore } from "@/lib/trial-store";
 import { CURRENCIES, getCurrencySymbol } from "@/lib/event-form-options";
 import { formatCurrencyAmount } from "@/lib/currencies";
 import { VenueInput } from "@/components/shared/venue-input";
+import { QRPreview } from "@/components/qr-preview";
 import Tesseract from "tesseract.js";
 
 const DRAFT_KEY = "accredit_event_draft";
@@ -408,6 +409,7 @@ export default function CreateEventPage() {
   const [trialEventId, setTrialEventId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [qrValue, setQrValue] = useState("");
   const [form, setForm] = useState({ ...DEFAULT_FORM });
   const [passPackages, setPassPackages] = useState<PassPackage[]>([
     { name: "Regular", price: "" },
@@ -1282,7 +1284,22 @@ export default function CreateEventPage() {
                 )}
               </div>
 
-
+              {/* QR Preview Section */}
+              {uploadedImagePreviewUrl && (
+                <div className="rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-6">
+                  <p className="text-sm font-bold text-[#0D1B2A] mb-4">Your Event QR Code Preview</p>
+                  <div className="flex justify-center">
+                    <QRPreview
+                      qrValue={`${form.title}-${form.event_date}-${form.host_name}`}
+                      imageUrl={uploadedImagePreviewUrl}
+                      title="This is how your QR code will look"
+                    />
+                  </div>
+                  <p className="text-xs text-[#94a3b8] text-center mt-4">
+                    Your QR code automatically matches your uploaded image's color and displays your flier in the center.
+                  </p>
+                </div>
+              )}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2">
@@ -2474,9 +2491,19 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
                   </div>
                 </div>
 
-                <div className="rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#E91E8C] mb-1">QR CODE</p>
-                  <p className="text-lg font-bold text-[#0D1B2A]">Ready</p>
+                <div className="rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-6">
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#E91E8C] mb-4">QR CODE</p>
+                  {uploadedImagePreviewUrl && (
+                    <div className="flex justify-center">
+                      <QRPreview
+                        qrValue={qrValue || `${form.title}-${form.event_date}`}
+                        imageUrl={uploadedImagePreviewUrl}
+                      />
+                    </div>
+                  )}
+                  {!uploadedImagePreviewUrl && (
+                    <p className="text-center text-sm text-[#94a3b8]">Upload an image to see your custom QR code</p>
+                  )}
                 </div>
 
                 <div className="rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-4">

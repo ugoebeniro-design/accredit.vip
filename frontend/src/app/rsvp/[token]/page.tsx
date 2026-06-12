@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Calendar, Clock, MapPin, Check, X } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
+import { InviteMotionBanner } from "@/components/invite-motion-banner";
 
 interface RSVPData {
   event_title: string;
@@ -118,7 +119,9 @@ export default function RSVPPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#E91E8C]/5 to-[#C4166F]/5 px-4 py-8">
+    <>
+      <InviteMotionBanner />
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#E91E8C]/5 to-[#C4166F]/5 px-4 py-8">
       <div className="max-w-md w-full rounded-2xl bg-white p-8 border border-[#e8edf2] shadow-lg">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-black text-[#0D1B2A]">You're Invited!</h1>
@@ -208,5 +211,6 @@ export default function RSVPPage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

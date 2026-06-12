@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
+import { InviteMotionBanner } from "@/components/invite-motion-banner";
 
 export default function EmbedEventPage() {
   const params = useParams();
@@ -19,7 +20,9 @@ export default function EmbedEventPage() {
   if (!event) return <div style={{ padding: 20, textAlign: "center", fontFamily: "sans-serif", color: "#ef4444" }}>Event not found</div>;
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", padding: 16, maxWidth: 400, margin: "0 auto" }}>
+    <>
+      <InviteMotionBanner />
+      <div style={{ fontFamily: "system-ui, sans-serif", padding: 16, maxWidth: 400, margin: "0 auto" }}>
       <div style={{ borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", background: "white" }}>
         {event.cover_image && <img src={event.cover_image} alt="" style={{ width: "100%", height: 160, objectFit: "cover" }} />}
         <div style={{ padding: 16 }}>
@@ -36,5 +39,6 @@ export default function EmbedEventPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
