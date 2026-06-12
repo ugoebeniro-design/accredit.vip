@@ -149,9 +149,9 @@ def _build_invite_message(
         if absolute_flyer:
             flyer_html = f'<img src="{absolute_flyer}" alt="{event.title}" style="width:100%;max-width:600px;display:block;border-radius:0" />'
     host_section = f'<p style="margin:0 0 4px;font-size:14px;font-weight:bold;color:#fff">Hosted by {event.host_name}</p>' if event.host_name else ''
-    dress_code_row = '<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">DRESS CODE</td><td style="padding:8px 0;font-size:14px;font-weight:bold">' + (event.dress_code or "Any") + '</td></tr>' if event.dress_code else ''
-    male_row = '<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">MEN</td><td style="padding:8px 0;font-size:14px;font-weight:bold">' + (event.male_dress_code or '') + '</td></tr>' if getattr(event, 'male_dress_code', None) else ''
-    female_row = '<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">WOMEN</td><td style="padding:8px 0;font-size:14px;font-weight:bold">' + (event.female_dress_code or '') + '</td></tr>' if getattr(event, 'female_dress_code', None) else ''
+    dress_code_row = '<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">DRESS CODE</td><td style="padding:8px 0;font-size:14px;font-weight:bold;color:#07182f">' + (event.dress_code or "Any") + '</td></tr>' if event.dress_code else ''
+    male_row = '<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">MEN</td><td style="padding:8px 0;font-size:14px;font-weight:bold;color:#07182f">' + (event.male_dress_code or '') + '</td></tr>' if getattr(event, 'male_dress_code', None) else ''
+    female_row = '<tr><td style="padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top">WOMEN</td><td style="padding:8px 0;font-size:14px;font-weight:bold;color:#07182f">' + (event.female_dress_code or '') + '</td></tr>' if getattr(event, 'female_dress_code', None) else ''
     tracking_pixel = f'<img src="{settings.FRONTEND_URL}/api/v1/track/open/{message_id}" alt="" width="1" height="1" style="display:none" />' if message_id else ''
     html = (
         '<div style="max-width:600px;margin:0 auto;font-family:Georgia,serif;color:#1a1a2e">'
