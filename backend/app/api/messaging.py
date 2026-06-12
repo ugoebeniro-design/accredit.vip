@@ -1,6 +1,7 @@
 import os
 import re
 import asyncio
+import base64
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -20,7 +21,8 @@ from app.services.email_service import send_email
 from app.services.sms_service import send_sms
 from app.services.whatsapp_service import send_whatsapp
 from app.services.whatsapp_cloud_service import send_whatsapp_cloud
-from app.services.qr_service import qr_to_url
+from app.services.qr_service import qr_to_url, styled_qr_to_url
+from app.services.qr_generator import generate_styled_qr
 
 RESEND_PRICE_PER_GUEST = 500  # NGN per guest for re-sending
 
@@ -207,8 +209,28 @@ async def _send_to_guest(
     flyer = flyer_result.scalar_one_or_none()
     flyer_url = flyer.url if flyer else event.cover_image
 
-    qr_image_path = _upload_path_from_url(flyer_url) if flyer_url else None
-    qr_image_url = qr_to_url(qr_token_url, image_path=qr_image_path, size=250)
+    # Generate styled QR with embedded image for WhatsApp/SMS
+    qr_image_url = None
+    if flyer_url and channel in ("whatsapp", "sms"):
+        try:
+            qr_image_path = _upload_path_from_url(flyer_url)
+            if qr_image_path and os.path.exists(qr_image_path):
+                with open(qr_image_path, 'rb') as f:
+                    image_data = f.read()
+                styled_qr_url = styled_qr_to_url(
+                    qr_token_url,
+                    image_data=image_data,
+                    size=250
+                )
+                if styled_qr_url:
+                    qr_image_url = styled_qr_url
+        except Exception as e:
+            print(f"Warning: Failed to generate styled QR: {e}")
+
+    # Fallback to old QR if styled generation failed
+    if not qr_image_url:
+        qr_image_path = _upload_path_from_url(flyer_url) if flyer_url else None
+        qr_image_url = qr_to_url(qr_token_url, image_path=qr_image_path, size=250)
 
     msg = InviteMessage(batch_id=batch_id, guest_id=guest.id, channel=channel)
     db.add(msg)

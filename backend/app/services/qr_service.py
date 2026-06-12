@@ -89,3 +89,23 @@ def qr_to_url(data: str, image_path: str | None = None, size: int = 200) -> str 
         return f"/uploads/qrs/{filename}"
     except Exception:
         return None
+
+
+def styled_qr_to_url(data: str, image_data: bytes | None = None, size: int = 250) -> str | None:
+    """Generate a styled QR code with embedded image and return a URL."""
+    try:
+        from app.services.qr_generator import generate_styled_qr
+        qr_base64 = generate_styled_qr(data, image_data, size) if image_data else None
+        if not qr_base64:
+            return None
+
+        png_bytes = base64.b64decode(qr_base64)
+        upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "qrs")
+        os.makedirs(upload_dir, exist_ok=True)
+        filename = f"styled_qr_{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}.png"
+        filepath = os.path.join(upload_dir, filename)
+        with open(filepath, "wb") as f:
+            f.write(png_bytes)
+        return f"/uploads/qrs/{filename}"
+    except Exception:
+        return None
