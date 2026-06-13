@@ -472,6 +472,32 @@ export default function CreateEventPage() {
     return () => window.clearTimeout(timer);
   }, []);
 
+  // Restore trial success state from sessionStorage on mount (survives reload)
+  useEffect(() => {
+    const saved = sessionStorage.getItem("accredit_trial_success");
+    if (!saved) return;
+    try {
+      const s = JSON.parse(saved);
+      if (!s.trialComplete) return;
+      setTrialComplete(true);
+      setTrialEventId(s.trialEventId);
+      if (s.flierUrl) setEventPreviewUrl(s.flierUrl);
+      if (s.flyerUrl) setInviteFlyer(s.flyerUrl);
+      if (s.mode === "event" && s.flierUrl) {
+        setMessage("Event flier preview generated! Here's what your event will look like on Discover Events:");
+      } else if (s.mode === "invite" && s.sentTo) {
+        const via = s.sentVia ? ` via ${s.sentVia}` : "";
+        setMessage(s.flyerUrl
+          ? `Test invitation flyer sent to ${s.sentTo}${via}. Here's the beautiful invitation your guests will see:`
+          : `Test invite sent to ${s.sentTo}${via}. Check your messages to see the invitation flyer. Create an account to send real invites to your guest list.`);
+      } else {
+        setMessage(s.mode === "event"
+          ? "Event preview ready. Create an account to publish to Discover Events."
+          : "Invite preview sent. Create an account to send to your full guest list.");
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   // Restore draft from localStorage on mount
   useEffect(() => {
     const lastMode = localStorage.getItem("accredit_last_mode") as Mode | null;
@@ -997,6 +1023,17 @@ export default function CreateEventPage() {
           : `Invite preview sent. Create an account to send to your full guest list.`
         );
       }
+
+      // Persist raw success data so the success screen survives page reload
+      sessionStorage.setItem("accredit_trial_success", JSON.stringify({
+        trialComplete: true,
+        trialEventId: result.event_id ?? null,
+        flierUrl: result.flier_url || null,
+        flyerUrl: result.flyer_url || null,
+        sentTo: result.sent_to || null,
+        sentVia: result.sent_via || null,
+        mode,
+      }));
     } catch (err) {
       const detail = err instanceof Error ? err.message : "You have already tested this feature.";
       setError(detail);
