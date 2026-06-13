@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import type { ReactNode } from "react";
-import { Briefcase, CalendarDays, Compass, Gem, LayoutGrid, Lock, LogOut, Menu, Mic, Moon, Music, PartyPopper, Plus, Trophy, Wallet as WalletIcon, X, Eye, EyeOff } from "lucide-react";
+import { Briefcase, CalendarDays, Compass, Gem, LayoutGrid, Lock, LogOut, Menu, Mic, Moon, Music, PartyPopper, Plus, Trophy, Wallet as WalletIcon, X } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { getEvents, type EventData } from "@/lib/api/events";
 import { apiClient } from "@/lib/api-client";
@@ -27,6 +26,35 @@ function maskEmail(email: string) {
   const visibleStart = local.slice(0, Math.min(8, local.length));
   const visibleEnd = local.length > 1 ? local.slice(-1) : "";
   return `${visibleStart}******${visibleEnd}@${domain}`;
+}
+
+function EventCard({ event, CATEGORY_ICONS }: { event: EventData; CATEGORY_ICONS: Record<string, ReactNode> }) {
+  return (
+    <Link href={`/dashboard/events/${event.id}`} className="block group">
+      <div
+        className="rounded-2xl overflow-hidden transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-lg flex flex-col"
+        style={{ background: "white", border: "1px solid #e8edf2", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+      >
+        <div className="h-40 flex items-end justify-start text-white/90 relative overflow-hidden" style={event.cover_image ? { backgroundImage: `url(${event.cover_image})`, backgroundSize: "cover", backgroundPosition: "center" } : { background: "linear-gradient(135deg, #0D1B2A, #1a2e45)" }}>
+          {!event.cover_image && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              {CATEGORY_ICONS[event.category || event.event_type || ""] || <PartyPopper className="h-12 w-12 opacity-50" />}
+            </div>
+          )}
+          <div className="p-3 w-full relative z-10" style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.6))" }}>
+            <span className="badge-pink text-[10px]">{(event.status || "draft").toUpperCase()}</span>
+          </div>
+        </div>
+        <div className="p-4 flex flex-col flex-1">
+          <h3 className="font-bold text-[#0D1B2A] text-sm line-clamp-2 group-hover:text-[#E91E8C] transition-colors">{event.title}</h3>
+          <div className="mt-3 pt-3 space-y-1" style={{ borderTop: "1px solid #f1f5f9" }}>
+            <p className="text-xs text-gray-400">{event.venue}</p>
+            <p className="text-xs text-gray-400">{event.event_date}</p>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
 }
 
 export default function EventsPage() {
@@ -195,8 +223,8 @@ export default function EventsPage() {
               <Menu className="w-5 h-5 text-[#0D1B2A]" />
             </button>
             <div>
-              <h1 className="text-lg font-bold text-[#0D1B2A]">All Events</h1>
-              <p className="text-xs text-gray-400">{events.length} event{events.length !== 1 ? "s" : ""} total</p>
+              <h1 className="text-lg font-bold text-[#0D1B2A]">My Events</h1>
+              <p className="text-xs text-gray-400">{events.length} total</p>
             </div>
           </div>
           <Link href="/dashboard/create" className="btn-primary text-xs py-2 px-4 inline-flex items-center gap-2">
@@ -210,7 +238,7 @@ export default function EventsPage() {
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {[1,2,3,4,5,6].map((i) => (
                 <div key={i} className="rounded-2xl overflow-hidden" style={{ background: "white", border: "1px solid #e8edf2" }}>
-                  <div className="skeleton h-24" />
+                  <div className="skeleton h-40" />
                   <div className="p-4 space-y-2">
                     <div className="skeleton h-4 w-3/4 rounded" />
                     <div className="skeleton h-3 w-1/2 rounded" />
@@ -228,34 +256,52 @@ export default function EventsPage() {
               <Link href="/dashboard/create" className="btn-primary inline-flex">Create Your First Event</Link>
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {events.map((event) => (
-                <Link key={event.id} href={`/dashboard/events/${event.id}`} className="block group">
-                  <div
-                    className="rounded-2xl overflow-hidden transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-lg flex flex-col"
-                    style={{ background: "white", border: "1px solid #e8edf2", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
-                  >
-                    <div className="h-40 flex items-end justify-start text-white/90 relative overflow-hidden" style={event.cover_image ? { backgroundImage: `url(${event.cover_image})`, backgroundSize: "cover", backgroundPosition: "center" } : { background: "linear-gradient(135deg, #0D1B2A, #1a2e45)" }}>
-                      {!event.cover_image && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          {CATEGORY_ICONS[event.category || event.event_type || ""] || <PartyPopper className="h-12 w-12 opacity-50" />}
+            <>
+              {(() => {
+                const invites = events.filter(e => !e.is_public);
+                const pubEvents = events.filter(e => e.is_public);
+                return (
+                  <>
+                    {invites.length > 0 && (
+                      <div className="mb-10">
+                        <div className="flex items-center justify-between mb-5">
+                          <h2 className="text-base font-bold text-[#0D1B2A]">Your Invites</h2>
+                          <span className="text-xs text-gray-400">{invites.length} invite{invites.length !== 1 ? "s" : ""}</span>
                         </div>
-                      )}
-                      <div className="p-3 w-full relative z-10" style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.6))" }}>
-                        <span className="badge-pink text-[10px]">{(event.status || "draft").toUpperCase()}</span>
+                        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                          {invites.map((event) => (
+                            <EventCard key={event.id} event={event} CATEGORY_ICONS={CATEGORY_ICONS} />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-4 flex flex-col flex-1">
-                      <h3 className="font-bold text-[#0D1B2A] text-sm line-clamp-2 group-hover:text-[#E91E8C] transition-colors">{event.title}</h3>
-                      <div className="mt-3 pt-3 space-y-1" style={{ borderTop: "1px solid #f1f5f9" }}>
-                        <p className="text-xs text-gray-400">{event.venue}</p>
-                        <p className="text-xs text-gray-400">{event.event_date}</p>
+                    )}
+                    {pubEvents.length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-5">
+                          <h2 className="text-base font-bold text-[#0D1B2A]">Your Events</h2>
+                          <span className="text-xs text-gray-400">{pubEvents.length} event{pubEvents.length !== 1 ? "s" : ""}</span>
+                        </div>
+                        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                          {pubEvents.map((event) => (
+                            <EventCard key={event.id} event={event} CATEGORY_ICONS={CATEGORY_ICONS} />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                    )}
+                    {invites.length === 0 && pubEvents.length === 0 && (
+                      <div className="rounded-2xl p-12 text-center" style={{ background: "white", border: "2px dashed #e8edf2" }}>
+                        <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-5 text-[#E91E8C]" style={{ background: "rgba(233,30,140,0.08)" }}>
+                          <CalendarDays className="h-8 w-8" />
+                        </div>
+                        <h3 className="text-lg font-bold text-[#0D1B2A] mb-2">No events or invites yet</h3>
+                        <p className="text-sm text-gray-400 mb-6">Create your first event or invite to get started.</p>
+                        <Link href="/dashboard/create" className="btn-primary inline-flex">Create Your First</Link>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </>
           )}
         </main>
       </div>

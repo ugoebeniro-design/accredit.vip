@@ -45,6 +45,58 @@ function maskEmail(email: string) {
   return `${visibleStart}******${visibleEnd}@${domain}`;
 }
 
+function DashboardEventCard({ event, CATEGORY_ICONS }: { event: EventData; CATEGORY_ICONS: Record<string, ReactNode> }) {
+  return (
+    <Link key={event.id} href={`/dashboard/events/${event.id}`} className="block group">
+      <div
+        className="rounded-2xl overflow-hidden transition-all duration-200 group-hover:-translate-y-1 flex flex-col"
+        style={{
+          background: "white",
+          border: "1px solid #e8edf2",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        }}
+      >
+        <div className="h-24 flex items-center justify-center text-white/90 relative overflow-hidden bg-gradient-to-br from-[#0D1B2A] to-[#1a2e45]">
+          {event.cover_image ? (
+            <Image
+              src={event.cover_image}
+              alt={event.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            />
+          ) : (
+            CATEGORY_ICONS[event.category || event.event_type || ""] || <PartyPopper className="h-9 w-9" />
+          )}
+        </div>
+
+        <div className="p-4 flex flex-col flex-1">
+          <span className="badge-pink text-[10px] mb-2.5 self-start">
+            {(event.category || event.event_type || "event").toUpperCase()}
+          </span>
+          <h3 className="font-bold text-[#0D1B2A] text-sm line-clamp-2 group-hover:text-[#E91E8C] transition-colors mb-1">
+            {event.title}
+          </h3>
+          <div className="mt-auto pt-3 space-y-1" style={{ borderTop: "1px solid #f1f5f9" }}>
+            <p className="text-xs text-gray-400 flex items-center gap-1.5">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              </svg>
+              {event.venue}
+            </p>
+            <p className="text-xs text-gray-400 flex items-center gap-1.5">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {event.event_date} · {event.event_time}
+            </p>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function CardSkeleton() {
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: "#f8f9fc", border: "1px solid #e8edf2" }}>
@@ -373,7 +425,7 @@ function DashboardContent() {
 
           {/* Events Grid */}
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#0D1B2A]">Your Events</h2>
+            <h2 className="text-lg font-bold text-[#0D1B2A]">My Events</h2>
             <Link
               href="/dashboard/events"
               className="text-xs font-semibold hover:underline"
@@ -416,58 +468,42 @@ function DashboardContent() {
               )}
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {events.map((event) => (
-                <Link key={event.id} href={`/dashboard/events/${event.id}`} className="block group">
-                  <div
-                    className="rounded-2xl overflow-hidden transition-all duration-200 group-hover:-translate-y-1 flex flex-col"
-                    style={{
-                      background: "white",
-                      border: "1px solid #e8edf2",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                    }}
-                  >
-                    {/* Event Cover Image or Placeholder */}
-                    <div className="h-24 flex items-center justify-center text-white/90 relative overflow-hidden bg-gradient-to-br from-[#0D1B2A] to-[#1a2e45]">
-                      {event.cover_image ? (
-                        <Image
-                          src={event.cover_image}
-                          alt={event.title}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
-                      ) : (
-                        CATEGORY_ICONS[event.category || event.event_type || ""] || <PartyPopper className="h-9 w-9" />
-                      )}
-                    </div>
-
-                    <div className="p-4 flex flex-col flex-1">
-                      <span className="badge-pink text-[10px] mb-2.5 self-start">
-                        {(event.category || event.event_type || "event").toUpperCase()}
-                      </span>
-                      <h3 className="font-bold text-[#0D1B2A] text-sm line-clamp-2 group-hover:text-[#E91E8C] transition-colors mb-1">
-                        {event.title}
-                      </h3>
-                      <div className="mt-auto pt-3 space-y-1" style={{ borderTop: "1px solid #f1f5f9" }}>
-                        <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          </svg>
-                          {event.venue}
-                        </p>
-                        <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {event.event_date} · {event.event_time}
-                        </p>
+            <>
+              {(() => {
+                const invites = events.filter(e => !e.is_public);
+                const pubEvents = events.filter(e => e.is_public);
+                return (
+                  <>
+                    {invites.length > 0 && (
+                      <div className="mb-10">
+                        <div className="mb-4 flex items-center justify-between">
+                          <h2 className="text-lg font-bold text-[#0D1B2A]">Your Invites</h2>
+                          <span className="text-xs text-gray-400">{invites.length} invite{invites.length !== 1 ? "s" : ""}</span>
+                        </div>
+                        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                          {invites.map((event) => (
+                            <DashboardEventCard key={event.id} event={event} CATEGORY_ICONS={CATEGORY_ICONS} />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                    )}
+                    {pubEvents.length > 0 && (
+                      <div>
+                        <div className="mb-4 flex items-center justify-between">
+                          <h2 className="text-lg font-bold text-[#0D1B2A]">Your Events</h2>
+                          <span className="text-xs text-gray-400">{pubEvents.length} event{pubEvents.length !== 1 ? "s" : ""}</span>
+                        </div>
+                        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                          {pubEvents.map((event) => (
+                            <DashboardEventCard key={event.id} event={event} CATEGORY_ICONS={CATEGORY_ICONS} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </>
           )}
         </main>
       </div>
