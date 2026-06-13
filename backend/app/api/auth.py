@@ -207,6 +207,8 @@ async def login(
             await db.commit()
 
         logger.info(f"User login successful: {user.email}")
+
+        return TokenResponse(
             access_token=access_token,
             user={
                 "id": user.id,
