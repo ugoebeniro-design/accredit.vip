@@ -941,7 +941,7 @@ function EventDetailContent() {
                             </button>
                           ))}
                           <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(currentPage + 1)}>›</button>
-                          <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(pageCount - 1)}»</button>
+                          <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(pageCount - 1)}{"\u00BB"}</button>
                         </div>
                       )}
                     </>
