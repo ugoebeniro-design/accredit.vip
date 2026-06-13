@@ -190,35 +190,59 @@ export default function RSVPPage() {
           )}
 
           <div className="space-y-3">
-            <button
-              onClick={() => setResponse(response === "yes" ? null : "yes")}
-              disabled={response === "no"}
-              className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base transition-all ${
-                response === "yes"
-                  ? "bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.4)] scale-[1.02] border-2 border-[#16a34a]"
-                  : response === "no"
-                    ? "bg-gray-200 text-gray-400 border-2 border-gray-200 cursor-not-allowed"
-                    : "bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.3)] hover:shadow-[0_6px_16px_rgba(22,163,74,0.45)] hover:scale-[1.02] border-2 border-[#16a34a]"
-              }`}
-            >
-              <Check className="w-5 h-5" />
-              Yes, I'll Attend
-            </button>
+            <div className="flex flex-col items-center">
+              <button
+                onClick={() => setResponse(response === "yes" ? null : "yes")}
+                disabled={response === "no"}
+                className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-t-xl font-bold text-base transition-all ${
+                  response === "yes"
+                    ? "bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.4)] scale-[1.02] border-2 border-[#16a34a]"
+                    : response === "no"
+                      ? "bg-gray-200 text-gray-400 border-2 border-gray-200 cursor-not-allowed"
+                      : "bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.3)] hover:shadow-[0_6px_16px_rgba(22,163,74,0.45)] hover:scale-[1.02] border-2 border-[#16a34a]"
+                }`}
+              >
+                <Check className="w-5 h-5" />
+                Yes, I'll Attend
+              </button>
+              <div
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderLeft: "14px solid transparent",
+                  borderRight: "14px solid transparent",
+                  borderTop: "12px solid " + (response === "yes" ? "#16a34a" : response === "no" ? "#d1d5db" : "#16a34a"),
+                  transition: "border-top-color 0.2s"
+                }}
+              />
+            </div>
 
-            <button
-              onClick={() => setResponse(response === "no" ? null : "no")}
-              disabled={response === "yes"}
-              className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base transition-all ${
-                response === "no"
-                  ? "bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(220,38,38,0.4)] scale-[1.02] border-2 border-[#dc2626]"
-                  : response === "yes"
-                    ? "bg-gray-200 text-gray-400 border-2 border-gray-200 cursor-not-allowed"
-                    : "bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(220,38,38,0.3)] hover:shadow-[0_6px_16px_rgba(220,38,38,0.45)] hover:scale-[1.02] border-2 border-[#dc2626]"
-              }`}
-            >
-              <X className="w-5 h-5" />
-              Sorry, Can't Attend
-            </button>
+            <div className="flex flex-col items-center">
+              <button
+                onClick={() => setResponse(response === "no" ? null : "no")}
+                disabled={response === "yes"}
+                className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-t-xl font-bold text-base transition-all ${
+                  response === "no"
+                    ? "bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(220,38,38,0.4)] scale-[1.02] border-2 border-[#dc2626]"
+                    : response === "yes"
+                      ? "bg-gray-200 text-gray-400 border-2 border-gray-200 cursor-not-allowed"
+                      : "bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(220,38,38,0.3)] hover:shadow-[0_6px_16px_rgba(220,38,38,0.45)] hover:scale-[1.02] border-2 border-[#dc2626]"
+                }`}
+              >
+                <X className="w-5 h-5" />
+                Sorry, Can't Attend
+              </button>
+              <div
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderLeft: "14px solid transparent",
+                  borderRight: "14px solid transparent",
+                  borderTop: "12px solid " + (response === "no" ? "#dc2626" : response === "yes" ? "#d1d5db" : "#dc2626"),
+                  transition: "border-top-color 0.2s"
+                }}
+              />
+            </div>
           </div>
 
           {response === "no" && (
@@ -238,13 +262,24 @@ export default function RSVPPage() {
           )}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          disabled={!response || submitting}
-          className="w-full px-6 py-4 rounded-xl bg-[#E91E8C] text-white font-bold text-base shadow-[0_4px_12px_rgba(233,30,140,0.4)] hover:bg-[#C4166F] hover:shadow-[0_6px_16px_rgba(233,30,140,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          {submitting ? "Submitting..." : "Submit Response"}
-        </button>
+        <div className="flex flex-col items-center">
+          <button
+            onClick={handleSubmit}
+            disabled={!response || submitting}
+            className="w-full px-6 py-4 rounded-t-xl bg-[#E91E8C] text-white font-bold text-base shadow-[0_4px_12px_rgba(233,30,140,0.4)] hover:bg-[#C4166F] hover:shadow-[0_6px_16px_rgba(233,30,140,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {submitting ? "Submitting..." : "Submit Response"}
+          </button>
+          <div
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: "16px solid transparent",
+              borderRight: "16px solid transparent",
+              borderTop: "12px solid #E91E8C"
+            }}
+          />
+        </div>
 
         <p className="text-xs text-[#94a3b8] text-center mt-4">
           Your response will be recorded and sent to the event organizer.

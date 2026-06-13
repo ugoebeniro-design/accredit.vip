@@ -236,7 +236,10 @@ async def send_guest_invitation(
                     </div>
                     <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
                         <p style="margin: 8px 0; color: rgba(255,255,255,0.9); font-size: 13px;">Ready to host your own event?</p>
-                        <a href="{settings.FRONTEND_URL}/create-event" style="display: inline-block; background: #ffffff; color: #E91E8C; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px; font-family: Arial, sans-serif; letter-spacing: 0.5px; margin-top: 8px;">Create Your Event</a>
+                        <div style="display: inline-block; margin-top: 8px;">
+                            <a href="{settings.FRONTEND_URL}/create-event" style="display: block; background: #ffffff; color: #E91E8C; padding: 12px 32px; border-radius: 12px 12px 0 0; text-decoration: none; font-weight: bold; font-size: 14px; font-family: Arial, sans-serif; letter-spacing: 0.5px;">Create Your Event</a>
+                            <div style="width: 0; height: 0; margin: 0 auto; border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 10px solid #ffffff;"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -275,9 +278,12 @@ async def send_guest_invitation(
                     </p>
 
                     <center>
-                        <a href="{rsvp_link}" class="cta-button">
-                            RSVP Now
-                        </a>
+                        <div style="display: inline-block;">
+                            <a href="{rsvp_link}" style="display: block; background: #E91E8C; color: white; padding: 14px 40px; border-radius: 8px 8px 0 0; text-decoration: none; font-weight: bold; font-size: 16px;">
+                                RSVP Now
+                            </a>
+                            <div style="width: 0; height: 0; margin: 0 auto; border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 12px solid #E91E8C;"></div>
+                        </div>
                     </center>
 
                     <p style="margin-top: 30px; color: #64748b; font-size: 14px;">
