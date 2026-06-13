@@ -231,7 +231,7 @@ async def send_guest_invitation(
             <div class="container">
                 <div style="background: linear-gradient(135deg, #E91E8C 0%, #C4166F 50%, #E91E8C 100%); padding: 32px 24px; text-align: center; border-radius: 12px; margin-bottom: 20px;">
                     <div style="margin-bottom: 12px;">
-                        <p style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: 1px; font-family: Arial, sans-serif;">✓ accredit.vip</p>
+                        <p style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: 1px; font-family: Arial, sans-serif;">Join accredit.vip</p>
                         <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 500;">Premium Event Infrastructure</p>
                     </div>
                     <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
