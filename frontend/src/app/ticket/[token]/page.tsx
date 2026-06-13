@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Calendar, Clock, MapPin, CheckCircle, XCircle, HelpCircle } from "lucide-react";
+import { Calendar, Clock, MapPin, CheckCircle, XCircle } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
 interface TicketData {
@@ -13,27 +13,9 @@ interface TicketData {
   venue: string;
   status: string;
   valid: boolean;
-  rsvp_status: string | null;
 }
 
-function formatDate(dateStr: string) {
-  if (!dateStr) return "TBD";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-}
-
-function formatTime(timeStr: string) {
-  if (!timeStr) return "TBD";
-  const parts = timeStr.split(":");
-  if (parts.length < 2) return timeStr;
-  const h = parseInt(parts[0]);
-  const m = parts[1];
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 || 12;
-  return `${h12}:${m} ${ampm}`;
-}
-
-export default function QrTicketPage() {
+export default function TicketPage() {
   const params = useParams();
   const token = params?.token;
   const [ticket, setTicket] = useState<TicketData | null>(null);
@@ -91,14 +73,14 @@ export default function QrTicketPage() {
                 <Calendar className="w-4 h-4" />
                 <span>Date</span>
               </div>
-              <p className="font-semibold text-[#0D1B2A]">{formatDate(ticket.event_date)}</p>
+              <p className="font-semibold text-[#0D1B2A]">{ticket.event_date}</p>
             </div>
             <div>
               <div className="flex items-center gap-1.5 text-sm text-[#64748b] mb-1">
                 <Clock className="w-4 h-4" />
                 <span>Time</span>
               </div>
-              <p className="font-semibold text-[#0D1B2A]">{formatTime(ticket.event_time)}</p>
+              <p className="font-semibold text-[#0D1B2A]">{ticket.event_time}</p>
             </div>
           </div>
 
@@ -110,23 +92,7 @@ export default function QrTicketPage() {
             <p className="font-semibold text-[#0D1B2A]">{ticket.venue}</p>
           </div>
 
-          {!ticket.rsvp_status || ticket.rsvp_status === "pending" ? (
-            <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 flex items-center gap-3">
-              <HelpCircle className="w-6 h-6 text-amber-600 flex-shrink-0" />
-              <div>
-                <p className="font-bold text-amber-800 text-sm">Awaiting RSVP</p>
-                <p className="text-xs text-amber-600">Guest has not responded yet</p>
-              </div>
-            </div>
-          ) : ticket.rsvp_status === "no" ? (
-            <div className="rounded-xl bg-red-50 border border-red-200 p-4 flex items-center gap-3">
-              <XCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
-              <div>
-                <p className="font-bold text-red-800 text-sm">Declined</p>
-                <p className="text-xs text-red-600">Guest declined the invitation</p>
-              </div>
-            </div>
-          ) : ticket.valid ? (
+          {ticket.valid ? (
             <div className="rounded-xl bg-green-50 border border-green-200 p-4 flex items-center gap-3">
               <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
               <div>
@@ -134,19 +100,11 @@ export default function QrTicketPage() {
                 <p className="text-xs text-green-600">Show this at the entrance</p>
               </div>
             </div>
-          ) : ticket.status === "event_ended" ? (
-            <div className="rounded-xl bg-gray-100 border border-gray-300 p-4 flex items-center gap-3">
-              <XCircle className="w-6 h-6 text-gray-500 flex-shrink-0" />
-              <div>
-                <p className="font-bold text-gray-700 text-sm">Event Ended</p>
-                <p className="text-xs text-gray-500">This event has already taken place</p>
-              </div>
-            </div>
           ) : (
             <div className="rounded-xl bg-red-50 border border-red-200 p-4 flex items-center gap-3">
               <XCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
               <div>
-                <p className="font-bold text-red-800 text-sm">Unavailable</p>
+                <p className="font-bold text-red-800 text-sm">Expired</p>
                 <p className="text-xs text-red-600">This ticket is no longer valid</p>
               </div>
             </div>

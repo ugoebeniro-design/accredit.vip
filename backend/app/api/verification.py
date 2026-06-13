@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, time
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -18,6 +18,13 @@ router = APIRouter()
 
 class ScanRequest(BaseModel):
     token: str
+
+
+def _event_has_passed(event) -> bool:
+    if not event.event_date:
+        return False
+    event_dt = datetime.combine(event.event_date, event.event_time or time.min, tzinfo=timezone.utc)
+    return event_dt < datetime.now(timezone.utc)
 
 
 def _get_client_info(request: Request) -> tuple[str | None, str | None]:
@@ -77,6 +84,30 @@ async def verify_qr(req: ScanRequest, request: Request, db: AsyncSession = Depen
         db.add(scan)
         await db.commit()
         raise HTTPException(status_code=400, detail="QR code has expired")
+
+    if _event_has_passed(event):
+        scan = ScanAttempt(
+            guest_id=guest.id if guest else None, event_id=event.id, token=req.token,
+            status="event_ended", device_info=ua, ip_address=ip,
+        )
+        db.add(scan)
+        await db.commit()
+        return {
+            "valid": False,
+            "reason": "event_ended",
+            "message": f"The event '{event.title}' has already ended.",
+            "guest": {
+                "id": guest.id,
+                "name": guest.name,
+                "phone": guest.phone,
+                "email": guest.email,
+            },
+            "event": {
+                "id": event.id,
+                "title": event.title,
+                "event_date": str(event.event_date),
+            },
+        }
 
     if guest.rsvp_status == "no":
         scan = ScanAttempt(
@@ -158,16 +189,17 @@ async def qr_token_info(
 
     is_used = qr.is_used if qr else False
     is_expired = qr and qr.expires_at and qr.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc)
+    event_passed = _event_has_passed(event)
 
     return {
-        "valid": not is_used and not is_expired,
+        "valid": not is_used and not is_expired and not event_passed,
         "guest_name": guest.name,
         "event_title": event.title,
         "event_date": str(event.event_date),
         "event_time": str(event.event_time),
         "venue": event.venue,
         "rsvp_status": guest.rsvp_status,
-        "status": "active",
+        "status": "event_ended" if event_passed else "active",
     }
 
 
@@ -211,6 +243,15 @@ async def scan_qr(req: ScanRequest, request: Request, db: AsyncSession = Depends
         db.add(scan)
         await db.commit()
         raise HTTPException(status_code=400, detail="QR code has expired")
+
+    if _event_has_passed(event):
+        scan = ScanAttempt(
+            guest_id=guest.id, event_id=event.id, token=req.token,
+            status="event_ended", device_info=ua, ip_address=ip,
+        )
+        db.add(scan)
+        await db.commit()
+        raise HTTPException(status_code=400, detail=f"The event '{event.title}' has already ended.")
 
     if qr:
         qr.is_used = True

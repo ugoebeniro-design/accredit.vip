@@ -12,6 +12,8 @@ from app.core.security import hash_password, verify_password, create_access_toke
 from app.core.config import settings
 from app.models.user import User
 from app.models.password_reset import PasswordResetToken
+from app.models.guest import Guest
+from app.models.event import Event
 from app.services.email_service import send_email
 from app.services.sms_service import send_sms
 from app.services.whatsapp_service import send_whatsapp
@@ -122,6 +124,17 @@ async def register(
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
+    # Transfer trial events created with this email to the new user
+    guest_result = await db.execute(select(Guest).where(Guest.email == req.email))
+    trial_guest = guest_result.scalar_one_or_none()
+    if trial_guest:
+        event_result = await db.execute(
+            select(Event).where(Event.id == trial_guest.event_id, Event.status == "trial")
+        )
+        trial_event = event_result.scalar_one_or_none()
+        if trial_event:
+            trial_event.organizer_id = user.id
 
     # Send verification message (non-blocking — don't block registration on email delivery)
     if channel == "whatsapp" and user.phone:

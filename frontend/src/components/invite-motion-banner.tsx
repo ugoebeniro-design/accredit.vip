@@ -72,7 +72,8 @@ export function InviteMotionBanner() {
           {/* CTA Button */}
           <Link
             href="/create-event"
-            className="flex-shrink-0 px-6 py-3 rounded-xl bg-gradient-to-r from-[#E91E8C] to-[#C4166F] text-white font-bold text-sm sm:text-base hover:shadow-lg hover:shadow-[#E91E8C]/50 transition-all hover:scale-105 whitespace-nowrap"
+            className="flex-shrink-0 text-white font-bold text-sm sm:text-base hover:shadow-lg hover:shadow-[#E91E8C]/50 transition-all hover:scale-105 whitespace-nowrap"
+            style={{ clipPath: "polygon(0 0,100% 0,100% calc(100% - 10px),calc(50% + 14px) calc(100% - 10px),50% 100%,calc(50% - 14px) calc(100% - 10px),0 calc(100% - 10px))", background: "linear-gradient(to right,#E91E8C,#C4166F)", padding: "12px 32px" }}
           >
             Create Event →
           </Link>

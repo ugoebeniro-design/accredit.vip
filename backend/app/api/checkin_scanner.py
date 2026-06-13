@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from datetime import datetime, timezone, time
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -17,6 +18,13 @@ router = APIRouter()
 
 class ScanTokenRequest(BaseModel):
     token: str
+
+
+def _event_has_passed(event) -> bool:
+    if not event.event_date:
+        return False
+    event_dt = datetime.combine(event.event_date, event.event_time or time.min, tzinfo=timezone.utc)
+    return event_dt < datetime.now(timezone.utc)
 
 
 async def _resolve_guest_and_event(token: str, db: AsyncSession):
@@ -59,6 +67,15 @@ async def scanner_verify_token(req: ScanTokenRequest, request: Request, db: Asyn
             "event": {"id": event.id, "title": event.title},
         }
 
+    if _event_has_passed(event):
+        return {
+            "valid": False,
+            "reason": "event_ended",
+            "message": f"The event '{event.title}' has already ended.",
+            "guest": {"id": guest.id, "name": guest.name, "phone": guest.phone, "email": guest.email},
+            "event": {"id": event.id, "title": event.title},
+        }
+
     return {
         "valid": True,
         "reason": "verified",
@@ -83,6 +100,12 @@ async def scanner_checkin(req: ScanTokenRequest, request: Request, db: AsyncSess
         db.add(scan)
         await db.commit()
         return {"status": "declined", "message": f"{guest.name} declined the invitation and cannot be checked in."}
+
+    if _event_has_passed(event):
+        scan = ScanAttempt(guest_id=guest.id, event_id=event.id, token=raw_token, status="event_ended", device_info=ua, ip_address=ip)
+        db.add(scan)
+        await db.commit()
+        return {"status": "event_ended", "message": f"The event '{event.title}' has already ended."}
 
     if qr and qr.is_used:
         return {"status": "error", "message": "Already checked in"}

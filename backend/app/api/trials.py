@@ -371,7 +371,7 @@ async def use_trial(
                         <span style="color:#ffffff80;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase">JOIN</span>
                         <img src="{logo_url}" alt="accredit.vip" style="height:20px;width:auto;opacity:0.8" />
                     </div>
-                    <a href="https://accredit.vip" style="display:inline-block;background:linear-gradient(to right,#E91E8C,#C4166F);color:#fff;padding:12px 32px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:14px;font-family:Arial,sans-serif">Create Event →</a>
+                    <div style="display:inline-block"><a href="https://accredit.vip" style="display:block;background:linear-gradient(to right,#E91E8C,#C4166F);color:#fff;padding:12px 32px;text-decoration:none;font-weight:bold;font-size:14px;font-family:Arial,sans-serif;border-radius:12px 12px 0 0">Create Event →</a><div style="width:0;height:0;margin:0 auto;border-left:14px solid transparent;border-right:14px solid transparent;border-top:10px solid #C4166F"></div></div>
                 </div>"""
 
             brand_html = _brand_banner()
