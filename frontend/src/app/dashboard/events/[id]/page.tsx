@@ -11,7 +11,7 @@ import { initiatePayment, calculatePrice } from "@/lib/api/payments";
 import { EventDetailSkeleton } from "@/components/shared/loading-skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { AlertTriangle, Check, CircleX, Hourglass } from "lucide-react";
+import { AlertTriangle, Check, CircleX, Hourglass, BarChart3, Users, Mail, Settings, Plus, Upload, Send, Edit2, Trash2, Eye, XCircle, Clock, Zap, Eye as EyeIcon, Share2, Wallet, DollarSign, TicketIcon } from "lucide-react";
 
 type Guest = {
   id: number;
@@ -558,10 +558,10 @@ function EventDetailContent() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const tabs = [
-    { id: "overview", label: "Overview", icon: "📊" },
-    { id: "guests", label: "Guests", icon: "👥", badge: totalGuests },
-    { id: "invites", label: "Send Invites", icon: "✉️" },
-    { id: "settings", label: "Settings", icon: "⚙️" }
+    { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "guests", label: "Guests", icon: Users, badge: totalGuests },
+    { id: "invites", label: "Send Invites", icon: Mail },
+    { id: "settings", label: "Settings", icon: Settings }
   ];
 
   return (
@@ -638,24 +638,28 @@ function EventDetailContent() {
         <div className="border-b bg-white rounded-t-xl mb-0">
           <div className="container mx-auto px-4">
             <div className="flex gap-8">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-4 font-medium text-sm border-b-2 transition-all ${
-                    activeTab === tab.id
-                      ? "border-[#E91E8C] text-[#E91E8C]"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {tab.icon} {tab.label}
-                  {tab.badge !== undefined && (
-                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 bg-[#E91E8C] text-white text-xs rounded-full font-bold">
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
+              {tabs.map((tab) => {
+                const IconComponent = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-4 py-4 font-medium text-sm border-b-2 transition-all flex items-center gap-2 ${
+                      activeTab === tab.id
+                        ? "border-[#E91E8C] text-[#E91E8C]"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <IconComponent className="w-5 h-5" />
+                    {tab.label}
+                    {tab.badge !== undefined && (
+                      <span className="ml-1 inline-flex items-center justify-center w-5 h-5 bg-[#E91E8C] text-white text-xs rounded-full font-bold">
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -669,7 +673,7 @@ function EventDetailContent() {
               <div className="space-y-6">
                 {event.status === "draft" && (
                   <div className="rounded-xl border-2 border-[#E91E8C]/30 bg-[#fff1f8] p-6">
-                    <h3 className="text-lg font-semibold text-[#E91E8C] mb-2">🚀 Publish Your Event</h3>
+                    <h3 className="text-lg font-semibold text-[#E91E8C] mb-2 flex items-center gap-2"><Zap className="w-5 h-5" /> Publish Your Event</h3>
                     <p className="text-sm text-muted-foreground mb-4">
                       Publish to unlock invite sending and start building your guest list.
                     </p>
@@ -712,38 +716,38 @@ function EventDetailContent() {
 
                 {/* Quick Links Grid */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Manage Event</h3>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Settings className="w-5 h-5" /> Manage Event</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     <Link href={`/dashboard/events/${id}/edit`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <p className="text-2xl mb-2 group-hover:scale-110 transition">✏️</p>
+                      <Edit2 className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
                       <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Edit</p>
                     </Link>
                     <Link href={`/dashboard/events/${id}/coupons`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <p className="text-2xl mb-2 group-hover:scale-110 transition">🎟️</p>
+                      <TicketIcon className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
                       <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Coupons</p>
                     </Link>
                     <Link href={`/dashboard/events/${id}/waitlist`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <p className="text-2xl mb-2 group-hover:scale-110 transition">📋</p>
+                      <Clock className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
                       <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Waitlist</p>
                     </Link>
                     <Link href={`/dashboard/events/${id}/questions`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <p className="text-2xl mb-2 group-hover:scale-110 transition">❓</p>
+                      <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
                       <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">RSVP Q's</p>
                     </Link>
                     <Link href={`/dashboard/events/${id}/reminders`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <p className="text-2xl mb-2 group-hover:scale-110 transition">🔔</p>
+                      <Mail className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
                       <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Reminders</p>
                     </Link>
                     <Link href={`/dashboard/events/${id}/templates`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <p className="text-2xl mb-2 group-hover:scale-110 transition">📧</p>
+                      <Edit2 className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
                       <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Templates</p>
                     </Link>
                     <Link href={`/scan`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <p className="text-2xl mb-2 group-hover:scale-110 transition">📱</p>
+                      <Eye className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
                       <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Scanner</p>
                     </Link>
                     <Link href={`/dashboard/wallet`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <p className="text-2xl mb-2 group-hover:scale-110 transition">💳</p>
+                      <Wallet className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
                       <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Wallet</p>
                       {walletBalance !== null && <p className="text-xs font-bold text-[#E91E8C] mt-1">₦{walletBalance.toLocaleString()}</p>}
                     </Link>
@@ -753,7 +757,7 @@ function EventDetailContent() {
                 {/* Checkin Stats */}
                 {checkinStats && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Check-in Status</h3>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Check className="w-5 h-5" /> Check-in Status</h3>
                     <div className="rounded-lg border bg-green-50 border-green-200 p-6">
                       <div className="flex items-center justify-between">
                         <div>
@@ -825,7 +829,7 @@ function EventDetailContent() {
               <div className="space-y-6">
                 {/* Add Guest Form */}
                 <div className="rounded-xl border p-6 bg-gradient-to-br from-blue-50 to-transparent">
-                  <h3 className="text-lg font-semibold mb-4">➕ Add Individual Guest</h3>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Plus className="w-5 h-5" /> Add Individual Guest</h3>
           <div>
                     {guestLimit !== null && (
                       <p className="mb-3 text-xs font-medium text-muted-foreground">
@@ -842,7 +846,7 @@ function EventDetailContent() {
 
                 {/* CSV Import */}
                 <div className="rounded-xl border p-6 bg-gradient-to-br from-purple-50 to-transparent">
-                  <h3 className="text-lg font-semibold mb-4">📤 Bulk Import (CSV)</h3>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Upload className="w-5 h-5" /> Bulk Import (CSV)</h3>
                   <p className="text-sm text-muted-foreground mb-4">
                     Upload a CSV file with columns: <code className="bg-gray-100 px-2 py-1 rounded text-xs">name, phone, email</code>
                   </p>
@@ -856,7 +860,7 @@ function EventDetailContent() {
                 </div>
                 {/* Guests List */}
                 <div className="rounded-xl border p-6">
-                  <h3 className="text-lg font-semibold mb-4">👥 Guest List ({totalGuests})</h3>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Users className="w-5 h-5" /> Guest List ({totalGuests})</h3>
                   {guests.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">No guests added yet. Start by adding a guest above or importing a CSV.</p>
                   ) : (
@@ -959,12 +963,12 @@ function EventDetailContent() {
             {activeTab === "invites" && (
               <div className="space-y-6">
                 <div className="rounded-xl border p-6 bg-gradient-to-br from-pink-50 to-transparent">
-                  <h3 className="text-lg font-semibold mb-4">✉️ Send Invitations</h3>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Send className="w-5 h-5" /> Send Invitations</h3>
             <div className="space-y-3">
               <select value={channel} onChange={(e) => setChannel(e.target.value)} className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                <option value="email">📧 Email</option>
-                <option value="whatsapp">💬 WhatsApp</option>
-                <option value="sms">📱 SMS</option>
+                <option value="email">Email</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="sms">SMS</option>
               </select>
               <div className="rounded-lg border border-dashed border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
                 💡 Sends only to guests who haven't been invited. Use individual buttons to re-send.
