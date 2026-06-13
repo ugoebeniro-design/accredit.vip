@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { Briefcase, CalendarDays, Compass, Gem, LayoutGrid, Lock, LogOut, Menu, Mic, Moon, Music, PartyPopper, Plus, Trophy, Wallet as WalletIcon, X, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { getEvents, type EventData } from "@/lib/api/events";
+import { apiClient } from "@/lib/api-client";
 
 const CATEGORY_ICONS: Record<string, ReactNode> = {
   concert: <Music className="h-9 w-9" />,
@@ -40,6 +41,7 @@ export default function EventsPage() {
   useEffect(() => {
     if (!loading && !user) { router.push("/login"); return; }
     if (user) {
+      apiClient("/events/claim-trial", { method: "POST" }).catch(() => {});
       getEvents().then(setEvents).catch(() => {}).finally(() => setEventsLoading(false));
     }
   }, [user, loading, router]);

@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.event import Event
+from app.models.guest import Guest
 from app.services.event_review import scan_for_keywords, compute_review_status
 from app.services.trial_enforcement import TrialEnforcementService
 
@@ -164,6 +165,25 @@ async def create_event(
     await db.commit()
     await db.refresh(event)
     return event
+
+
+@router.post("/claim-trial")
+async def claim_trial_events(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Claim trial events that have a guest with the user's email."""
+    claimed = 0
+    result = await db.execute(select(Event).where(Event.status == "trial"))
+    trial_events = result.scalars().all()
+    for event in trial_events:
+        gref = await db.execute(select(Guest).where(Guest.event_id == event.id, Guest.email == user.email))
+        if gref.scalar_one_or_none():
+            event.organizer_id = user.id
+            claimed += 1
+    if claimed:
+        await db.commit()
+    return {"claimed": claimed, "message": f"Claimed {claimed} trial event(s)"}
 
 
 @router.get("")

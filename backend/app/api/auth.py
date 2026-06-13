@@ -127,15 +127,16 @@ async def register(
 
     # Transfer trial events created with this email to the new user
     guest_result = await db.execute(select(Guest).where(Guest.email == req.email))
-    trial_guest = guest_result.scalar_one_or_none()
-    if trial_guest:
+    trial_guests = guest_result.scalars().all()
+    for trial_guest in trial_guests:
         event_result = await db.execute(
             select(Event).where(Event.id == trial_guest.event_id, Event.status == "trial")
         )
         trial_event = event_result.scalar_one_or_none()
-        if trial_event:
+        if trial_event and trial_event.organizer_id != user.id:
             trial_event.organizer_id = user.id
-            await db.commit()
+    if trial_guests:
+        await db.commit()
 
     # Send verification message (non-blocking — don't block registration on email delivery)
     if channel == "whatsapp" and user.phone:
@@ -192,9 +193,20 @@ async def login(
         # Set secure authentication cookie
         set_auth_cookie(response, access_token)
 
-        logger.info(f"User login successful: {user.email}")
+        # Transfer trial events created with this email to the user on login
+        guest_result = await db.execute(select(Guest).where(Guest.email == user.email))
+        trial_guests = guest_result.scalars().all()
+        for trial_guest in trial_guests:
+            event_result = await db.execute(
+                select(Event).where(Event.id == trial_guest.event_id, Event.status == "trial")
+            )
+            trial_event = event_result.scalar_one_or_none()
+            if trial_event and trial_event.organizer_id != user.id:
+                trial_event.organizer_id = user.id
+        if trial_guests:
+            await db.commit()
 
-        return TokenResponse(
+        logger.info(f"User login successful: {user.email}")
             access_token=access_token,
             user={
                 "id": user.id,
