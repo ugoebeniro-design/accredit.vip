@@ -365,7 +365,7 @@ async def use_trial(
             """
 
             def _brand_banner():
-                logo_url = f"{settings.FRONTEND_URL}/logo-trim.png"
+                logo_url = f"{settings.FRONTEND_URL}/logo-dark-trim.png"
                 return f"""<div style="background:linear-gradient(to right,#0D1B2A,#1a2a3a,#0D1B2A);padding:24px 20px;text-align:center">
                     <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px">
                         <span style="color:#ffffff80;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase">JOIN</span>

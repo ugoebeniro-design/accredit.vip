@@ -61,7 +61,7 @@ export function InviteMotionBanner() {
           <div className="flex-1 text-center sm:text-left">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white/60 mb-2 uppercase tracking-wider">
               JOIN
-              <img src="/logo-trim.png" alt="accredit.vip" className="h-5 w-auto object-contain opacity-80" />
+              <img src="/logo-dark-trim.png" alt="accredit.vip" className="h-5 w-auto object-contain opacity-80" />
             </h3>
             <div className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#E91E8C] to-[#ff6db3] min-h-[40px] sm:min-h-[50px]">
               {displayText}
