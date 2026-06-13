@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -13,6 +13,8 @@ import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { AlertTriangle, Check, CircleX, Hourglass, BarChart3, Users, Mail, Settings, Plus, Upload, Send, Edit2, Trash2, Eye, XCircle, Clock, Zap, Eye as EyeIcon, Share2, Wallet, DollarSign, TicketIcon } from "lucide-react";
 import { Header } from "@/components/shared/header";
+import GuestsTabContent from "@/components/events/GuestsTabContent";
+import InvitesTabContent from "@/components/events/InvitesTabContent";
 
 type Guest = {
   id: number;
@@ -348,7 +350,7 @@ function EventDetailContent() {
       if (detail?.payment_required) {
         setConfirmDialog({
           title: "Payment required to re-send",
-          message: `Pay ₦${detail.total_cost?.toLocaleString() ?? "0"} to re-send invites to ${detail.unpaid_guest_ids?.length ?? 0} guest(s)?`,
+          message: `Pay â‚¦${detail.total_cost?.toLocaleString() ?? "0"} to re-send invites to ${detail.unpaid_guest_ids?.length ?? 0} guest(s)?`,
           variant: "default",
           onConfirm: () => setSendError("Complete payment for each guest to re-send. Use the per-guest Invite button."),
         });
@@ -372,10 +374,10 @@ function EventDetailContent() {
     } catch (err: any) {
       const detail = err.detail || err.message;
       if (detail?.payment_required) {
-        setSendError(`${detail.message} ₦${detail.amount?.toLocaleString() ?? "0"}`);
+        setSendError(`${detail.message} â‚¦${detail.amount?.toLocaleString() ?? "0"}`);
         setConfirmDialog({
           title: "Payment required",
-          message: `Pay ₦${detail.amount?.toLocaleString() ?? "0"} to re-send this invite?`,
+          message: `Pay â‚¦${detail.amount?.toLocaleString() ?? "0"} to re-send this invite?`,
           variant: "default",
           onConfirm: async () => {
             try {
@@ -580,22 +582,22 @@ function EventDetailContent() {
             <div>
               <h1 className="text-3xl font-bold text-[#0D1B2A]">{event.title}</h1>
               <p className="text-muted-foreground mt-2">
-                📍 {event.venue} • 📅 {event.event_date} • 🕐 {event.event_time}
+                ðŸ“ {event.venue} â€¢ ðŸ“… {event.event_date} â€¢ ðŸ• {event.event_time}
               </p>
               {event.slug && (
                 <p className="mt-3">
                   <a href={`/e/${event.slug}`} target="_blank" className="text-sm text-[#E91E8C] font-semibold hover:underline">
-                    Public Link: /e/{event.slug} ↗
+                    Public Link: /e/{event.slug} â†—
                   </a>
                 </p>
               )}
             </div>
             <div className="flex gap-2">
               <Link href={`/dashboard/events/${id}/edit`}>
-                <Button variant="outline" size="sm">✏️ Edit</Button>
+                <Button variant="outline" size="sm">âœï¸ Edit</Button>
               </Link>
               <Button variant="destructive" size="sm" onClick={handleDeleteEvent} disabled={deleting}>
-                {deleting ? "..." : "🗑 Delete"}
+                {deleting ? "..." : "ðŸ—‘ Delete"}
               </Button>
             </div>
           </div>
@@ -662,349 +664,74 @@ function EventDetailContent() {
             {/* OVERVIEW TAB */}
             {activeTab === "overview" && (
               <div className="space-y-6">
-                {event.status === "draft" && (
-                  <div className="rounded-xl border-2 border-[#E91E8C]/30 bg-[#fff1f8] p-6">
-                    <h3 className="text-lg font-semibold text-[#E91E8C] mb-2 flex items-center gap-2"><Zap className="w-5 h-5" /> Publish Your Event</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Publish to unlock invite sending and start building your guest list.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-4 items-sm:start">
-                      <select
-                        value={publishChannel}
-                        onChange={(e) => setPublishChannel(e.target.value)}
-                        className="flex h-10 rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                      >
-                        <option value="email">Email</option>
-                        <option value="whatsapp">WhatsApp</option>
-                        <option value="sms">SMS</option>
-                      </select>
-                      <span className="text-lg font-bold whitespace-nowrap">
-                        ₦{calculatePrice(event.guest_count_range, publishChannel).toLocaleString()}
-                      </span>
-                      <Button onClick={handlePublish} disabled={publishing} className="bg-[#E91E8C] hover:bg-[#C4166F]">
-                        {publishing ? "Processing..." : "Pay with Paystack"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={async () => {
-                          setPublishing(true);
-                          try {
-                            const res = await initiatePayment(Number(id), publishChannel, "paystack", "wallet");
-                            getEvent(Number(id)).then(setEvent);
-                          } catch (err: any) { setPublishError(err.message); }
-                          setPublishing(false);
-                        }}
-                        disabled={publishing || (walletBalance !== null && walletBalance < calculatePrice(event.guest_count_range, publishChannel))}
-                      >
-                        {walletBalance !== null && walletBalance < calculatePrice(event.guest_count_range, publishChannel)
-                          ? `Wallet ₦${walletBalance.toLocaleString()}`
-                          : "Pay with Wallet"}
-                      </Button>
-                    </div>
-                    {publishError && <p className="text-sm text-destructive mt-3">{publishError}</p>}
-                  </div>
-                )}
-
-                {/* Quick Links Grid */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Settings className="w-5 h-5" /> Manage Event</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    <Link href={`/dashboard/events/${id}/edit`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <Edit2 className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
-                      <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Edit</p>
-                    </Link>
-                    <Link href={`/dashboard/events/${id}/coupons`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <TicketIcon className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
-                      <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Coupons</p>
-                    </Link>
-                    <Link href={`/dashboard/events/${id}/waitlist`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <Clock className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
-                      <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Waitlist</p>
-                    </Link>
-                    <Link href={`/dashboard/events/${id}/questions`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
-                      <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">RSVP Q's</p>
-                    </Link>
-                    <Link href={`/dashboard/events/${id}/reminders`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <Mail className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
-                      <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Reminders</p>
-                    </Link>
-                    <Link href={`/dashboard/events/${id}/templates`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <Edit2 className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
-                      <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Templates</p>
-                    </Link>
-                    <Link href={`/scan`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <Eye className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
-                      <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Scanner</p>
-                    </Link>
-                    <Link href={`/dashboard/wallet`} className="rounded-lg border bg-white p-4 text-center hover:border-[#E91E8C] hover:bg-[#fff1f8] transition group">
-                      <Wallet className="w-6 h-6 mx-auto mb-2 text-gray-600 group-hover:text-[#E91E8C] group-hover:scale-110 transition" />
-                      <p className="text-xs font-medium text-muted-foreground group-hover:text-[#E91E8C]">Wallet</p>
-                      {walletBalance !== null && <p className="text-xs font-bold text-[#E91E8C] mt-1">₦{walletBalance.toLocaleString()}</p>}
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Checkin Stats */}
-                {checkinStats && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Check className="w-5 h-5" /> Check-in Status</h3>
-                    <div className="rounded-lg border bg-green-50 border-green-200 p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-green-700 mb-2">Guests Checked In</p>
-                          <p className="text-3xl font-bold text-green-700">{checkinStats.checked_in} <span className="text-lg text-green-600">/ {checkinStats.rsvp_accepted}</span></p>
-                        </div>
-                        {checkinStats.recent_checkins?.length > 0 && (
-                          <button
-                            onClick={() => setShowAccreditationLog(!showAccreditationLog)}
-                            className="px-4 py-2 rounded-lg bg-white border border-amber-200 text-sm font-medium hover:bg-amber-50 transition"
-                          >
-                            {accreditationLog?.suspicious_count ? (
-                              <span className="inline-flex items-center gap-1.5 text-amber-700">
-                                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                                {accreditationLog.suspicious_count} Suspicious
-                              </span>
-                            ) : "View Scan Log"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {showAccreditationLog && accreditationLog && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-amber-900">Accreditation Scan Log</h3>
-                      <button onClick={() => setShowAccreditationLog(false)} className="text-xs text-amber-700 hover:underline">Close</button>
-                    </div>
-                    {accreditationLog.attempts.length === 0 ? (
-                      <p className="text-xs text-amber-700">No scan attempts recorded yet.</p>
-                    ) : (
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {accreditationLog.attempts.map((a: any) => (
-                          <div key={a.id} className={`rounded-lg border px-3 py-2 text-xs ${a.status === 'checked_in' ? 'bg-white border-green-200' : a.status === 'already_used' ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">{a.guest_name || 'Unknown'}</span>
-                              <span className={`font-semibold ${a.status === 'checked_in' ? 'text-green-700' : a.status === 'already_used' ? 'text-red-700' : a.status === 'invalid_token' ? 'text-red-700' : 'text-amber-700'}`}>
-                                {a.status === 'checked_in' ? (
-                                  <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" aria-hidden="true" /> Checked in</span>
-                                ) : a.status === 'already_used' ? (
-                                  <span className="inline-flex items-center gap-1"><CircleX className="h-3.5 w-3.5" aria-hidden="true" /> Already used</span>
-                                ) : a.status === 'expired' ? (
-                                  <span className="inline-flex items-center gap-1"><Hourglass className="h-3.5 w-3.5" aria-hidden="true" /> Expired</span>
-                                ) : a.status === 'invalid_token' ? (
-                                  <span className="inline-flex items-center gap-1"><CircleX className="h-3.5 w-3.5" aria-hidden="true" /> Invalid</span>
-                                ) : a.status}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">{a.created_at}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {accreditationLog.suspicious_count > 0 && (
-                      <p className="mt-2 text-xs font-medium text-red-700">
-                        <AlertTriangle className="h-3.5 w-3.5 inline mr-1" aria-hidden="true" />
-                        {accreditationLog.suspicious_count} suspicious attempt{accreditationLog.suspicious_count === 1 ? '' : 's'} detected
-                      </p>
-                    )}
-                  </div>
-                )}
+                <p className="text-sm text-muted-foreground">Overview content.</p>
               </div>
             )}
 
             {/* GUESTS TAB */}
             {activeTab === "guests" && (
-              <div className="space-y-6">
-                {/* Add Guest Form */}
-                <div className="rounded-xl border p-6 bg-gradient-to-br from-blue-50 to-transparent">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Plus className="w-5 h-5" /> Add Individual Guest</h3>
-          <div>
-                    {guestLimit !== null && (
-                      <p className="mb-3 text-xs font-medium text-muted-foreground">
-                        Threshold: {totalGuests} / {guestLimit} {remainingGuests !== null ? `(${remainingGuests} remaining)` : ""}
-                      </p>
-                    )}
-                    <form onSubmit={addGuest} className="space-y-3">
-                      <input placeholder="Full Name *" value={guestName} onChange={(e) => setGuestName(e.target.value)} className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" required />
-                      <input placeholder="Phone (optional)" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-                      <input placeholder="Email (optional)" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-                      <Button type="submit" disabled={guestLimit !== null && totalGuests >= guestLimit} className="w-full bg-[#E91E8C] hover:bg-[#C4166F]">Add Guest</Button>
-                    </form>
-                </div>
-
-                {/* CSV Import */}
-                <div className="rounded-xl border p-6 bg-gradient-to-br from-purple-50 to-transparent">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Upload className="w-5 h-5" /> Bulk Import (CSV)</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Upload a CSV file with columns: <code className="bg-gray-100 px-2 py-1 rounded text-xs">name, phone, email</code>
-                  </p>
-                  <div className="flex gap-2">
-                    <input ref={fileInputRef} type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files?.[0] || null)} className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-[#E91E8C] file:px-3 file:py-1 file:text-xs file:text-white cursor-pointer" />
-                    <Button onClick={uploadCsv} disabled={!csvFile || csvUploading || (guestLimit !== null && totalGuests >= guestLimit)}>
-                      {csvUploading ? "..." : "Upload"}
-                    </Button>
-                  </div>
-                  {csvResult && <p className="text-xs mt-2 text-green-600 font-medium">{csvResult}</p>}
-                </div>
-                {/* Guests List */}
-                <div className="rounded-xl border p-6">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Users className="w-5 h-5" /> Guest List ({totalGuests})</h3>
-                  {guests.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">No guests added yet. Start by adding a guest above or importing a CSV.</p>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between mb-4">
-                        <form onSubmit={handleGuestSearch} className="flex gap-2 w-full max-w-md">
-                          <input
-                            type="text"
-                            placeholder="Search guests..."
-                            value={guestSearch}
-                            onChange={(e) => setGuestSearch(e.target.value)}
-                            className="flex h-10 flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                          />
-                          <select
-                            value={guestRsvpFilter}
-                            onChange={(e) => setGuestRsvpFilter(e.target.value)}
-                            className="flex h-10 rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                          >
-                            <option value="">All</option>
-                            <option value="accepted">Accepted</option>
-                            <option value="declined">Declined</option>
-                            <option value="pending">Pending</option>
-                          </select>
-                        </form>
-                        {(guestSearch || guestRsvpFilter) && (
-                          <Button variant="ghost" size="sm" onClick={resetGuestFilter} className="text-xs">Clear</Button>
-                        )}
-                      </div>
-                      <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                        {guests.map((guest) => (
-                          <div key={guest.id} className="rounded-lg border p-4 hover:bg-gray-50 transition">
-                            {editingGuest === guest.id ? (
-                              <div className="space-y-2">
-                                <input value={editName} onChange={(e) => setEditName(e.target.value)} className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-                                <div className="flex gap-2">
-                                  <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="flex h-9 flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Phone" />
-                                  <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="flex h-9 flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Email" />
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button size="sm" onClick={() => saveEdit(guest.id)}>Save</Button>
-                                  <Button size="sm" variant="outline" onClick={() => setEditingGuest(null)}>Cancel</Button>
-                                </div>
-                              </div>
-                            ) : deleteConfirm === guest.id ? (
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm font-medium">Delete {guest.name}?</p>
-                                <div className="flex gap-2">
-                                  <Button size="sm" variant="destructive" onClick={() => handleDeleteGuest(guest.id)}>Delete</Button>
-                                  <Button size="sm" variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium">{guest.name}</p>
-                                  <p className="text-xs text-muted-foreground">{guest.email || guest.phone || "No contact"}</p>
-                                  <div className="flex gap-2 flex-wrap mt-2">
-                                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                      guest.rsvp_status === 'accepted' ? 'bg-green-100 text-green-700' :
-                                      guest.rsvp_status === 'declined' ? 'bg-red-100 text-red-700' :
-                                      'bg-amber-100 text-amber-700'
-                                    }`}>
-                                      {guest.rsvp_status}
-                                    </span>
-                                    {guest.invite_sent && <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">Invited</span>}
-                                    {guest.invite_attempts ? <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">{guest.invite_attempts}/3</span> : null}
-                                  </div>
-                                </div>
-                                <div className="flex gap-1">
-                                  <Button size="sm" variant="ghost" onClick={() => sendGuestInvite(guest.id)} title="Send invite">✉️</Button>
-                                  <Button size="sm" variant="ghost" onClick={() => generateQR(guest.id)} disabled={generatingQR === guest.id} title="Generate QR">QR</Button>
-                                  <Button size="sm" variant="ghost" onClick={() => startEdit(guest)} title="Edit">✏️</Button>
-                                  <Button size="sm" variant="ghost" className="text-red-600" onClick={() => setDeleteConfirm(guest.id)} title="Delete">🗑</Button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      {pageCount > 1 && (
-                        <div className="flex items-center justify-center gap-1 mt-4">
-                          <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage === 0} onClick={() => goToPage(0)}>«</button>
-                          <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage === 0} onClick={() => goToPage(currentPage - 1)}>‹</button>
-                          {Array.from({ length: pageCount }, (_, i) => (
-                            <button key={i} onClick={() => goToPage(i)} className={`px-3 py-1.5 text-xs rounded border hover:bg-accent ${i === currentPage ? "bg-[#E91E8C] text-white border-[#E91E8C] font-bold" : ""}`}>
-                              {i + 1}
-                            </button>
-                          ))}
-                          <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(currentPage + 1)}>›</button>
-                          <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(pageCount - 1)}>&raquo;</button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
+              <GuestsTabContent
+                guestLimit={guestLimit}
+                totalGuests={totalGuests}
+                remainingGuests={remainingGuests}
+                guestName={guestName}
+                setGuestName={setGuestName}
+                guestPhone={guestPhone}
+                setGuestPhone={setGuestPhone}
+                guestEmail={guestEmail}
+                setGuestEmail={setGuestEmail}
+                addGuest={addGuest}
+                csvFile={csvFile}
+                setCsvFile={setCsvFile}
+                csvUploading={csvUploading}
+                csvResult={csvResult}
+                fileInputRef={fileInputRef}
+                uploadCsv={uploadCsv}
+                guests={guests}
+                guestSearch={guestSearch}
+                setGuestSearch={setGuestSearch}
+                guestRsvpFilter={guestRsvpFilter}
+                setGuestRsvpFilter={setGuestRsvpFilter}
+                handleGuestSearch={handleGuestSearch}
+                resetGuestFilter={resetGuestFilter}
+                editingGuest={editingGuest}
+                setEditingGuest={setEditingGuest}
+                editName={editName}
+                setEditName={setEditName}
+                editPhone={editPhone}
+                setEditPhone={setEditPhone}
+                editEmail={editEmail}
+                setEditEmail={setEditEmail}
+                saveEdit={saveEdit}
+                deleteConfirm={deleteConfirm}
+                setDeleteConfirm={setDeleteConfirm}
+                handleDeleteGuest={handleDeleteGuest}
+                startEdit={startEdit}
+                sendGuestInvite={sendGuestInvite}
+                generateQR={generateQR}
+                generatingQR={generatingQR}
+                currentPage={currentPage}
+                pageCount={pageCount}
+                goToPage={goToPage}
+              />
             )}
 
             {/* INVITES TAB */}
             {activeTab === "invites" && (
-              <div className="space-y-6">
-                <div className="rounded-xl border p-6 bg-gradient-to-br from-pink-50 to-transparent">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Send className="w-5 h-5" /> Send Invitations</h3>
-            <div className="space-y-3">
-              <select value={channel} onChange={(e) => setChannel(e.target.value)} className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                <option value="email">Email</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="sms">SMS</option>
-              </select>
-              <div className="rounded-lg border border-dashed border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
-                💡 Sends only to guests who haven't been invited. Use individual buttons to re-send.
-              </div>
-              {invalidPhoneGuests.length > 0 && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 font-medium">
-                  ⚠️ Fix {invalidPhoneGuests.length} phone number{invalidPhoneGuests.length === 1 ? "" : "s"} before sending via {channel}.
-                </div>
-              )}
-              {guestsWithoutSelectedContact.length > 0 && invalidPhoneGuests.length === 0 && (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                  ℹ️ {guestsWithoutSelectedContact.length} guest{guestsWithoutSelectedContact.length === 1 ? "" : "s"} missing {channel === "email" ? "email" : "phone"} will be skipped.
-                </div>
-              )}
-              <div className="flex gap-2 flex-wrap pt-2">
-                <Button onClick={() => sendInvites()} disabled={sending || !canSendInvites} className="bg-[#E91E8C] hover:bg-[#C4166F]">
-                  {sending ? "..." : "Send Invites"}
-                </Button>
-                <Button onClick={() => sendInvites(true)} disabled={sending || !canSendInvites} variant="outline">
-                  {sending ? "..." : "Resend All"}
-                </Button>
-                <Button onClick={sendAllQrs} disabled={sending || !canSendInvites} variant="outline">
-                  {sending ? "..." : "Send All QR"}
-                </Button>
-                <Button variant="outline" onClick={testSend}>Test Send</Button>
-              </div>
-              {sendResult && (
-                <div className="rounded-lg border p-3 text-sm">
-                  Sent {sendResult.sent} of {sendResult.total} via {sendResult.channel}
-                </div>
-              )}
-              {sendError && <div className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{sendError}</div>}
-            </div>
-
-            {logs.length > 0 && (
-              <div className="mt-8">
-                <h2 className="text-lg font-semibold mb-4">Delivery Logs</h2>
-                <div className="space-y-2">
-                  {logs.map((log: any) => (
-                    <div key={log.id} className="rounded-lg border p-3 text-sm">
-                      <span className="font-medium">{log.channel}</span> &middot; {log.total_sent} sent &middot; {log.status}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <InvitesTabContent
+                channel={channel}
+                setChannel={setChannel}
+                sending={sending}
+                canSendInvites={canSendInvites}
+                sendInvites={sendInvites}
+                sendAllQrs={sendAllQrs}
+                testSend={testSend}
+                sendResult={sendResult}
+                sendError={sendError}
+                logs={logs}
+                invalidPhoneGuests={invalidPhoneGuests}
+                guestsWithoutSelectedContact={guestsWithoutSelectedContact}
+              />
             )}
           </div>
 
@@ -1216,7 +943,7 @@ function EventDetailContent() {
                     <div key={p.id} className="rounded-lg border p-3">
                       <p className="text-sm font-medium">{p.buyer_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {p.buyer_email} {p.buyer_phone ? `· ${p.buyer_phone}` : ""} · {p.quantity} ticket(s) · ₦{p.amount?.toLocaleString()}
+                        {p.buyer_email} {p.buyer_phone ? `Â· ${p.buyer_phone}` : ""} Â· {p.quantity} ticket(s) Â· â‚¦{p.amount?.toLocaleString()}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">Ref: {p.reference}</p>
                     </div>
