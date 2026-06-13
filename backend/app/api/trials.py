@@ -90,9 +90,9 @@ def _dress_code_rows(payload: dict) -> str:
     if dc:
         rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>Code:</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{dc}</td></tr>"
     if fdc:
-        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>Women:</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{fdc}</td></tr>"
+        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>Female</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{fdc}</td></tr>"
     if mdc:
-        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>Men:</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{mdc}</td></tr>"
+        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>Male</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{mdc}</td></tr>"
     return rows
 
 
@@ -365,9 +365,13 @@ async def use_trial(
             """
 
             def _brand_banner():
-                return f"""<div style="background:linear-gradient(135deg,#E91E8C,#C4166F);padding:28px 24px;text-align:center;min-height:105px">
-                    <div style="animation:accredit-text 6s ease-in-out infinite"><p style="margin:0;color:#fff;font-size:20px;font-weight:bold;letter-spacing:1px;font-family:Georgia,serif">Accredit.vip</p></div>
-                    <div style="animation:accredit-btn 6s ease-in-out infinite;margin-top:14px"><a href="https://accredit.vip" style="animation:accredit-pulse 2s infinite;display:inline-block;background:#ffffff;color:#E91E8C;padding:12px 36px;border-radius:50px;text-decoration:none;font-weight:bold;font-size:13px;font-family:Arial,sans-serif;letter-spacing:1px">Register Now</a></div>
+                logo_url = f"{settings.FRONTEND_URL}/logo-trim.png"
+                return f"""<div style="background:linear-gradient(to right,#0D1B2A,#1a2a3a,#0D1B2A);padding:24px 20px;text-align:center">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px">
+                        <span style="color:#ffffff80;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase">JOIN</span>
+                        <img src="{logo_url}" alt="accredit.vip" style="height:20px;width:auto;opacity:0.8" />
+                    </div>
+                    <a href="https://accredit.vip" style="display:inline-block;background:linear-gradient(to right,#E91E8C,#C4166F);color:#fff;padding:12px 32px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:14px;font-family:Arial,sans-serif">Create Event →</a>
                 </div>"""
 
             brand_html = _brand_banner()
@@ -382,9 +386,6 @@ async def use_trial(
                         .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
                         .flyer {{ width: 100%; max-width: 500px; display: block; }}
                         .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #999; background: #f8f9fc; }}
-                        @keyframes accredit-text {{ 0%,10% {{ opacity:1; }} 20%,70% {{ opacity:1; }} 85%,100% {{ opacity:0; }} }}
-                        @keyframes accredit-btn {{ 0%,35% {{ opacity:1; }} 45%,70% {{ opacity:1; }} 85%,100% {{ opacity:0; }} }}
-                        @keyframes accredit-pulse {{ 0%,100% {{ box-shadow:0 0 0 0 rgba(233,30,140,0.3); }} 50% {{ box-shadow:0 0 0 12px rgba(233,30,140,0); }} }}
                     </style>
                 </head>
                 <body>
@@ -409,9 +410,6 @@ async def use_trial(
                         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
                         .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
                         .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #999; background: #f8f9fc; }}
-                        @keyframes accredit-text {{ 0%,10% {{ opacity:1; }} 20%,70% {{ opacity:1; }} 85%,100% {{ opacity:0; }} }}
-                        @keyframes accredit-btn {{ 0%,35% {{ opacity:1; }} 45%,70% {{ opacity:1; }} 85%,100% {{ opacity:0; }} }}
-                        @keyframes accredit-pulse {{ 0%,100% {{ box-shadow:0 0 0 0 rgba(233,30,140,0.3); }} 50% {{ box-shadow:0 0 0 12px rgba(233,30,140,0); }} }}
                     </style>
                 </head>
                 <body>
