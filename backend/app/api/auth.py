@@ -135,6 +135,7 @@ async def register(
         trial_event = event_result.scalar_one_or_none()
         if trial_event:
             trial_event.organizer_id = user.id
+            await db.commit()
 
     # Send verification message (non-blocking — don't block registration on email delivery)
     if channel == "whatsapp" and user.phone:
