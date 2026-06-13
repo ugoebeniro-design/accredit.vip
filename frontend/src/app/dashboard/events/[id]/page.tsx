@@ -567,7 +567,7 @@ function EventDetailContent() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f8f9fc]">
-      <Header userFullName={user.full_name} dashboardLink="/dashboard" />
+      <Header showNav={true} userFullName={user.full_name} dashboardLink="/dashboard" />
 
       <div className="flex-1 container mx-auto px-4 py-6">
         <Link href="/dashboard" className="text-sm text-muted-foreground mb-6 inline-block hover:text-foreground">

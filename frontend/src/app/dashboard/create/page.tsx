@@ -898,7 +898,7 @@ export default function CreateEventPage() {
             transform: translateZ(0);
           }
         `}</style>
-        <Header userFullName={user?.full_name} dashboardLink="/dashboard" />
+        <Header showNav={true} userFullName={user?.full_name} dashboardLink="/dashboard" />
         <div className="flex-1 container mx-auto px-4 py-2 sm:py-8">
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5 mt-2">

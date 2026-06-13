@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { User, LogOut } from "lucide-react";
 
 interface HeaderProps {
@@ -14,11 +15,8 @@ export function Header({ showNav = true, userFullName, onLogout, dashboardLink =
   return (
     <header className="border-b bg-white sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 p-1.5 rounded-lg bg-[#f0f4f8] hover:opacity-80 transition flex-shrink-0">
-          <div>
-            <p className="text-lg font-bold tracking-tight text-[#0D1B2A]">Accredit</p>
-            <p className="text-xs font-semibold text-[#E91E8C] -mt-1">.vip</p>
-          </div>
+        <Link href="/" className="flex items-center hover:opacity-80 transition flex-shrink-0">
+          <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4086} height={801} className="h-10 w-auto object-contain" />
         </Link>
 
         {showNav && (
