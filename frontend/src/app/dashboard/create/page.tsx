@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ChevronDown, Check } from "lucide-react";
+import { Header } from "@/components/shared/header";
 import { useAuth } from "@/contexts/auth-context";
 import { createEvent } from "@/lib/api/events";
 import { apiClient } from "@/lib/api-client";
@@ -897,17 +898,7 @@ export default function CreateEventPage() {
             transform: translateZ(0);
           }
         `}</style>
-        <header className="border-b border-[#e8edf2] bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0 p-1.5 rounded-lg bg-[#f0f4f8]">
-              <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4086} height={801} className="h-10 sm:h-12 w-auto object-contain" />
-            </Link>
-            <div className="flex items-center gap-3 sm:gap-4">
-              <Link href="/dashboard" className="rounded-lg border border-[#0D1B2A] bg-[#0D1B2A] px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C] hover:shadow-md">Dashboard</Link>
-              <Link href="/" className="rounded-lg border border-[#d9e2ec] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-[#0D1B2A] shadow-sm transition-all hover:border-[#E91E8C] hover:text-[#E91E8C] hover:shadow-md">Home</Link>
-            </div>
-          </div>
-        </header>
+        <Header userFullName={user?.full_name} dashboardLink="/dashboard" />
         <div className="flex-1 container mx-auto px-4 py-2 sm:py-8">
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5 mt-2">
@@ -995,17 +986,7 @@ export default function CreateEventPage() {
       `}</style>
 
       {/* Header */}
-      <header className="border-b border-[#e8edf2] bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <button type="button" onClick={() => setMode(null)} className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0 p-1.5 rounded-lg bg-[#f0f4f8]">
-            <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4086} height={801} className="h-10 sm:h-12 w-auto object-contain" />
-          </button>
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Link href="/dashboard" className="rounded-lg border border-[#0D1B2A] bg-[#0D1B2A] px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all hover:bg-[#13283d] hover:border-[#E91E8C] hover:shadow-md">Dashboard</Link>
-            <Link href="/" className="rounded-lg border border-[#d9e2ec] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-[#0D1B2A] shadow-sm transition-all hover:border-[#E91E8C] hover:text-[#E91E8C] hover:shadow-md">Home</Link>
-          </div>
-        </div>
-      </header>
+      <Header userFullName={user?.full_name} dashboardLink="/dashboard" />
 
       <main className="flex-1">
         {/* Step indicator */}

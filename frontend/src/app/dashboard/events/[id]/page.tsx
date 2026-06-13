@@ -12,6 +12,7 @@ import { EventDetailSkeleton } from "@/components/shared/loading-skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { AlertTriangle, Check, CircleX, Hourglass, BarChart3, Users, Mail, Settings, Plus, Upload, Send, Edit2, Trash2, Eye, XCircle, Clock, Zap, Eye as EyeIcon, Share2, Wallet, DollarSign, TicketIcon } from "lucide-react";
+import { Header } from "@/components/shared/header";
 
 type Guest = {
   id: number;
@@ -566,17 +567,7 @@ function EventDetailContent() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f8f9fc]">
-      <header className="border-b bg-white">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold tracking-tight">
-            Accredit<span className="text-primary">.vip</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">Dashboard</Link>
-            <span className="text-sm text-muted-foreground">{user.full_name}</span>
-          </div>
-        </div>
-      </header>
+      <Header userFullName={user.full_name} dashboardLink="/dashboard" />
 
       <div className="flex-1 container mx-auto px-4 py-6">
         <Link href="/dashboard" className="text-sm text-muted-foreground mb-6 inline-block hover:text-foreground">
