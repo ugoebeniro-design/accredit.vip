@@ -79,17 +79,20 @@ def _format_date(val: str | None) -> str:
 
 
 def _dress_code_rows(payload: dict) -> str:
-    """Return HTML <tr> rows for dress code(s)."""
+    """Return HTML <tr> rows for dress code(s) with section header."""
     dc = payload.get("dress_code") or ""
     mdc = payload.get("male_dress_code") or ""
     fdc = payload.get("female_dress_code") or ""
     rows = ""
+    # Add section header if any dress codes exist
+    if dc or mdc or fdc:
+        rows += "<tr><td colspan='2' style='padding:12px 0 8px;border-top:1px solid #e8edf2;font-size:12px;color:#888;font-weight:bold;text-transform:uppercase;letter-spacing:1px'>DRESS CODE</td></tr>"
     if dc:
-        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>DRESS CODE</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{dc}</td></tr>"
+        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>Code:</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{dc}</td></tr>"
     if fdc:
-        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>WOMEN</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{fdc}</td></tr>"
+        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>Women:</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{fdc}</td></tr>"
     if mdc:
-        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>MEN</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{mdc}</td></tr>"
+        rows += f"<tr><td style='padding:8px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;width:100px;vertical-align:top'>Men:</td><td style='padding:8px 0;font-size:14px;font-weight:bold;color:#07182f'>{mdc}</td></tr>"
     return rows
 
 
