@@ -147,7 +147,7 @@ async def _maybe_create_event(req: TrialUseRequest, user: User | None, flyer_url
         country=p.get("country") or "Nigeria",
         description=p.get("description") or "",
         dress_code=p.get("dress_code") or "",
-        guest_count_range=p.get("guest_count") or p.get("guest_count_range") or "1-50",
+        guest_count_range=str(p.get("guest_count") or p.get("guest_count_range") or "1-50"),
         status="trial",
         cover_image=flyer_url or "",
     )
