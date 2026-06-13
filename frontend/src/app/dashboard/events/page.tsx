@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { Briefcase, CalendarDays, Compass, Gem, LayoutGrid, Lock, LogOut, Menu, Mic, Moon, Music, PartyPopper, Plus, Trophy, Wallet as WalletIcon, X } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
