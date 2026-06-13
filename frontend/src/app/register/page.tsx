@@ -133,7 +133,7 @@ export default function RegisterPage() {
 
         <Link href="/" className="relative z-10">
           <Image
-            src="/logo-trim.png"
+            src="/logo-dark-trim.png"
             alt="accredit.vip"
             width={4071}
             height={761}

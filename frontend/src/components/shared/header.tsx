@@ -16,7 +16,7 @@ export function Header({ showNav = true, userFullName, onLogout, dashboardLink =
     <header className="border-b bg-white sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center hover:opacity-80 transition flex-shrink-0">
-          <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4086} height={801} className="h-10 w-auto object-contain" />
+          <Image src="/logo-trim.png" alt="accredit.vip" width={4086} height={801} className="h-10 w-auto object-contain" />
         </Link>
 
         {showNav && (

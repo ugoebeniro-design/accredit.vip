@@ -44,6 +44,7 @@ async def get_rsvp_data(
         "venue": event.venue,
         "host_name": event.host_name,
         "guest_name": guest.name,
+        "cover_image": event.cover_image or None,
     }
 
 
