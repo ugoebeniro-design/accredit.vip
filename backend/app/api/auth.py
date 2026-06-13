@@ -126,7 +126,9 @@ async def register(
     await db.refresh(user)
 
     # Transfer trial events created with this email to the new user
-    guest_result = await db.execute(select(Guest).where(Guest.email == req.email))
+    guest_result = await db.execute(
+        select(Guest).where(Guest.email.ilike(req.email))
+    )
     trial_guests = guest_result.scalars().all()
     for trial_guest in trial_guests:
         event_result = await db.execute(
@@ -194,7 +196,7 @@ async def login(
         set_auth_cookie(response, access_token)
 
         # Transfer trial events created with this email to the user on login
-        guest_result = await db.execute(select(Guest).where(Guest.email == user.email))
+        guest_result = await db.execute(select(Guest).where(Guest.email.ilike(user.email)))
         trial_guests = guest_result.scalars().all()
         for trial_guest in trial_guests:
             event_result = await db.execute(

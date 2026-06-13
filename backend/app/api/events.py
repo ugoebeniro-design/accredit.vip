@@ -177,7 +177,7 @@ async def claim_trial_events(
     result = await db.execute(select(Event).where(Event.status == "trial"))
     trial_events = result.scalars().all()
     for event in trial_events:
-        gref = await db.execute(select(Guest).where(Guest.event_id == event.id, Guest.email == user.email))
+        gref = await db.execute(select(Guest).where(Guest.event_id == event.id, Guest.email.ilike(user.email)))
         if gref.scalar_one_or_none():
             event.organizer_id = user.id
             claimed += 1

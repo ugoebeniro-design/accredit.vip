@@ -1284,6 +1284,27 @@ export default function CreateEventPage() {
           </div>
         </section>
 
+        {message ? (
+          <div className="min-h-[80vh] flex items-center justify-center px-4">
+            <div className="max-w-md w-full text-center">
+              <div className="rounded-2xl bg-white p-8 shadow-[0_16px_42px_rgba(15,23,42,0.08)]">
+                <div className="mb-6 flex justify-center">
+                  <svg className="w-16 h-16 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-black text-[#0D1B2A] mb-4">Test Invite Sent!</h2>
+                <p className="text-base font-medium text-[#0D1B2A] mb-6">{message}</p>
+                {trialEventId ? (
+                  <button onClick={() => router.push(`/dashboard/events/${trialEventId}`)} className="w-full h-14 rounded-xl bg-gradient-to-r from-[#E91E8C] to-[#C4166F] text-white px-6 text-lg font-black shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:scale-105 whitespace-nowrap" style={{clipPath: "polygon(0 0,100% 0,100% calc(100% - 10px),calc(50% + 14px) calc(100% - 10px),50% 100%,calc(50% - 14px) calc(100% - 10px),0 calc(100% - 10px))", padding: "14px 40px"}}>View in Dashboard →</button>
+                ) : (
+                  <button onClick={handleTestAndSignup} disabled={submitting} className="w-full h-14 rounded-xl bg-gradient-to-r from-[#E91E8C] to-[#C4166F] text-white px-6 text-lg font-black shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed animate-bounce whitespace-nowrap" style={{clipPath: "polygon(0 0,100% 0,100% calc(100% - 10px),calc(50% + 14px) calc(100% - 10px),50% 100%,calc(50% - 14px) calc(100% - 10px),0 calc(100% - 10px))", padding: "14px 40px"}}>{submitting ? "Setting up..." : "Create Event →"}</button>
+                )}
+                <p className="mt-4 text-xs text-[#94a3b8]">Create an account to send real invites to your guest list</p>
+              </div>
+            </div>
+          </div>
+        ) : (
         <section className={`px-4 sm:px-6 lg:px-8 ${step > 0 ? 'pt-0 pb-0' : 'py-4 sm:py-8'}`}>
           <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-[1fr_390px]">
             <form id="create-event-form" onSubmit={showEmailModal} className={`rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-[0_16px_42px_rgba(15,23,42,0.08)] sm:p-4 ${step === 1 ? '' : 'hidden'}`}>
@@ -2499,6 +2520,7 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
             )}
           </div>
         </section>
+      )}
       </main>
 
       {/* Email Input Modal for Test Invites */}
@@ -2540,95 +2562,6 @@ className="block w-full cursor-pointer rounded-xl border border-[#d9e2ec] bg-whi
               >
                 {submitting ? "Sending..." : "Send Preview"}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Test Invite Result Modal - Full Screen */}
-      {message && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="rounded-2xl bg-white w-full max-w-lg shadow-2xl overflow-hidden">
-            {/* Header with logo */}
-            <div className="bg-gradient-to-br from-[#E91E8C]/10 to-[#E91E8C]/5 px-6 py-8 text-center border-b border-[#e8edf2]">
-              <div className="mb-4 flex justify-center">
-                <svg className="w-12 h-12 text-[#E91E8C]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-black text-[#0D1B2A]">Test Invite Sent!</h2>
-            </div>
-
-            {/* Content */}
-            <div className="px-6 py-8 space-y-6">
-              <p className="text-base font-medium text-[#0D1B2A]">{message}</p>
-
-              {/* Status Cards */}
-              <div className="space-y-3">
-                <div className="rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#E91E8C] mb-1">PREVIEW</p>
-                      <p className="text-lg font-bold text-[#0D1B2A]">{mode === "event" ? "Flyer ready" : "Invite ready"}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-6">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#E91E8C] mb-4">QR CODE</p>
-                  {uploadedImagePreviewUrl && (
-                    <div className="flex justify-center">
-                      <QRPreview
-                        qrValue={qrValue || `${form.title}-${form.event_date}`}
-                        imageUrl={uploadedImagePreviewUrl}
-                        size={220}
-                      />
-                    </div>
-                  )}
-                  {!uploadedImagePreviewUrl && (
-                    <p className="text-center text-sm text-[#94a3b8]">Upload an image to see your custom QR code</p>
-                  )}
-                </div>
-
-                <div className="rounded-xl border-2 border-[#E91E8C]/20 bg-gradient-to-br from-[#fef2f8] to-[#fff5f9] p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#E91E8C] mb-1">
-                    {mode === "event" ? "DISCOVER" : "CHANNELS"}
-                  </p>
-                  <p className="text-lg font-bold text-[#0D1B2A]">
-                    {mode === "event" ? "Publish after signup" : selectedChannelNames.join(" + ")}
-                  </p>
-                </div>
-              </div>
-
-              {/* CTA */}
-              {trialEventId ? (
-                <button
-                  type="button"
-                  onClick={() => router.push(`/dashboard/events/${trialEventId}`)}
-                  className="w-full h-14 rounded-xl bg-[#E91E8C] px-6 text-lg font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F]"
-                >
-                  View in Dashboard →
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleTestAndSignup}
-                  disabled={submitting}
-                  className="w-full h-14 rounded-xl bg-[#E91E8C] px-6 text-lg font-black text-white shadow-[0_8px_24px_rgba(233,30,140,0.35)] transition-all hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed animate-bounce"
-                >
-                  {submitting ? "Setting up..." : "Would you like to continue with your invite?"}
-                </button>
-              )}
-
-              {trialEventId ? (
-                <p className="text-xs text-center text-[#94a3b8]">
-                  Your event has been saved as a draft. Add guests, edit details, or publish from the dashboard.
-                </p>
-              ) : (
-                <p className="text-xs text-center text-[#94a3b8]">
-                  Create an account to send real invites to your guest list
-                </p>
-              )}
             </div>
           </div>
         </div>
