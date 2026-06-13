@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { getEvent, deleteEvent, type EventData } from "@/lib/api/events";
 import { apiClient } from "@/lib/api-client";
-import { initiatePayment, calculatePrice } from "@/lib/api/payments";
+import { initiatePayment } from "@/lib/api/payments";
 import { EventDetailSkeleton } from "@/components/shared/loading-skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { AlertTriangle, Check, CircleX, Hourglass, BarChart3, Users, Mail, Settings, Plus, Upload, Send, Edit2, Trash2, Eye, XCircle, Clock, Zap, Eye as EyeIcon, Share2, Wallet, DollarSign, TicketIcon } from "lucide-react";
+import { AlertTriangle, Check, CircleX, Hourglass, BarChart3, Users, Mail, Settings, Plus, Upload, Send, Edit2, Trash2, Eye, XCircle, Clock, Zap, Share2, Wallet, DollarSign, ArrowLeft, Loader, ExternalLink, MapPin, Calendar } from "lucide-react";
 import { Header } from "@/components/shared/header";
 import GuestsTabContent from "@/components/events/GuestsTabContent";
 import InvitesTabContent from "@/components/events/InvitesTabContent";
@@ -310,7 +310,6 @@ function EventDetailContent() {
   const sendInvites = async (force: boolean = false) => {
     setSending(true); setSendResult(null); setSendError(null);
     try {
-      // For resend all, use the legacy endpoint (handles payment logic)
       if (force) {
         const res = await apiClient<any>(`/events/${id}/send-invites?force=true`, { method: "POST", body: { channel } });
         setSendResult(res);
@@ -322,7 +321,6 @@ function EventDetailContent() {
         setSending(false);
         return;
       }
-      // Normal send: fetch up to 5 unsent guests and send via batch
       const gParams = new URLSearchParams();
       gParams.set("invite_status", "not_sent");
       gParams.set("limit", "5");
@@ -351,7 +349,7 @@ function EventDetailContent() {
       if (detail?.payment_required) {
         setConfirmDialog({
           title: "Payment required to re-send",
-          message: `Pay â‚¦${detail.total_cost?.toLocaleString() ?? "0"} to re-send invites to ${detail.unpaid_guest_ids?.length ?? 0} guest(s)?`,
+          message: `Pay ${detail.total_cost?.toLocaleString() ?? "0"} to re-send invites to ${detail.unpaid_guest_ids?.length ?? 0} guest(s)?`,
           variant: "default",
           onConfirm: () => setSendError("Complete payment for each guest to re-send. Use the per-guest Invite button."),
         });
@@ -375,10 +373,10 @@ function EventDetailContent() {
     } catch (err: any) {
       const detail = err.detail || err.message;
       if (detail?.payment_required) {
-        setSendError(`${detail.message} â‚¦${detail.amount?.toLocaleString() ?? "0"}`);
+        setSendError(`${detail.message} ${detail.amount?.toLocaleString() ?? "0"}`);
         setConfirmDialog({
           title: "Payment required",
-          message: `Pay â‚¦${detail.amount?.toLocaleString() ?? "0"} to re-send this invite?`,
+          message: `Pay ${detail.amount?.toLocaleString() ?? "0"} to re-send this invite?`,
           variant: "default",
           onConfirm: async () => {
             try {
@@ -543,9 +541,7 @@ function EventDetailContent() {
         <AlertTriangle className="mx-auto h-10 w-10 text-amber-500" aria-hidden="true" />
         <h2 className="text-xl font-semibold">Could not load event</h2>
         <p className="text-sm text-muted-foreground">The event may have been deleted or a network error occurred.</p>
-        <div className="flex gap-3 justify-center">
-          <button onClick={() => router.push("/dashboard")} className="rounded-lg border border-input px-4 py-2 text-sm font-medium hover:bg-accent">Go to Dashboard</button>
-        </div>
+        <button onClick={() => router.push("/dashboard")} className="rounded-lg border border-input px-4 py-2 text-sm font-medium hover:bg-accent">Go to Dashboard</button>
       </div>
     </div>
   );
@@ -555,9 +551,7 @@ function EventDetailContent() {
   const remainingGuests = guestLimit === null ? null : Math.max(guestLimit - totalGuests, 0);
   const phoneChannelSelected = channel === "whatsapp" || channel === "sms";
   const invalidPhoneGuests = phoneChannelSelected ? guests.filter((guest) => !isValidPhone(guest.phone)) : [];
-  const guestsWithoutSelectedContact = guests.filter((guest) =>
-    channel === "email" ? !guest.email : !guest.phone
-  );
+  const guestsWithoutSelectedContact = guests.filter((guest) => channel === "email" ? !guest.email : !guest.phone);
   const canSendInvites = totalGuests > 0 && invalidPhoneGuests.length === 0;
 
   const tabs = [
@@ -568,107 +562,228 @@ function EventDetailContent() {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f8f9fc]">
+    <div className="min-h-screen bg-slate-50">
       <Header showNav={true} userFullName={user.full_name} dashboardLink="/dashboard" />
 
-      <div className="flex-1 container mx-auto px-4 py-6">
-        <Link href="/dashboard" className="text-sm text-muted-foreground mb-6 inline-block hover:text-foreground">
-          &larr; Back to Dashboard
+      <div className="container mx-auto max-w-7xl px-4 py-8">
+        <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 mb-8 transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Dashboard
         </Link>
 
-        {/* Event Header Card */}
-        <div className="rounded-xl border bg-white p-6 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-[#0D1B2A]">{event.title}</h1>
-              <p className="text-muted-foreground mt-2">
-                ðŸ“ {event.venue} â€¢ ðŸ“… {event.event_date} â€¢ ðŸ• {event.event_time}
-              </p>
-              {event.slug && (
-                <p className="mt-3">
-                  <a href={`/e/${event.slug}`} target="_blank" className="text-sm text-[#E91E8C] font-semibold hover:underline">
-                    Public Link: /e/{event.slug} â†—
-                  </a>
-                </p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Link href={`/dashboard/events/${id}/edit`}>
-                <Button variant="outline" size="sm">âœï¸ Edit</Button>
-              </Link>
-              <Button variant="destructive" size="sm" onClick={handleDeleteEvent} disabled={deleting}>
-                {deleting ? "..." : "ðŸ—‘ Delete"}
-              </Button>
-            </div>
+        {event.cover_image && (
+          <div className="relative h-96 rounded-2xl overflow-hidden mb-8 shadow-lg">
+            <img src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           </div>
+        )}
 
-          {/* Key Stats */}
-          {rsvpStats && (
-            <div className="flex gap-4 flex-wrap mt-6 pt-6 border-t">
-              <div className="flex-1 min-w-[150px]">
-                <p className="text-sm text-muted-foreground mb-1">Accepted</p>
-                <p className="text-2xl font-bold text-green-600">{rsvpStats.accepted}</p>
-              </div>
-              <div className="flex-1 min-w-[150px]">
-                <p className="text-sm text-muted-foreground mb-1">Pending</p>
-                <p className="text-2xl font-bold text-amber-600">{rsvpStats.pending}</p>
-              </div>
-              <div className="flex-1 min-w-[150px]">
-                <p className="text-sm text-muted-foreground mb-1">Declined</p>
-                <p className="text-2xl font-bold text-red-600">{rsvpStats.declined}</p>
-              </div>
-              {checkinStats && (
-                <div className="flex-1 min-w-[150px]">
-                  <p className="text-sm text-muted-foreground mb-1">Checked In</p>
-                  <p className="text-2xl font-bold text-blue-600">{checkinStats.checked_in}/{checkinStats.rsvp_accepted}</p>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
+          <div className="mb-6">
+            <h1 className="text-4xl font-bold text-slate-900 mb-4">{event.title}</h1>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {event.venue && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 bg-slate-100 rounded-lg flex-shrink-0">
+                    <MapPin className="w-5 h-5 text-slate-700" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Location</p>
+                    <p className="text-slate-900 font-medium">{event.venue}</p>
+                  </div>
+                </div>
+              )}
+              {event.event_date && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 bg-slate-100 rounded-lg flex-shrink-0">
+                    <Calendar className="w-5 h-5 text-slate-700" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Date</p>
+                    <p className="text-slate-900 font-medium">{event.event_date}</p>
+                  </div>
+                </div>
+              )}
+              {event.event_time && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 bg-slate-100 rounded-lg flex-shrink-0">
+                    <Clock className="w-5 h-5 text-slate-700" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Time</p>
+                    <p className="text-slate-900 font-medium">{event.event_time}</p>
+                  </div>
                 </div>
               )}
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Tabs Navigation */}
-        <div className="border-b bg-white rounded-t-xl mb-0">
-          <div className="container mx-auto px-4">
-            <div className="flex gap-8">
-              {tabs.map((tab) => {
-                const IconComponent = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-4 font-medium text-sm border-b-2 transition-all flex items-center gap-2 ${
-                      activeTab === tab.id
-                        ? "border-[#E91E8C] text-[#E91E8C]"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <IconComponent className="w-5 h-5" />
-                    {tab.label}
-                    {tab.badge !== undefined && (
-                      <span className="ml-1 inline-flex items-center justify-center w-5 h-5 bg-[#E91E8C] text-white text-xs rounded-full font-bold">
-                        {tab.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex gap-3 pt-6 border-t border-slate-200">
+            <Link href={`/dashboard/events/${id}/edit`} className="flex-1">
+              <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white gap-2 h-10">
+                <Edit2 className="w-4 h-4" />
+                Edit Event
+              </Button>
+            </Link>
+            <Button variant="destructive" onClick={handleDeleteEvent} disabled={deleting} className="gap-2 h-10">
+              {deleting ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </>
+              )}
+            </Button>
+            {event.slug && (
+              <a href={`/e/${event.slug}`} target="_blank" rel="noreferrer">
+                <Button variant="outline" className="gap-2 h-10">
+                  <ExternalLink className="w-4 h-4" />
+                  View Public
+                </Button>
+              </a>
+            )}
           </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="bg-white rounded-b-xl">
-          <div className="container mx-auto px-4 py-8">
+        {rsvpStats && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 mb-2">Accepted</p>
+                  <p className="text-3xl font-bold text-emerald-600">{rsvpStats.accepted}</p>
+                </div>
+                <Check className="w-8 h-8 text-emerald-600 opacity-20" />
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 mb-2">Pending</p>
+                  <p className="text-3xl font-bold text-amber-600">{rsvpStats.pending}</p>
+                </div>
+                <Hourglass className="w-8 h-8 text-amber-600 opacity-20" />
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 mb-2">Declined</p>
+                  <p className="text-3xl font-bold text-red-600">{rsvpStats.declined}</p>
+                </div>
+                <CircleX className="w-8 h-8 text-red-600 opacity-20" />
+              </div>
+            </div>
+            {checkinStats && (
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 mb-2">Checked In</p>
+                    <p className="text-3xl font-bold text-blue-600">{checkinStats.checked_in}/{checkinStats.rsvp_accepted}</p>
+                  </div>
+                  <Check className="w-8 h-8 text-blue-600 opacity-20" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
-            {/* OVERVIEW TAB */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="flex border-b border-slate-200 overflow-x-auto">
+            {tabs.map((tab) => {
+              const IconComp = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-all border-b-2 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "border-b-2 border-slate-900 text-slate-900 bg-slate-50"
+                      : "border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <IconComp className="w-4 h-4" />
+                  {tab.label}
+                  {tab.badge !== undefined && tab.badge > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center h-5 px-2 rounded-full text-xs font-bold bg-slate-900 text-white">
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="p-8">
             {activeTab === "overview" && (
-              <div className="space-y-6">
-                <p className="text-sm text-muted-foreground">Overview content.</p>
+              <div className="space-y-8">
+                {event.description && (
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 mb-3">About This Event</h2>
+                    <p className="text-slate-700 leading-relaxed">{event.description}</p>
+                  </div>
+                )}
+
+                {event.dress_code && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+                    <h3 className="font-bold text-slate-900 mb-2">Dress Code</h3>
+                    <p className="text-slate-700">{event.dress_code}</p>
+                  </div>
+                )}
+
+                {fliers.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-4">Event Fliers</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {fliers.map((f) => (
+                        <div key={f.id} className="rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                          <img src={f.url} alt="Event flier" className="w-full h-48 object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {event.slug && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                    <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                      <Share2 className="w-5 h-5 text-blue-600" />
+                      Share This Event
+                    </h3>
+                    <div className="bg-white rounded-lg p-3 font-mono text-sm text-slate-700 break-all border border-blue-100 select-all">
+                      {typeof window !== "undefined" ? `${window.location.origin}/e/${event.slug}` : ""}
+                    </div>
+                  </div>
+                )}
+
+                {purchases.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-4">Ticket Sales ({purchases.length})</h3>
+                    <div className="space-y-2">
+                      {purchases.map((p) => (
+                        <div key={p.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-slate-900">{p.buyer_name}</p>
+                              <p className="text-sm text-slate-600">{p.buyer_email}{p.buyer_phone && ` • ${p.buyer_phone}`}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-slate-900">{p.quantity} ticket(s)</p>
+                              <p className="text-sm text-slate-600">NGN {p.amount?.toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* GUESTS TAB */}
             {activeTab === "guests" && (
               <GuestsTabContent
                 guestLimit={guestLimit}
@@ -716,7 +831,6 @@ function EventDetailContent() {
               />
             )}
 
-            {/* INVITES TAB */}
             {activeTab === "invites" && (
               <InvitesTabContent
                 channel={channel}
@@ -733,221 +847,71 @@ function EventDetailContent() {
                 guestsWithoutSelectedContact={guestsWithoutSelectedContact}
               />
             )}
-          </div>
 
-          <div>
-            {/* Cover Image */}
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold mb-4">Cover Image</h2>
-              {event.cover_image && (
-                <img src={event.cover_image} alt="Event cover" className="w-full h-40 object-cover rounded-lg border mb-3" />
-              )}
-              <div className="flex gap-2">
-                <input ref={coverInputRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { uploadCover(f); if (coverInputRef.current) coverInputRef.current.value = ""; } }} className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:text-primary-foreground" />
-                {coverUploading && <span className="text-sm text-muted-foreground self-center">Uploading...</span>}
-              </div>
-            </div>
-
-            {/* Flier Upload */}
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold mb-4">Fliers</h2>
-              <div className="flex gap-2 mb-3">
-                <input ref={flierInputRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { uploadFlier(f); if (flierInputRef.current) flierInputRef.current.value = ""; } }} className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:text-primary-foreground" />
-                {flierUploading && <span className="text-sm text-muted-foreground self-center">Uploading...</span>}
-              </div>
-              {fliers.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {fliers.map((f: any) => (
-                    <img key={f.id} src={f.url} alt={`Flier ${f.variant}`} className="w-full h-24 object-cover rounded-lg border" />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Embed Widget */}
-            {event.slug && (
-              <div className="mb-8 rounded-xl border bg-white p-4">
-                <h2 className="text-sm font-semibold mb-2">Embed Widget</h2>
-                <p className="text-xs text-gray-500 mb-2">Copy this code to embed this event on your website:</p>
-                <pre className="text-xs bg-gray-50 p-3 rounded-lg border overflow-x-auto">
-                  {`<iframe src="${window.location.origin}/embed/event/${id}" width="100%" height="320" frameborder="0" style="border:none;max-width:400px;margin:0 auto;display:block"></iframe>`}
-                </pre>
-              </div>
-            )}
-
-            <h2 className="text-lg font-semibold mb-4">Guests ({totalGuests})</h2>
-            <form onSubmit={handleGuestSearch} className="flex gap-2 mb-4 flex-wrap">
-              <input
-                type="text"
-                placeholder="Search guests..."
-                value={guestSearch}
-                onChange={(e) => setGuestSearch(e.target.value)}
-                className="flex h-9 min-w-[160px] rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              />
-              <select
-                value={guestRsvpFilter}
-                onChange={(e) => setGuestRsvpFilter(e.target.value)}
-                className="flex h-9 rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">All RSVP</option>
-                <option value="accepted">Accepted</option>
-                <option value="declined">Declined</option>
-                <option value="pending">Pending</option>
-                <option value="maybe">Maybe</option>
-              </select>
-              <Button type="submit" variant="outline" size="sm">Filter</Button>
-              {(guestSearch || guestRsvpFilter) && (
-                <Button type="button" variant="ghost" size="sm" onClick={resetGuestFilter}>Clear</Button>
-              )}
-            </form>
-            <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <select
-                value={exportStatus}
-                onChange={(e) => setExportStatus(e.target.value)}
-                className="flex h-9 rounded-lg border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="all">All guests</option>
-                <option value="sent">Invite sent</option>
-                <option value="not_sent">Not sent</option>
-                <option value="delivered">Delivered</option>
-                <option value="failed">Failed</option>
-              </select>
-              <Button variant="outline" size="sm" onClick={exportGuests} disabled={exporting}>
-                {exporting ? "Exporting..." : "Export CSV"}
-              </Button>
-            </div>
-            {guests.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No guests added yet.</p>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                    <input type="checkbox" checked={selectedGuestIds.length === guests.length && guests.length > 0} onChange={toggleSelectAll} className="rounded" />
-                    Select all (max 5)
+            {activeTab === "settings" && (
+              <div className="space-y-8 max-w-2xl">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Cover Image</h3>
+                  {event.cover_image && (
+                    <div className="mb-4 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
+                      <img src={event.cover_image} alt="Current cover" className="w-full h-48 object-cover" />
+                    </div>
+                  )}
+                  <label className="block">
+                    <input
+                      ref={coverInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) {
+                          uploadCover(f);
+                          if (coverInputRef.current) coverInputRef.current.value = "";
+                        }
+                      }}
+                      className="block w-full text-sm text-slate-600 file:mr-3 file:mb-2 file:px-4 file:py-2.5 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 file:cursor-pointer file:transition-colors"
+                    />
                   </label>
-                  {selectedGuestIds.length > 0 && (
-                    <Button size="sm" onClick={sendToSelected} disabled={sending}>
-                      {sending ? "Sending..." : `Send to Selected (${selectedGuestIds.length})`}
-                    </Button>
+                  {coverUploading && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Uploading...
+                    </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  {guests.map((guest) => (
-                    <div key={guest.id} className="rounded-lg border p-3">
-                      {editingGuest === guest.id ? (
-                        <div className="space-y-2">
-                          <input value={editName} onChange={(e) => setEditName(e.target.value)} className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-                          <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Phone" />
-                          <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="Email" />
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => saveEdit(guest.id)}>Save</Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingGuest(null)}>Cancel</Button>
-                          </div>
-                        </div>
-                      ) : deleteConfirm === guest.id ? (
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm">Delete <strong>{guest.name}</strong>?</p>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="destructive" onClick={() => handleDeleteGuest(guest.id)}>Yes</Button>
-                            <Button size="sm" variant="outline" onClick={() => setDeleteConfirm(null)}>No</Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <input
-                              type="checkbox"
-                              checked={selectedGuestIds.includes(guest.id)}
-                              onChange={() => toggleSelect(guest.id)}
-                              className="rounded flex-shrink-0"
-                            />
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{guest.name}</p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {guest.phone || guest.email || "No contact"} &middot; {guest.rsvp_status}
-                              </p>
-                              {guest.rsvp_note && (
-                                <p className="text-xs text-gray-500 italic mt-0.5 truncate">&ldquo;{guest.rsvp_note}&rdquo;</p>
-                              )}
-                              <div className="flex gap-1 flex-wrap mt-1">
-                                {guest.invite_sent && (
-                                  <span className="inline-block text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded">Invite Sent</span>
-                                )}
-                                {typeof guest.invite_attempts === 'number' && guest.invite_attempts > 0 && (
-                                  <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded ${guest.invite_attempts >= 3 ? 'text-red-700 bg-red-100' : 'text-amber-700 bg-amber-100'}`}>
-                                    {guest.invite_attempts}/3 attempts
-                                  </span>
-                                )}
-                                {guest.invite_viewed_at && (
-                                  <span className="inline-block text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded">Viewed</span>
-                                )}
-                              </div>
-                              {phoneChannelSelected && !isValidPhone(guest.phone) && (
-                                <p className="mt-1 text-xs font-medium text-amber-700">Check phone number before WhatsApp/SMS send</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {qrMap[guest.id] ? (
-                              <span className="text-xs text-muted-foreground mr-2">QR Ready</span>
-                            ) : (
-                              <Button size="sm" variant="outline" onClick={() => generateQR(guest.id)} disabled={generatingQR === guest.id}>
-                                {generatingQR === guest.id ? "..." : "QR"}
-                              </Button>
-                            )}
-                            <Button size="sm" variant="outline" onClick={() => sendGuestQr(guest.id)}>Send QR</Button>
-                            {!guest.invite_sent && (
-                              <Button size="sm" variant="outline" onClick={() => sendGuestInvite(guest.id)}>Invite</Button>
-                            )}
-                            <Button size="sm" variant="ghost" onClick={() => startEdit(guest)}>Edit</Button>
-                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteConfirm(guest.id)}>Del</Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {pageCount > 1 && (
-                  <div className="flex items-center justify-center gap-1 mt-4">
-                    <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage === 0} onClick={() => goToPage(0)} title="First page">
-                      &#171;
-                    </button>
-                    <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage === 0} onClick={() => goToPage(currentPage - 1)} title="Previous page">
-                      &#8249;
-                    </button>
-                    {Array.from({ length: pageCount }, (_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => goToPage(i)}
-                        className={`px-3 py-1.5 text-xs rounded border hover:bg-accent ${i === currentPage ? "bg-primary text-primary-foreground border-primary font-bold" : ""}`}
-                      >
-                        {i + 1}
-                      </button>
-                    ))}
-                    <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(currentPage + 1)} title="Next page">
-                      &#8250;
-                    </button>
-                    <button className="px-2 py-1.5 text-xs rounded border hover:bg-accent disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(pageCount - 1)} title="Last page">
-                      &#187;
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
 
-            {purchases.length > 0 && (
-              <div className="mt-8">
-                <h2 className="text-lg font-semibold mb-4">Ticket Buyers ({purchases.length})</h2>
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {purchases.map((p: any) => (
-                    <div key={p.id} className="rounded-lg border p-3">
-                      <p className="text-sm font-medium">{p.buyer_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {p.buyer_email} {p.buyer_phone ? `Â· ${p.buyer_phone}` : ""} Â· {p.quantity} ticket(s) Â· â‚¦{p.amount?.toLocaleString()}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">Ref: {p.reference}</p>
+                <div className="pt-8 border-t border-slate-200">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Event Fliers</h3>
+                  {fliers.length > 0 && (
+                    <div className="mb-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {fliers.map((f) => (
+                        <div key={f.id} className="rounded-lg overflow-hidden border border-slate-200 shadow-sm">
+                          <img src={f.url} alt="Flier" className="w-full h-24 object-cover" />
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  <label className="block">
+                    <input
+                      ref={flierInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) {
+                          uploadFlier(f);
+                          if (flierInputRef.current) flierInputRef.current.value = "";
+                        }
+                      }}
+                      className="block w-full text-sm text-slate-600 file:mr-3 file:mb-2 file:px-4 file:py-2.5 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 file:cursor-pointer file:transition-colors"
+                    />
+                  </label>
+                  {flierUploading && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Uploading...
+                    </div>
+                  )}
                 </div>
               </div>
             )}
