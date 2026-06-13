@@ -130,7 +130,7 @@ async def _maybe_create_event(req: TrialUseRequest, user: User | None, flyer_url
     ed = _parse_date(p.get("event_date"))
     et = _parse_time(p.get("event_time"))
     if not user:
-        result = await db.execute(select(User).where(User.is_super_admin == True))
+        result = await db.execute(select(User).where(User.role == 'super_admin'))
         user = result.scalar_one_or_none()
     if not user:
         return None
