@@ -56,17 +56,11 @@ function DashboardEventCard({ event, CATEGORY_ICONS }: { event: EventData; CATEG
           boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
         }}
       >
-        <div className="h-24 flex items-center justify-center text-white/90 relative overflow-hidden bg-gradient-to-br from-[#0D1B2A] to-[#1a2e45]">
-          {event.cover_image ? (
-            <Image
-              src={event.cover_image}
-              alt={event.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
-          ) : (
-            CATEGORY_ICONS[event.category || event.event_type || ""] || <PartyPopper className="h-9 w-9" />
+        <div className="h-40 flex items-center text-white/90 relative overflow-hidden" style={event.cover_image ? { backgroundImage: `url(${event.cover_image})`, backgroundSize: "cover", backgroundPosition: "center" } : { background: "linear-gradient(135deg, #0D1B2A, #1a2e45)" }}>
+          {!event.cover_image && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              {CATEGORY_ICONS[event.category || event.event_type || ""] || <PartyPopper className="h-12 w-12 opacity-50" />}
+            </div>
           )}
         </div>
 
