@@ -565,146 +565,138 @@ function EventDetailContent() {
     <div className="min-h-screen bg-slate-50">
       <Header showNav={true} userFullName={user.full_name} dashboardLink="/dashboard" />
 
-      <div className="px-4 py-8">
-        <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 mb-6 transition-colors container mx-auto max-w-7xl">
+      <div className="container mx-auto max-w-7xl px-4 py-8">
+        <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 mb-8 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
         </Link>
 
-        <div className="container mx-auto max-w-7xl flex gap-6">
-          {/* Left Sidebar */}
-          <div className="w-96 flex-shrink-0 sticky top-20 h-fit">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              {/* Cover Image or Placeholder */}
-              {event.cover_image ? (
-                <div className="relative h-40 overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300">
-                  <img src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="h-40 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                  <BarChart3 className="w-12 h-12 text-slate-400" />
+        {event.cover_image && (
+          <div className="relative h-96 rounded-2xl overflow-hidden mb-8 shadow-lg">
+            <img src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
+          <div className="mb-8">
+            <h1 className="text-5xl font-bold text-slate-900 mb-6 leading-tight">{event.title}</h1>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+              {event.venue && (
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-gradient-to-br from-slate-100 to-slate-50 rounded-lg flex-shrink-0 border border-slate-200">
+                    <MapPin className="w-5 h-5 text-slate-700" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Location</p>
+                    <p className="text-slate-900 font-semibold text-sm leading-snug">{event.venue}</p>
+                  </div>
                 </div>
               )}
-
-              {/* Sidebar Content */}
-              <div className="p-6 space-y-6">
-                {/* Event Title */}
-                <div>
-                  <h1 className="text-2xl font-bold text-slate-900 leading-tight">{event.title}</h1>
-                </div>
-
-                {/* Event Details */}
-                <div className="space-y-3">
-                  {event.venue && (
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Location</p>
-                        <p className="text-sm text-slate-700 font-medium">{event.venue}</p>
-                      </div>
-                    </div>
-                  )}
-                  {event.event_date && (
-                    <div className="flex items-start gap-3">
-                      <Calendar className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Date</p>
-                        <p className="text-sm text-slate-700 font-medium">{event.event_date}</p>
-                      </div>
-                    </div>
-                  )}
-                  {event.event_time && (
-                    <div className="flex items-start gap-3">
-                      <Clock className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Time</p>
-                        <p className="text-sm text-slate-700 font-medium">{event.event_time}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="pt-4 border-t border-slate-200 flex gap-2">
-                  <Link href={`/dashboard/events/${id}/edit`} className="flex-1">
-                    <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white gap-2 h-9 text-xs font-medium">
-                      <Edit2 className="w-3.5 h-3.5" />
-                      Edit
-                    </Button>
-                  </Link>
-                  <Button variant="destructive" onClick={handleDeleteEvent} disabled={deleting} className="gap-2 h-9 px-3 text-xs font-medium">
-                    {deleting ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                  </Button>
-                </div>
-
-                {/* RSVP Stats - Compact */}
-                {rsvpStats && (
-                  <div className="pt-4 border-t border-slate-200 space-y-2">
-                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">RSVP Status</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-                        <p className="text-xs text-emerald-700 font-semibold">Accepted</p>
-                        <p className="text-xl font-bold text-emerald-700">{rsvpStats.accepted}</p>
-                      </div>
-                      <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
-                        <p className="text-xs text-amber-700 font-semibold">Pending</p>
-                        <p className="text-xl font-bold text-amber-700">{rsvpStats.pending}</p>
-                      </div>
-                      <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                        <p className="text-xs text-red-700 font-semibold">Declined</p>
-                        <p className="text-xl font-bold text-red-700">{rsvpStats.declined}</p>
-                      </div>
-                      {checkinStats && (
-                        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                          <p className="text-xs text-blue-700 font-semibold">Checked In</p>
-                          <p className="text-xl font-bold text-blue-700">{checkinStats.checked_in}</p>
-                        </div>
-                      )}
-                    </div>
+              {event.event_date && (
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-gradient-to-br from-slate-100 to-slate-50 rounded-lg flex-shrink-0 border border-slate-200">
+                    <Calendar className="w-5 h-5 text-slate-700" />
                   </div>
-                )}
-
-                {/* Navigation Menu */}
-                <div className="pt-4 border-t border-slate-200 space-y-1">
-                  {tabs.map((tab) => {
-                    const IconComp = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          isActive
-                            ? "bg-slate-900 text-white shadow-md"
-                            : "text-slate-700 hover:bg-slate-100"
-                        }`}
-                      >
-                        <IconComp className="w-4 h-4" />
-                        <span>{tab.label}</span>
-                        {tab.badge !== undefined && tab.badge > 0 && (
-                          <span className="ml-auto inline-flex items-center justify-center h-5 px-2 rounded-full text-xs font-bold bg-slate-200 text-slate-900">
-                            {tab.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {event.slug && (
-                  <div className="pt-4 border-t border-slate-200">
-                    <a href={`/e/${event.slug}`} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors">
-                      <ExternalLink className="w-4 h-4" />
-                      View Public
-                    </a>
+                  <div className="min-w-0">
+                    <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Date</p>
+                    <p className="text-slate-900 font-semibold text-sm">{event.event_date}</p>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+              {event.event_time && (
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-gradient-to-br from-slate-100 to-slate-50 rounded-lg flex-shrink-0 border border-slate-200">
+                    <Clock className="w-5 h-5 text-slate-700" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Time</p>
+                    <p className="text-slate-900 font-semibold text-sm">{event.event_time}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 min-w-0">
+          <div className="flex gap-2 pt-6 border-t border-slate-200 flex-wrap">
+            <Link href={`/dashboard/events/${id}/edit`}>
+              <Button className="bg-slate-900 hover:bg-slate-800 text-white gap-2 h-9 px-4 text-sm font-medium transition-colors">
+                <Edit2 className="w-4 h-4" />
+                Edit
+              </Button>
+            </Link>
+            <Button variant="destructive" onClick={handleDeleteEvent} disabled={deleting} className="gap-2 h-9 px-4 text-sm font-medium">
+              {deleting ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Deleting
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </>
+              )}
+            </Button>
+            {event.slug && (
+              <a href={`/e/${event.slug}`} target="_blank" rel="noreferrer">
+                <Button variant="outline" className="gap-2 h-9 px-4 text-sm font-medium">
+                  <ExternalLink className="w-4 h-4" />
+                  View Public
+                </Button>
+              </a>
+            )}
+          </div>
+        </div>
+
+        {rsvpStats && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-6 border border-emerald-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1">Accepted</p>
+                  <p className="text-4xl font-bold text-emerald-700">{rsvpStats.accepted}</p>
+                  <p className="text-xs text-emerald-600 mt-1">of {rsvpStats.total} total</p>
+                </div>
+                <Check className="w-10 h-10 text-emerald-400 opacity-40" />
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-xl p-6 border border-amber-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Pending</p>
+                  <p className="text-4xl font-bold text-amber-700">{rsvpStats.pending}</p>
+                  <p className="text-xs text-amber-600 mt-1">awaiting response</p>
+                </div>
+                <Hourglass className="w-10 h-10 text-amber-400 opacity-40" />
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-red-50 to-red-100/50 rounded-xl p-6 border border-red-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">Declined</p>
+                  <p className="text-4xl font-bold text-red-700">{rsvpStats.declined}</p>
+                  <p className="text-xs text-red-600 mt-1">not attending</p>
+                </div>
+                <CircleX className="w-10 h-10 text-red-400 opacity-40" />
+              </div>
+            </div>
+            {checkinStats && (
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-6 border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Checked In</p>
+                    <p className="text-4xl font-bold text-blue-700">{checkinStats.checked_in}</p>
+                    <p className="text-xs text-blue-600 mt-1">{checkinStats.rsvp_accepted > 0 ? Math.round((checkinStats.checked_in / checkinStats.rsvp_accepted) * 100) : 0}% of accepted</p>
+                  </div>
+                  <Check className="w-10 h-10 text-blue-400 opacity-40" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-8">
           {/* Sidebar */}
           <div className="w-64 flex-shrink-0">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sticky top-8">
