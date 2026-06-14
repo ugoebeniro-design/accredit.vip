@@ -11,7 +11,7 @@ import { initiatePayment } from "@/lib/api/payments";
 import { EventDetailSkeleton } from "@/components/shared/loading-skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { AlertTriangle, Check, CircleX, Hourglass, BarChart3, Users, Mail, Settings, Plus, Upload, Send, Edit2, Trash2, Eye, XCircle, Clock, Zap, Share2, Wallet, DollarSign, ArrowLeft, Loader, ExternalLink, MapPin, Calendar } from "lucide-react";
+import { AlertTriangle, Check, CircleX, Hourglass, BarChart3, Users, Mail, Settings, Plus, Upload, Send, Edit2, Trash2, Eye, XCircle, Clock, Zap, Share2, Wallet, DollarSign, ArrowLeft, Loader, ExternalLink, MapPin, Calendar, Menu, X } from "lucide-react";
 import { Header } from "@/components/shared/header";
 import GuestsTabContent from "@/components/events/GuestsTabContent";
 import InvitesTabContent from "@/components/events/InvitesTabContent";
@@ -104,6 +104,7 @@ function EventDetailContent() {
   const [accreditationLog, setAccreditationLog] = useState<{ attempts: any[]; suspicious_count: number } | null>(null);
   const [showAccreditationLog, setShowAccreditationLog] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const loadGuests = useCallback(async (search?: string, rsvpStatus?: string, page?: number) => {
     try {
@@ -566,145 +567,23 @@ function EventDetailContent() {
       <Header showNav={true} userFullName={user.full_name} dashboardLink="/dashboard" />
 
       <div className="px-4 py-6">
-        <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 container mx-auto max-w-7xl mb-6">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Link>
-
-        <div className="container mx-auto max-w-7xl flex gap-6">
-          {/* Left Sidebar - Comprehensive Info Panel */}
-          <div className="w-96 flex-shrink-0 sticky top-20 h-fit">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              {/* Cover Image */}
-              {event.cover_image ? (
-                <div className="relative h-48 overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300">
-                  <img src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="h-48 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                  <BarChart3 className="w-12 h-12 text-slate-400" />
-                </div>
-              )}
-
-              {/* Sidebar Content */}
-              <div className="p-6 space-y-6">
-                {/* Event Title */}
-                <div>
-                  <h1 className="text-2xl font-bold text-slate-900 leading-tight">{event.title}</h1>
-                </div>
-
-                {/* Event Details */}
-                <div className="space-y-3">
-                  {event.venue && (
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Location</p>
-                        <p className="text-sm text-slate-700 font-medium">{event.venue}</p>
-                      </div>
-                    </div>
-                  )}
-                  {event.event_date && (
-                    <div className="flex items-start gap-3">
-                      <Calendar className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Date</p>
-                        <p className="text-sm text-slate-700 font-medium">{event.event_date}</p>
-                      </div>
-                    </div>
-                  )}
-                  {event.event_time && (
-                    <div className="flex items-start gap-3">
-                      <Clock className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Time</p>
-                        <p className="text-sm text-slate-700 font-medium">{event.event_time}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="pt-4 border-t border-slate-200 flex gap-2">
-                  <Link href={`/dashboard/events/${id}/edit`} className="flex-1">
-                    <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white gap-2 h-9 text-xs font-medium">
-                      <Edit2 className="w-3.5 h-3.5" />
-                      Edit
-                    </Button>
-                  </Link>
-                  <Button variant="destructive" onClick={handleDeleteEvent} disabled={deleting} className="gap-2 h-9 px-3 text-xs font-medium">
-                    {deleting ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                  </Button>
-                </div>
-
-                {/* RSVP Stats - Compact */}
-                {rsvpStats && (
-                  <div className="pt-4 border-t border-slate-200 space-y-2">
-                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">RSVP Status</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-                        <p className="text-xs text-emerald-700 font-semibold">Accepted</p>
-                        <p className="text-xl font-bold text-emerald-700">{rsvpStats.accepted}</p>
-                      </div>
-                      <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
-                        <p className="text-xs text-amber-700 font-semibold">Pending</p>
-                        <p className="text-xl font-bold text-amber-700">{rsvpStats.pending}</p>
-                      </div>
-                      <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                        <p className="text-xs text-red-700 font-semibold">Declined</p>
-                        <p className="text-xl font-bold text-red-700">{rsvpStats.declined}</p>
-                      </div>
-                      {checkinStats && (
-                        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                          <p className="text-xs text-blue-700 font-semibold">Checked In</p>
-                          <p className="text-xl font-bold text-blue-700">{checkinStats.checked_in}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Navigation Menu */}
-                <div className="pt-4 border-t border-slate-200 space-y-1">
-                  {tabs.map((tab) => {
-                    const IconComp = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          isActive
-                            ? "bg-slate-900 text-white shadow-md"
-                            : "text-slate-700 hover:bg-slate-100"
-                        }`}
-                      >
-                        <IconComp className="w-4 h-4" />
-                        <span>{tab.label}</span>
-                        {tab.badge !== undefined && tab.badge > 0 && (
-                          <span className="ml-auto inline-flex items-center justify-center h-5 px-2 rounded-full text-xs font-bold bg-slate-200 text-slate-900">
-                            {tab.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {event.slug && (
-                  <div className="pt-4 border-t border-slate-200">
-                    <a href={`/e/${event.slug}`} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors">
-                      <ExternalLink className="w-4 h-4" />
-                      View Public
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
+        <div className="container mx-auto max-w-7xl">
+          <div className="flex items-center justify-between mb-6">
+            <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Link>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+              Info
+            </button>
           </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 min-w-0">
+          {/* Main Content Area - Full Width */}
+          <div className="w-full">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
             {activeTab === "overview" && (
               <div className="space-y-8">
@@ -904,6 +783,165 @@ function EventDetailContent() {
             )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Drawer Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Drawer Sidebar */}
+      <div
+        className={`fixed left-0 top-0 h-screen w-96 bg-white shadow-2xl z-50 overflow-y-auto transition-transform duration-300 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="p-6 space-y-6">
+          {/* Close Button */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-slate-900">Event Info</h2>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-slate-600" />
+            </button>
+          </div>
+
+          {/* Cover Image */}
+          {event.cover_image ? (
+            <div className="relative h-40 overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300 rounded-lg">
+              <img src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="h-40 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center rounded-lg">
+              <BarChart3 className="w-12 h-12 text-slate-400" />
+            </div>
+          )}
+
+          {/* Event Title */}
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 leading-tight">{event.title}</h1>
+          </div>
+
+          {/* Event Details */}
+          <div className="space-y-3">
+            {event.venue && (
+              <div className="flex items-start gap-3">
+                <MapPin className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Location</p>
+                  <p className="text-sm text-slate-700 font-medium">{event.venue}</p>
+                </div>
+              </div>
+            )}
+            {event.event_date && (
+              <div className="flex items-start gap-3">
+                <Calendar className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Date</p>
+                  <p className="text-sm text-slate-700 font-medium">{event.event_date}</p>
+                </div>
+              </div>
+            )}
+            {event.event_time && (
+              <div className="flex items-start gap-3">
+                <Clock className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Time</p>
+                  <p className="text-sm text-slate-700 font-medium">{event.event_time}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="pt-4 border-t border-slate-200 flex gap-2">
+            <Link href={`/dashboard/events/${id}/edit`} className="flex-1">
+              <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white gap-2 h-9 text-xs font-medium">
+                <Edit2 className="w-3.5 h-3.5" />
+                Edit
+              </Button>
+            </Link>
+            <Button variant="destructive" onClick={handleDeleteEvent} disabled={deleting} className="gap-2 h-9 px-3 text-xs font-medium">
+              {deleting ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            </Button>
+          </div>
+
+          {/* RSVP Stats */}
+          {rsvpStats && (
+            <div className="pt-4 border-t border-slate-200 space-y-2">
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">RSVP Status</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                  <p className="text-xs text-emerald-700 font-semibold">Accepted</p>
+                  <p className="text-xl font-bold text-emerald-700">{rsvpStats.accepted}</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
+                  <p className="text-xs text-amber-700 font-semibold">Pending</p>
+                  <p className="text-xl font-bold text-amber-700">{rsvpStats.pending}</p>
+                </div>
+                <div className="bg-red-50 rounded-lg p-3 border border-red-200">
+                  <p className="text-xs text-red-700 font-semibold">Declined</p>
+                  <p className="text-xl font-bold text-red-700">{rsvpStats.declined}</p>
+                </div>
+                {checkinStats && (
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <p className="text-xs text-blue-700 font-semibold">Checked In</p>
+                    <p className="text-xl font-bold text-blue-700">{checkinStats.checked_in}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Menu */}
+          <div className="pt-4 border-t border-slate-200 space-y-1">
+            {tabs.map((tab) => {
+              const IconComp = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isActive
+                      ? "bg-slate-900 text-white shadow-md"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <IconComp className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  {tab.badge !== undefined && tab.badge > 0 && (
+                    <span className="ml-auto inline-flex items-center justify-center h-5 px-2 rounded-full text-xs font-bold bg-slate-200 text-slate-900">
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {event.slug && (
+            <div className="pt-4 border-t border-slate-200">
+              <a
+                href={`/e/${event.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                View Public
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
