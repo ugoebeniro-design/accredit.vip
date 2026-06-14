@@ -73,16 +73,16 @@ export default function WaitlistPage() {
                 <span>{event.venue}</span>
               </div>
             )}
-            {event?.date && (
+            {event?.event_date && (
               <div className="flex items-center gap-2 text-slate-700">
                 <Calendar className="w-4 h-4 flex-shrink-0" />
-                <span>{new Date(event.date).toLocaleDateString()}</span>
+                <span>{new Date(event.event_date).toLocaleDateString()}</span>
               </div>
             )}
-            {event?.time && (
+            {event?.event_time && (
               <div className="flex items-center gap-2 text-slate-700">
                 <Clock className="w-4 h-4 flex-shrink-0" />
-                <span>{event.time}</span>
+                <span>{event.event_time}</span>
               </div>
             )}
           </div>
