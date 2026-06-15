@@ -93,6 +93,61 @@ async def upload_flier(
     return {"url": url, "variant": variant}
 
 
+@router.delete("/{event_id}/cover")
+async def delete_cover(
+    event_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Event).where(Event.id == event_id, Event.organizer_id == user.id)
+    )
+    event = result.scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    if event.cover_image:
+        path = os.path.join(UPLOAD_DIR, os.path.basename(event.cover_image))
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        event.cover_image = None
+        await db.commit()
+
+    return {"status": "deleted"}
+
+
+@router.delete("/{event_id}/fliers/{flier_id}")
+async def delete_flier(
+    event_id: int,
+    flier_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Event).where(Event.id == event_id, Event.organizer_id == user.id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    f_result = await db.execute(
+        select(FlierAsset).where(FlierAsset.id == flier_id, FlierAsset.event_id == event_id)
+    )
+    flier = f_result.scalar_one_or_none()
+    if not flier:
+        raise HTTPException(status_code=404, detail="Flier not found")
+
+    try:
+        os.remove(os.path.join(UPLOAD_DIR, os.path.basename(flier.url)))
+    except OSError:
+        pass
+
+    await db.delete(flier)
+    await db.commit()
+    return {"status": "deleted"}
+
+
 @router.get("/{event_id}/fliers")
 async def list_fliers(
     event_id: int,

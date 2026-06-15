@@ -281,6 +281,36 @@ function EventDetailContent() {
     setFlierUploading(false);
   };
 
+  const deleteCover = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/events/${id}/cover`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to delete cover");
+      if (event) setEvent({ ...event, cover_image: null as any });
+      showToast("Cover image removed");
+    } catch {
+      showToast("Failed to delete cover", "error");
+    }
+  };
+
+  const deleteFlier = async (flierId: number) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/events/${id}/fliers/${flierId}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to delete flier");
+      loadFliers();
+      showToast("Flier deleted");
+    } catch {
+      showToast("Failed to delete flier", "error");
+    }
+  };
+
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToastMessage(message);
     setToastType(type);
@@ -655,8 +685,15 @@ function EventDetailContent() {
                     <h3 className="text-lg font-bold text-slate-900 mb-4">Event Fliers</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {fliers.map((f) => (
-                        <div key={f.id} className="rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                          <img src={f.url} alt="Event flier" className="w-full h-48 object-cover" />
+                        <div key={f.id} className="rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative group">
+                          <img src={f.url} alt="Event flier" className="w-full object-contain max-h-96 bg-slate-100" />
+                          <button
+                            onClick={() => deleteFlier(f.id)}
+                            className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+                            title="Delete flier"
+                          >
+                            ×
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -866,8 +903,15 @@ function EventDetailContent() {
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 mb-4">Cover Image</h3>
                   {event.cover_image && (
-                    <div className="mb-4 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
-                      <img src={event.cover_image} alt="Current cover" className="w-full h-48 object-cover" />
+                    <div className="mb-4 rounded-lg overflow-hidden border border-slate-200 shadow-sm relative group">
+                      <img src={event.cover_image} alt="Current cover" className="w-full object-contain max-h-96 bg-slate-100" />
+                      <button
+                        onClick={deleteCover}
+                        className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+                        title="Remove cover"
+                      >
+                        ×
+                      </button>
                     </div>
                   )}
                   <label className="block">

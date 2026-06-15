@@ -127,14 +127,19 @@ class FileUploadSecurityService:
         return safe_name
 
 
-def resize_and_save(image_data: bytes, filepath: str, max_dim: int = 1200) -> str | None:
+def resize_and_save(image_data: bytes, filepath: str, max_dim: int = 1920) -> str | None:
     """Resize image to max_dim on longest side, maintaining aspect ratio, then save.
     Re-encodes as JPEG for consistency. Returns filepath on success."""
     try:
         from PIL import Image
         import io
         img = Image.open(io.BytesIO(image_data))
-        img = img.convert("RGB")
+        if img.mode in ("RGBA", "LA", "P"):
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
+            img = background
+        else:
+            img = img.convert("RGB")
         w, h = img.size
         if w > max_dim or h > max_dim:
             if w > h:
