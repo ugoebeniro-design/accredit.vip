@@ -1,5 +1,5 @@
-import json, logging
-from fastapi import APIRouter, Depends, Request, HTTPException, status
+import json, logging, hmac, hashlib
+from fastapi import APIRouter, Depends, Request, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timezone
@@ -14,20 +14,33 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+@router.get("/webhooks/whatsapp/status")
+async def whatsapp_webhook_verify(req: Request):
+    mode = req.query_params.get("hub.mode")
+    token = req.query_params.get("hub.verify_token")
+    challenge = req.query_params.get("hub.challenge")
+    logger.info(f"Webhook verify: mode={mode}, token={token}, challenge={challenge}")
+    if mode == "subscribe" and token == settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN:
+        return Response(content=challenge, media_type="text/plain")
+    logger.warning(f"Webhook verification failed: mode={mode}, token={token}")
+    raise HTTPException(status_code=403, detail="Verification failed")
+
+
 @router.post("/webhooks/whatsapp/status")
-async def whatsapp_status_webhook(req: Request, db: AsyncSession = Depends(get_db)):
+async def whatsapp_webhook(req: Request, db: AsyncSession = Depends(get_db)):
     body = await req.json()
     payload = json.dumps(body)
+
     entry = body.get("entry", [])
     for e in entry:
         changes = e.get("changes", [])
         for c in changes:
             value = c.get("value", {})
-            statuses = value.get("statuses", [])
-            for s in statuses:
+
+            # Handle status updates (delivery receipts)
+            for s in value.get("statuses", []):
                 message_id = s.get("id")
                 status = s.get("status")
-                recipient_id = s.get("recipient_id")
                 if not message_id:
                     continue
                 result = await db.execute(
@@ -50,17 +63,19 @@ async def whatsapp_status_webhook(req: Request, db: AsyncSession = Depends(get_d
                         msg.status = status
                     msg.webhook_payload = payload[:500]
                     await db.commit()
+
+            # Handle incoming messages (e.g. replies from guests)
+            for m in value.get("messages", []):
+                from_number = m.get("from", "")
+                msg_type = m.get("type", "")
+                msg_id = m.get("id", "")
+                text_body = ""
+                if msg_type == "text":
+                    text_body = m.get("text", {}).get("body", "")
+                logger.info(f"Incoming WhatsApp from {from_number}: {text_body[:100]}")
+                # TODO: store incoming messages or trigger auto-reply
+
     return {"status": "ok"}
-
-
-@router.get("/webhooks/whatsapp/status")
-async def whatsapp_webhook_verify(req: Request):
-    mode = req.query_params.get("hub.mode")
-    token = req.query_params.get("hub.verify_token")
-    challenge = req.query_params.get("hub.challenge")
-    if mode == "subscribe" and token == settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN:
-        return int(challenge)
-    return {"error": "Verification failed"}
 
 
 @router.post("/webhooks/twilio/status")
@@ -71,15 +86,16 @@ async def twilio_status_webhook(req: Request, db: AsyncSession = Depends(get_db)
     status = payload.get("MessageStatus", "")
     if message_sid:
         result = await db.execute(
-            select(InviteMessage).where(InviteMessage.error == message_sid)
+            select(InviteMessage).where(InviteMessage.provider_message_id == message_sid)
         )
         msg = result.scalar_one_or_none()
         if msg:
             if status in ("delivered", "sent"):
                 msg.delivered_at = datetime.now(timezone.utc)
             elif status == "failed":
-                msg.error = payload.get("ErrorCode", "Delivery failed")
-            if status in ("delivered", "sent", "read", "failed"):
+                msg.status = "failed"
+                msg.error = payload.get("ErrorCode", payload.get("ErrorMessage", "Delivery failed"))
+            if status in ("delivered", "sent", "read"):
                 msg.status = status
             msg.webhook_payload = json.dumps(payload)[:500]
             await db.commit()

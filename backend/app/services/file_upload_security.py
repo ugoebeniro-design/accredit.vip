@@ -3,7 +3,10 @@
 from fastapi import UploadFile, HTTPException, status
 import mimetypes
 import os
-import magic  # python-magic for file type detection
+try:
+    import magic  # python-magic for file type detection
+except ImportError:
+    magic = None
 import logging
 
 logger = logging.getLogger(__name__)

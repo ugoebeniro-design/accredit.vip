@@ -30,6 +30,8 @@ export type EventData = {
   category: string | null;
   description: string | null;
   dress_code: string | null;
+  male_dress_code: string | null;
+  female_dress_code: string | null;
   map_link: string | null;
   cover_image: string | null;
   ticket_price: number | null;
@@ -76,6 +78,8 @@ export type CreateEventInput = {
   category?: string;
   description?: string;
   dress_code?: string;
+  male_dress_code?: string;
+  female_dress_code?: string;
   map_link?: string;
   cover_image?: string;
   ticket_price?: number;

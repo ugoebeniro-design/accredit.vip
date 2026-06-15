@@ -37,11 +37,15 @@ function LoginForm() {
     e.preventDefault();
     setError("");
     setLoading(true);
+    console.log("Login: submitting", email);
     try {
       await login(email, password);
+      console.log("Login: success, redirecting");
       router.push(redirect || "/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed. Please check your credentials.");
+    } catch (err: any) {
+      const msg = err?.message || err?.detail || "Login failed. Please check your credentials.";
+      console.error("Login: error", msg, err);
+      setError(msg);
     }
     setLoading(false);
   };

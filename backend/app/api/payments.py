@@ -13,6 +13,7 @@ from app.models.user import User
 from app.models.event import Event
 from app.models.guest import Guest
 from app.models.payment import Payment
+from app.models.coupon import Coupon
 from app.models.wallet import Wallet, WalletTransaction, DEFAULT_BALANCES
 from app.services.notify import notify_subscribers
 
@@ -26,6 +27,7 @@ class InitiatePaymentRequest(BaseModel):
     channel: str = "email"
     provider: str = "paystack"
     payment_method: str = "paystack"
+    coupon_code: str | None = None
 
 
 class ResendPaymentRequest(BaseModel):
@@ -50,6 +52,58 @@ async def initiate_payment(
 
     reference = f"ACC-{secrets.token_hex(8).upper()}"
     amount = calculate_price(event.guest_count_range, req.channel)
+
+    # Apply coupon code if provided
+    coupon_discount = 0
+    if req.coupon_code:
+        coupon_result = await db.execute(
+            select(Coupon).where(
+                Coupon.event_id == req.event_id,
+                Coupon.code == req.coupon_code.upper(),
+                Coupon.is_active == True,
+            )
+        )
+        coupon = coupon_result.scalar_one_or_none()
+        if not coupon:
+            raise HTTPException(status_code=400, detail="Invalid coupon code")
+        if coupon.expires_at and coupon.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="Coupon has expired")
+        if coupon.max_uses > 0 and coupon.used_count >= coupon.max_uses:
+            raise HTTPException(status_code=400, detail="Coupon usage limit reached")
+
+        if coupon.discount_percent:
+            coupon_discount = int(amount * coupon.discount_percent / 100)
+        elif coupon.discount_fixed:
+            coupon_discount = min(coupon.discount_fixed, amount)
+        amount = max(amount - coupon_discount, 0)
+
+        coupon.used_count += 1
+        db.add(coupon)
+
+    # Full discount / coupon waiver — skip Paystack
+    if amount == 0 and req.payment_method != "wallet":
+        payment = Payment(
+            event_id=event.id,
+            organizer_id=user.id,
+            amount=0,
+            provider="coupon",
+            reference=reference,
+            status="completed",
+            paid_at=datetime.now(timezone.utc),
+        )
+        db.add(payment)
+        event.status = "published"
+        event.is_public = True
+        await db.commit()
+        await notify_subscribers(db, event.id)
+        return {
+            "payment_id": payment.id,
+            "reference": reference,
+            "amount": 0,
+            "provider": "coupon",
+            "authorization_url": None,
+            "method": "coupon",
+        }
 
     # Wallet payment
     if req.payment_method == "wallet":

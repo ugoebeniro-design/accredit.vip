@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { getEvent, updateEvent, type EventData } from "@/lib/api/events";
 import { VenueInput } from "@/components/shared/venue-input";
-import { Header } from "@/components/shared/header";
-import { AlertTriangle, ArrowLeft, Menu, X, MapPin, Calendar, Clock, Edit2, Trash2, ExternalLink } from "lucide-react";
+import { DashboardSidebar } from "@/components/dashboard/sidebar";
+import { DashboardTopbar } from "@/components/dashboard/topbar";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 
 export default function EditEventPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,7 @@ export default function EditEventPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [form, setForm] = useState({
     title: "",
     event_type: "wedding",
@@ -28,7 +30,8 @@ export default function EditEventPage() {
     venue: "",
     guest_count_range: "1-100",
     description: "",
-    dress_code: "",
+    male_dress_code: "",
+    female_dress_code: "",
     map_link: "",
     ticket_price: "",
     tickets_available: "",
@@ -55,7 +58,8 @@ export default function EditEventPage() {
           venue: e.venue,
           guest_count_range: e.guest_count_range,
           description: e.description || "",
-          dress_code: e.dress_code || "",
+          male_dress_code: e.male_dress_code || "",
+          female_dress_code: e.female_dress_code || "",
           map_link: e.map_link || "",
           ticket_price: e.ticket_price?.toString() || "",
           tickets_available: e.tickets_available?.toString() || "",
@@ -71,6 +75,9 @@ export default function EditEventPage() {
     try {
       await updateEvent(Number(id), {
         ...form,
+        dress_code: form.male_dress_code || undefined,
+        male_dress_code: form.male_dress_code || undefined,
+        female_dress_code: form.female_dress_code || undefined,
         timezone: form.timezone || "WAT",
         is_public: event?.is_public || false,
         category: form.event_type,
@@ -103,121 +110,29 @@ export default function EditEventPage() {
   if (!event) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Header showNav={true} userFullName={user.full_name} dashboardLink="/dashboard" />
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <DashboardTopbar
+        title="Edit Event"
+        subtitle={event.title}
+        onMenuClick={() => setMobileNavOpen(true)}
+      />
 
-      <div className="px-4 py-6">
-        <div className="container mx-auto max-w-7xl">
-          <div className="flex items-center gap-3 mb-6">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
-              title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-            >
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-            <Link href={`/dashboard/events/${id}`} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
+      <div className="flex flex-1">
+        <DashboardSidebar
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          mobileNavOpen={mobileNavOpen}
+          onMobileNavClose={() => setMobileNavOpen(false)}
+        />
+
+        <div className="flex-1 px-4 py-6 overflow-auto">
+          <div className="container mx-auto max-w-7xl">
+            <Link href={`/dashboard/events/${id}`} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 mb-6">
               <ArrowLeft className="w-4 h-4" />
               Back to Event
             </Link>
-          </div>
 
-          {/* Drawer Sidebar Overlay */}
-          {sidebarOpen && (
-            <div
-              className="fixed inset-0 bg-black/50 z-40 transition-opacity"
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-
-          {/* Drawer Sidebar */}
-          <div
-            className={`fixed left-0 top-0 h-screen w-96 bg-white shadow-2xl z-50 overflow-y-auto transition-transform duration-300 ${
-              sidebarOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
-          >
-            <div className="p-6 space-y-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-slate-900">Event Summary</h2>
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-600" />
-                </button>
-              </div>
-
-              {/* Event Title */}
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 leading-tight">{form.title}</h1>
-              </div>
-
-              {/* Event Details */}
-              <div className="space-y-3">
-                {form.venue && (
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Location</p>
-                      <p className="text-sm text-slate-700 font-medium">{form.venue}</p>
-                    </div>
-                  </div>
-                )}
-                {form.event_date && (
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Date</p>
-                      <p className="text-sm text-slate-700 font-medium">{form.event_date}</p>
-                    </div>
-                  </div>
-                )}
-                {form.event_time && (
-                  <div className="flex items-start gap-3">
-                    <Clock className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Time</p>
-                      <p className="text-sm text-slate-700 font-medium">{form.event_time}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-4 border-t border-slate-200 flex gap-2">
-                <Link href={`/dashboard/events/${id}`} className="flex-1">
-                  <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white gap-2 h-9 text-xs font-medium">
-                    <Edit2 className="w-3.5 h-3.5" />
-                    View Details
-                  </Button>
-                </Link>
-              </div>
-
-              {event.slug && (
-                <div className="pt-4 border-t border-slate-200">
-                  <a
-                    href={`/e/${event.slug}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    Preview Live
-                  </a>
-                </div>
-              )}
-
-              <div className="text-xs text-slate-500">
-                <p>Last edited {event.id && `• Event #${event.id}`}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content Area */}
-          <div className="w-full">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-              <h1 className="text-3xl font-bold text-slate-900 mb-8">Edit Event</h1>
-
               <form className="space-y-8 max-w-3xl" onSubmit={handleSubmit}>
                 {error && (
                   <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -314,7 +229,7 @@ export default function EditEventPage() {
                   </div>
                 </div>
 
-                {/* Description Section */}
+                {/* Details Section */}
                 <div className="pt-6 border-t border-slate-200">
                   <h2 className="text-lg font-semibold text-slate-900 mb-4">Details</h2>
                   <div className="space-y-4">
@@ -324,7 +239,18 @@ export default function EditEventPage() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700">Dress Code</label>
-                      <input value={form.dress_code} onChange={(e) => setForm({ ...form, dress_code: e.target.value })} className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" placeholder="e.g., Black Tie, Casual" />
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <p className="text-xs text-slate-500 mb-1">Female</p>
+                          <input value={form.female_dress_code} onChange={(e) => setForm({ ...form, female_dress_code: e.target.value })}
+                            className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" placeholder="e.g. Evening gown, Casual" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 mb-1">Male</p>
+                          <input value={form.male_dress_code} onChange={(e) => setForm({ ...form, male_dress_code: e.target.value })}
+                            className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" placeholder="e.g. All white, Black tie" />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

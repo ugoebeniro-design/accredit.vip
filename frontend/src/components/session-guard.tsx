@@ -17,7 +17,7 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
 
     // Check if this is an auth-related page
     const isAuthPage =
-      pathname.startsWith("/auth/") || pathname === "/" || pathname.startsWith("/events");
+      pathname.startsWith("/auth/") || pathname === "/" || pathname.startsWith("/events") || pathname === "/login" || pathname === "/register" || pathname === "/forgot-password" || pathname === "/reset-password";
 
     if (user) {
       if (isProtectedRoute) {

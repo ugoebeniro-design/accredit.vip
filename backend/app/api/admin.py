@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, cast, Date, case
 from datetime import datetime, timezone, timedelta, date
+from pydantic import BaseModel
 import csv
 import io
+import secrets
 
 from app.core.database import get_db
 from app.core.security import get_current_user, hash_password
@@ -21,6 +23,7 @@ from app.models.accreditation import AccreditationRequest
 from app.models.ticket_purchase import TicketPurchase
 from app.models.data_management import DataGroup, DataProfile, DataRequest
 from app.models.wallet import Withdrawal, BankAccount, WalletTransaction, Wallet
+from app.models.coupon import Coupon
 from sqlalchemy.orm import joinedload
 
 router = APIRouter()
@@ -1285,3 +1288,118 @@ async def admin_deliveries(
             for r in rows
         ],
     }
+
+
+
+
+
+# -- Admin: Coupon Management --
+
+
+@router.get("/coupons")
+async def admin_list_coupons(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    search: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+):
+    q = select(Coupon).join(Event, Coupon.event_id == Event.id)
+    if search:
+        q = q.where(Coupon.code.ilike(f"%{search}%"))
+    total_q = select(func.count()).select_from(q.subquery())
+    total = await db.scalar(total_q)
+    q = q.order_by(Coupon.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
+    result = await db.execute(q)
+    coupons = result.scalars().all()
+    return {
+        "total": total or 0,
+        "page": page,
+        "per_page": per_page,
+        "coupons": [
+            {
+                "id": c.id,
+                "event_id": c.event_id,
+                "event_title": (await db.execute(select(Event.title).where(Event.id == c.event_id))).scalar(),
+                "code": c.code,
+                "discount_percent": c.discount_percent,
+                "discount_fixed": c.discount_fixed,
+                "max_uses": c.max_uses,
+                "used_count": c.used_count,
+                "is_active": c.is_active,
+                "expires_at": str(c.expires_at) if c.expires_at else None,
+                "created_at": str(c.created_at),
+            }
+            for c in coupons
+        ],
+    }
+
+
+class AdminCreateCouponRequest(BaseModel):
+    event_id: int
+    code: str = ""
+    discount_percent: int | None = None
+    discount_fixed: int | None = None
+    max_uses: int = 0
+
+
+@router.post("/coupons")
+async def admin_create_coupon(
+    req: AdminCreateCouponRequest,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    event = await db.get(Event, req.event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    code = req.code.upper() if req.code else secrets.token_hex(4).upper()
+    existing = await db.execute(select(Coupon).where(Coupon.event_id == req.event_id, Coupon.code == code))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Coupon code already exists for this event")
+    coupon = Coupon(
+        event_id=req.event_id,
+        code=code,
+        discount_percent=req.discount_percent,
+        discount_fixed=req.discount_fixed,
+        max_uses=req.max_uses,
+    )
+    db.add(coupon)
+    await db.commit()
+    await db.refresh(coupon)
+    return {
+        "id": coupon.id,
+        "code": coupon.code,
+        "discount_percent": coupon.discount_percent,
+        "discount_fixed": coupon.discount_fixed,
+        "max_uses": coupon.max_uses,
+    }
+
+
+@router.delete("/coupons/{coupon_id}")
+async def admin_delete_coupon(
+    coupon_id: int,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Coupon).where(Coupon.id == coupon_id))
+    coupon = result.scalar_one_or_none()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+    await db.delete(coupon)
+    await db.commit()
+    return {"message": "Coupon deleted"}
+
+
+@router.patch("/coupons/{coupon_id}/toggle")
+async def admin_toggle_coupon(
+    coupon_id: int,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Coupon).where(Coupon.id == coupon_id))
+    coupon = result.scalar_one_or_none()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+    coupon.is_active = not coupon.is_active
+    await db.commit()
+    return {"is_active": coupon.is_active}

@@ -25,5 +25,6 @@ class InviteMessage(Base):
     delivered_at = Column(DateTime(timezone=True), nullable=True)
     opened_at = Column(DateTime(timezone=True), nullable=True)
     error = Column(String, nullable=True)
+    provider_message_id = Column(String, nullable=True)
     webhook_payload = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

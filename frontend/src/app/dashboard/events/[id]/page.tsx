@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { getEvent, deleteEvent, type EventData } from "@/lib/api/events";
 import { apiClient } from "@/lib/api-client";
@@ -11,10 +9,17 @@ import { initiatePayment } from "@/lib/api/payments";
 import { EventDetailSkeleton } from "@/components/shared/loading-skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { AlertTriangle, Check, CircleX, Hourglass, BarChart3, Users, Mail, Settings, Plus, Upload, Send, Edit2, Trash2, Eye, XCircle, Clock, Zap, Share2, Wallet, DollarSign, ArrowLeft, Loader, ExternalLink, MapPin, Calendar, Menu, X } from "lucide-react";
-import { Header } from "@/components/shared/header";
+import Link from "next/link";
+import { AlertTriangle, BarChart3, Users, Mail, Settings, Share2, Loader, HelpCircle, Bell, Ticket, Copy, Edit2, Zap } from "lucide-react";
+import { DashboardSidebar } from "@/components/dashboard/sidebar";
+import { DashboardTopbar } from "@/components/dashboard/topbar";
 import GuestsTabContent from "@/components/events/GuestsTabContent";
 import InvitesTabContent from "@/components/events/InvitesTabContent";
+import QuestionsTabContent from "@/components/events/QuestionsTabContent";
+import RemindersTabContent from "@/components/events/RemindersTabContent";
+import CouponsTabContent from "@/components/events/CouponsTabContent";
+import TemplatesTabContent from "@/components/events/TemplatesTabContent";
+import WaitlistTabContent from "@/components/events/WaitlistTabContent";
 
 type Guest = {
   id: number;
@@ -29,10 +34,13 @@ type Guest = {
 };
 
 type SendResult = {
-  batch_id: number;
-  channel: string;
-  sent: number;
-  total: number;
+  channels?: Record<string, { batch_id: number; sent: number; total: number; skipped_max_attempts?: number }>;
+  total_sent?: number;
+  total_guests?: number;
+  batch_id?: number;
+  channel?: string;
+  sent?: number;
+  total?: number;
 };
 
 type RSVPStats = {
@@ -68,7 +76,7 @@ function EventDetailContent() {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [channel, setChannel] = useState("email");
+  const [channels, setChannels] = useState<string[]>(["email"]);
   const [logs, setLogs] = useState<any[]>([]);
   const [rsvpStats, setRsvpStats] = useState<RSVPStats | null>(null);
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -105,6 +113,7 @@ function EventDetailContent() {
   const [showAccreditationLog, setShowAccreditationLog] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const loadGuests = useCallback(async (search?: string, rsvpStatus?: string, page?: number) => {
     try {
@@ -145,12 +154,16 @@ function EventDetailContent() {
     }
   }, [searchParams, id]);
 
+  const [couponCode, setCouponCode] = useState("");
+
   const handlePublish = async () => {
     setPublishError("");
     setPublishing(true);
     try {
-      const res = await initiatePayment(Number(id), publishChannel);
-      if (res.authorization_url) {
+      const res = await initiatePayment(Number(id), publishChannel, "paystack", "paystack", couponCode || undefined);
+      if (res.method === "coupon") {
+        getEvent(Number(id)).then(setEvent);
+      } else if (res.authorization_url) {
         window.location.href = res.authorization_url;
       } else {
         getEvent(Number(id)).then(setEvent);
@@ -311,40 +324,13 @@ function EventDetailContent() {
   const sendInvites = async (force: boolean = false) => {
     setSending(true); setSendResult(null); setSendError(null);
     try {
-      if (force) {
-        const res = await apiClient<any>(`/events/${id}/send-invites?force=true`, { method: "POST", body: { channel } });
-        setSendResult(res);
-        loadLogs();
-        loadGuests();
-        if (res.skipped_max_attempts > 0) {
-          setSendError(`${res.skipped_max_attempts} guest(s) skipped (max 3 invite attempts reached).`);
-        }
-        setSending(false);
-        return;
-      }
-      const gParams = new URLSearchParams();
-      gParams.set("invite_status", "not_sent");
-      gParams.set("limit", "5");
-      gParams.set("offset", "0");
-      const gRes = await apiClient<{ guests: Guest[]; total: number }>(`/events/${id}/guests?${gParams.toString()}`);
-      const unsentGuests = gRes.guests;
-      if (unsentGuests.length === 0) {
-        setSendError("All guests have already been invited.");
-        setSending(false);
-        return;
-      }
-      const guestIds = unsentGuests.map((g) => g.id);
-      const batchRes = await apiClient<any>(`/events/${id}/send-invites-batch`, {
-        method: "POST",
-        body: { channel, guest_ids: guestIds },
+      const body: any = { channels };
+      const res = await apiClient<any>(`/events/${id}/send-invites${force ? "?force=true" : ""}`, {
+        method: "POST", body,
       });
-      setSendResult(batchRes);
+      setSendResult(res);
       loadLogs();
       loadGuests();
-      const remaining = gRes.total - guestIds.length;
-      if (remaining > 0) {
-        setSendError(`${remaining} more guest(s) remaining. Click Send again to continue.`);
-      }
     } catch (err: any) {
       const detail = err.detail || err.message;
       if (detail?.payment_required) {
@@ -366,9 +352,9 @@ function EventDetailContent() {
     setSendError(null);
     setSendResult(null);
     try {
-      const res = await apiClient<any>(`/events/${id}/guests/${guestId}/send-invite?force=true`, { method: "POST", body: { channel } });
-      if (res.status === "max_attempts") {
-        setSendError(res.message || "Maximum invite attempts reached.");
+      const res = await apiClient<any>(`/events/${id}/guests/${guestId}/send-invite?force=true`, { method: "POST", body: { channels } });
+      if (res.channels?.some((c: any) => c.status === "max_attempts")) {
+        setSendError("Maximum invite attempts reached for some channels.");
       }
       loadGuests();
     } catch (err: any) {
@@ -385,7 +371,7 @@ function EventDetailContent() {
               const check = await checkResendPayment(Number(id), guestId);
               if (check.has_valid_payment) {
                 setSendError(null);
-                await apiClient(`/events/${id}/guests/${guestId}/send-invite?force=true`, { method: "POST", body: { channel } });
+                await apiClient(`/events/${id}/guests/${guestId}/send-invite?force=true`, { method: "POST", body: { channels } });
                 loadGuests();
               } else {
                 const res = await initiateResendPayment(Number(id), guestId);
@@ -406,7 +392,7 @@ function EventDetailContent() {
 
   const sendGuestQr = async (guestId: number) => {
     try {
-      await apiClient(`/events/${id}/guests/${guestId}/send-qr`, { method: "POST", body: { channel } });
+      await apiClient(`/events/${id}/guests/${guestId}/send-qr`, { method: "POST", body: { channels } });
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Could not send QR.");
     }
@@ -415,7 +401,7 @@ function EventDetailContent() {
   const sendAllQrs = async () => {
     setSending(true); setSendResult(null); setSendError(null);
     try {
-      const res = await apiClient<any>(`/events/${id}/send-qrs`, { method: "POST", body: { channel } });
+      const res = await apiClient<any>(`/events/${id}/send-qrs`, { method: "POST", body: { channels } });
       setSendResult(res);
       loadLogs();
     } catch (err) {
@@ -426,14 +412,16 @@ function EventDetailContent() {
 
   const testSend = async () => {
     try {
-      await apiClient("/events/test-send", {
-        method: "POST",
-        body: {
-          channel,
-          email: channel === "email" ? (user?.email || "") : undefined,
-          phone: channel !== "email" ? (user?.phone || "") : undefined,
-        },
-      });
+      for (const ch of channels) {
+        await apiClient("/events/test-send", {
+          method: "POST",
+          body: {
+            channel: ch,
+            email: ch === "email" ? (user?.email || "") : undefined,
+            phone: ch !== "email" ? (user?.phone || "") : undefined,
+          },
+        });
+      }
     } catch {}
   };
 
@@ -457,7 +445,7 @@ function EventDetailContent() {
     try {
       const res = await apiClient<any>(`/events/${id}/send-invites-batch`, {
         method: "POST",
-        body: { channel, guest_ids: selectedGuestIds },
+        body: { channels, guest_ids: selectedGuestIds },
       });
       setSendResult(res);
       setSelectedGuestIds([]);
@@ -550,40 +538,73 @@ function EventDetailContent() {
 
   const guestLimit = guestLimitFromRange(event.guest_count_range);
   const remainingGuests = guestLimit === null ? null : Math.max(guestLimit - totalGuests, 0);
-  const phoneChannelSelected = channel === "whatsapp" || channel === "sms";
-  const invalidPhoneGuests = phoneChannelSelected ? guests.filter((guest) => !isValidPhone(guest.phone)) : [];
-  const guestsWithoutSelectedContact = guests.filter((guest) => channel === "email" ? !guest.email : !guest.phone);
+  const phoneChannelsSelected = channels.some((c) => c === "whatsapp" || c === "sms");
+  const invalidPhoneGuests = phoneChannelsSelected ? guests.filter((guest) => !isValidPhone(guest.phone)) : [];
+  const guestsWithMissingContact = guests.filter((guest) => {
+    const missingEmail = channels.includes("email") && !guest.email;
+    const missingPhone = channels.some((c) => c !== "email") && !guest.phone;
+    return missingEmail || missingPhone;
+  });
   const canSendInvites = totalGuests > 0 && invalidPhoneGuests.length === 0;
 
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "guests", label: "Guests", icon: Users, badge: totalGuests },
     { id: "invites", label: "Send Invites", icon: Mail },
+    { id: "questions", label: "Questions", icon: HelpCircle },
+    { id: "reminders", label: "Reminders", icon: Bell },
+    { id: "coupons", label: "Coupons", icon: Ticket },
+    { id: "templates", label: "Templates", icon: Copy },
+    { id: "waitlist", label: "Waitlist", icon: Users },
     { id: "settings", label: "Settings", icon: Settings }
   ];
 
+  const allTabs = tabs.map((t) => {
+    const IconComp = t.icon;
+    const isActive = activeTab === t.id;
+    return (
+      <button
+        key={t.id}
+        onClick={() => setActiveTab(t.id)}
+        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+          isActive
+            ? "bg-slate-900 text-white shadow-md"
+            : "text-slate-700 hover:bg-slate-100"
+        }`}
+      >
+        <IconComp className="w-4 h-4" />
+        <span>{t.label}</span>
+        {t.badge !== undefined && t.badge > 0 && (
+          <span className="ml-auto inline-flex items-center justify-center h-5 px-2 rounded-full text-xs font-bold bg-slate-200 text-slate-900">
+            {t.badge}
+          </span>
+        )}
+      </button>
+    );
+  });
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Header showNav={true} userFullName={user.full_name} dashboardLink="/dashboard" />
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <DashboardTopbar
+        title={event.title}
+        subtitle="Event Details"
+        onMenuClick={() => setMobileNavOpen(true)}
+      />
 
-      <div className="px-4 py-6">
-        <div className="container mx-auto max-w-7xl">
-          <div className="flex items-center gap-3 mb-6">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
-              title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-            >
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-            <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Dashboard
-            </Link>
-          </div>
+      <div className="flex flex-1">
+        <DashboardSidebar
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          mobileNavOpen={mobileNavOpen}
+          onMobileNavClose={() => setMobileNavOpen(false)}
+        />
 
-          {/* Main Content Area - Full Width */}
-          <div className="w-full">
+        <div className="flex-1 px-4 py-6 overflow-auto">
+          <div className="container mx-auto max-w-7xl">
+            <div className="flex items-center gap-2 mb-6 flex-wrap">
+              {allTabs}
+            </div>
+
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
             {activeTab === "overview" && (
               <div className="space-y-8">
@@ -623,6 +644,73 @@ function EventDetailContent() {
                     <div className="bg-white rounded-lg p-3 font-mono text-sm text-slate-700 break-all border border-blue-100 select-all">
                       {typeof window !== "undefined" ? `${window.location.origin}/e/${event.slug}` : ""}
                     </div>
+                  </div>
+                )}
+
+                {/* Publish Section */}
+                {event.status !== "published" && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 space-y-4">
+                    <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-amber-600" />
+                      Publish Event
+                    </h3>
+                    <p className="text-sm text-slate-700">
+                      Publish this event to make it visible to the public and allow ticket purchases.
+                    </p>
+
+                    {/* Channel selection for publish */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">Delivery Channel</label>
+                      <div className="flex flex-wrap gap-2">
+                        {["email", "whatsapp", "sms"].map((ch) => {
+                          const active = publishChannel === ch;
+                          return (
+                            <button
+                              key={ch}
+                              type="button"
+                              onClick={() => setPublishChannel(ch)}
+                              className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all capitalize ${
+                                active
+                                  ? "bg-slate-900 text-white border-slate-900"
+                                  : "bg-white text-slate-700 border-slate-200 hover:border-slate-400"
+                              }`}
+                            >
+                              {ch}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Coupon Code Input */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">
+                        Coupon Code <span className="text-xs text-slate-500">(optional — use 100% off coupon to bypass payment)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter coupon code"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      />
+                    </div>
+
+                    {publishError && (
+                      <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{publishError}</p>
+                    )}
+
+                    <button
+                      onClick={handlePublish}
+                      disabled={publishing}
+                      className="w-full h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {publishing ? (
+                        <><Loader className="w-4 h-4 animate-spin" /> Publishing...</>
+                      ) : (
+                        <><Zap className="w-4 h-4" /> Publish Event</>
+                      )}
+                    </button>
                   </div>
                 )}
 
@@ -699,8 +787,8 @@ function EventDetailContent() {
 
             {activeTab === "invites" && (
               <InvitesTabContent
-                channel={channel}
-                setChannel={setChannel}
+                channels={channels}
+                setChannels={setChannels}
                 sending={sending}
                 canSendInvites={canSendInvites}
                 sendInvites={sendInvites}
@@ -710,12 +798,43 @@ function EventDetailContent() {
                 sendError={sendError}
                 logs={logs}
                 invalidPhoneGuests={invalidPhoneGuests}
-                guestsWithoutSelectedContact={guestsWithoutSelectedContact}
+                guestsWithMissingContact={guestsWithMissingContact}
+                guestCountRange={event.guest_count_range}
               />
+            )}
+
+            {activeTab === "questions" && (
+              <QuestionsTabContent eventId={id} />
+            )}
+
+            {activeTab === "reminders" && (
+              <RemindersTabContent eventId={id} />
+            )}
+
+            {activeTab === "coupons" && (
+              <CouponsTabContent eventId={id} />
+            )}
+
+            {activeTab === "templates" && (
+              <TemplatesTabContent eventId={id} />
+            )}
+
+            {activeTab === "waitlist" && (
+              <WaitlistTabContent eventId={id} />
             )}
 
             {activeTab === "settings" && (
               <div className="space-y-8">
+                <div className="flex items-center justify-between pb-6 border-b border-slate-200">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Event Settings</h3>
+                    <p className="text-sm text-slate-600 mt-1">Manage event details, cover image, and fliers</p>
+                  </div>
+                  <Link href={`/dashboard/events/${id}/edit`} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                    <Edit2 className="w-4 h-4" />
+                    Edit Event Details
+                  </Link>
+                </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 mb-4">Cover Image</h3>
                   {event.cover_image && (
@@ -783,165 +902,6 @@ function EventDetailContent() {
             )}
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Drawer Sidebar Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Drawer Sidebar */}
-      <div
-        className={`fixed left-0 top-0 h-screen w-96 bg-white shadow-2xl z-50 overflow-y-auto transition-transform duration-300 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="p-6 space-y-6">
-          {/* Close Button */}
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-slate-900">Event Info</h2>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-slate-600" />
-            </button>
-          </div>
-
-          {/* Cover Image */}
-          {event.cover_image ? (
-            <div className="relative h-40 overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300 rounded-lg">
-              <img src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
-            </div>
-          ) : (
-            <div className="h-40 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center rounded-lg">
-              <BarChart3 className="w-12 h-12 text-slate-400" />
-            </div>
-          )}
-
-          {/* Event Title */}
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 leading-tight">{event.title}</h1>
-          </div>
-
-          {/* Event Details */}
-          <div className="space-y-3">
-            {event.venue && (
-              <div className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Location</p>
-                  <p className="text-sm text-slate-700 font-medium">{event.venue}</p>
-                </div>
-              </div>
-            )}
-            {event.event_date && (
-              <div className="flex items-start gap-3">
-                <Calendar className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Date</p>
-                  <p className="text-sm text-slate-700 font-medium">{event.event_date}</p>
-                </div>
-              </div>
-            )}
-            {event.event_time && (
-              <div className="flex items-start gap-3">
-                <Clock className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-slate-500 font-semibold uppercase mb-0.5">Time</p>
-                  <p className="text-sm text-slate-700 font-medium">{event.event_time}</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="pt-4 border-t border-slate-200 flex gap-2">
-            <Link href={`/dashboard/events/${id}/edit`} className="flex-1">
-              <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white gap-2 h-9 text-xs font-medium">
-                <Edit2 className="w-3.5 h-3.5" />
-                Edit
-              </Button>
-            </Link>
-            <Button variant="destructive" onClick={handleDeleteEvent} disabled={deleting} className="gap-2 h-9 px-3 text-xs font-medium">
-              {deleting ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-            </Button>
-          </div>
-
-          {/* RSVP Stats */}
-          {rsvpStats && (
-            <div className="pt-4 border-t border-slate-200 space-y-2">
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">RSVP Status</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-                  <p className="text-xs text-emerald-700 font-semibold">Accepted</p>
-                  <p className="text-xl font-bold text-emerald-700">{rsvpStats.accepted}</p>
-                </div>
-                <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
-                  <p className="text-xs text-amber-700 font-semibold">Pending</p>
-                  <p className="text-xl font-bold text-amber-700">{rsvpStats.pending}</p>
-                </div>
-                <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                  <p className="text-xs text-red-700 font-semibold">Declined</p>
-                  <p className="text-xl font-bold text-red-700">{rsvpStats.declined}</p>
-                </div>
-                {checkinStats && (
-                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                    <p className="text-xs text-blue-700 font-semibold">Checked In</p>
-                    <p className="text-xl font-bold text-blue-700">{checkinStats.checked_in}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Navigation Menu */}
-          <div className="pt-4 border-t border-slate-200 space-y-1">
-            {tabs.map((tab) => {
-              const IconComp = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    setSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? "bg-slate-900 text-white shadow-md"
-                      : "text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  <IconComp className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                  {tab.badge !== undefined && tab.badge > 0 && (
-                    <span className="ml-auto inline-flex items-center justify-center h-5 px-2 rounded-full text-xs font-bold bg-slate-200 text-slate-900">
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {event.slug && (
-            <div className="pt-4 border-t border-slate-200">
-              <a
-                href={`/e/${event.slug}`}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-                View Public
-              </a>
-            </div>
-          )}
         </div>
       </div>
 

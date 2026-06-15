@@ -2,6 +2,7 @@ import os
 import re
 import asyncio
 import base64
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -30,11 +31,19 @@ router = APIRouter()
 
 
 class SendInvitesRequest(BaseModel):
-    channel: str
+    channel: str = "email"
+    channels: Optional[List[str]] = None
+
+    def get_channels(self) -> List[str]:
+        return self.channels if self.channels else [self.channel]
 
 
 class SendGuestInviteRequest(BaseModel):
-    channel: str
+    channel: str = "email"
+    channels: Optional[List[str]] = None
+
+    def get_channels(self) -> List[str]:
+        return self.channels if self.channels else [self.channel]
 
 
 def is_valid_phone(value: str | None) -> bool:
@@ -44,9 +53,10 @@ def is_valid_phone(value: str | None) -> bool:
     return bool(re.fullmatch(r"\+?[1-9]\d{7,14}", compact))
 
 
-async def _send_whatsapp(to: str, message: str, media_url: str | None = None) -> bool:
+async def _send_whatsapp(to: str, message: str, media_url: str | None = None) -> tuple[bool, str | None]:
     if settings.WHATSAPP_CLOUD_TOKEN and settings.WHATSAPP_CLOUD_PHONE_ID:
-        return await send_whatsapp_cloud(to, message, media_url)
+        ok = await send_whatsapp_cloud(to, message, media_url)
+        return ok, None
     return await send_whatsapp(to, message, media_url)
 
 
@@ -256,7 +266,11 @@ async def _send_to_guest(
             ok = await asyncio.wait_for(send_email(guest.email, subject, html, from_addr=from_addr), timeout=15)
         elif channel == "whatsapp" and guest.phone:
             media_to_send = _absolute_url(flyer_url) or _absolute_url(qr_image_url)
-            ok = await _send_whatsapp(guest.phone, body, media_url=media_to_send)
+            ok, provider_id = await _send_whatsapp(guest.phone, body, media_url=media_to_send)
+            if provider_id:
+                msg.provider_message_id = provider_id
+            elif not ok:
+                msg.error = provider_id
             qr_abs = _absolute_url(qr_image_url)
             if not ok and qr_abs and qr_abs != media_to_send:
                 await _send_whatsapp(guest.phone, "Your entry QR code is ready!", media_url=qr_abs)
@@ -349,7 +363,11 @@ async def _send_qr_to_guest(
             from_addr = f"{(event.host_name or 'Accredit.vip')} via Accredit.vip <noreply@wristbandsng.com>"
             ok = await asyncio.wait_for(send_email(guest.email, subject, html, from_addr=from_addr), timeout=15)
         elif channel == "whatsapp" and guest.phone:
-            ok = await _send_whatsapp(guest.phone, body, media_url=_absolute_url(qr_image_url))
+            ok, provider_id = await _send_whatsapp(guest.phone, body, media_url=_absolute_url(qr_image_url))
+            if provider_id:
+                msg.provider_message_id = provider_id
+            elif not ok:
+                msg.error = provider_id
         elif channel == "sms" and guest.phone:
             ok = await send_sms(guest.phone, body)
         else:
@@ -386,18 +404,19 @@ async def send_invites(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
+    channels = req.get_channels()
+
     query = select(Guest).where(Guest.event_id == event_id)
     if not force:
         query = query.where(Guest.invite_sent == False)
     guests_result = await db.execute(query)
     guests = guests_result.scalars().all()
     if not guests:
-        return {"batch_id": None, "channel": req.channel, "sent": 0, "total": 0, "already_sent": True, "message": "All guests have already been invited. Use ?force=true to resend."}
+        return {"channels": {}, "total_sent": 0, "total_guests": 0, "already_sent": True, "message": "All guests have already been invited. Use ?force=true to resend."}
 
     if force:
         already_sent_guests = [g for g in guests if g.invite_sent]
         if already_sent_guests:
-            # Check which already-sent guests have valid resend payments
             guest_ids = [g.id for g in already_sent_guests]
             payment_result = await db.execute(
                 select(Payment).where(
@@ -421,43 +440,62 @@ async def send_invites(
                     },
                 )
 
-    if req.channel in {"whatsapp", "sms"}:
-        invalid_phone_guests = [
-            {"id": guest.id, "name": guest.name, "phone": guest.phone}
-            for guest in guests
-            if not is_valid_phone(guest.phone)
-        ]
-        if invalid_phone_guests:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "message": "Fix incorrect phone numbers before sending.",
-                    "invalid_phone_guests": invalid_phone_guests,
-                },
-            )
+    def has_contact(guest: Guest, ch: str) -> bool:
+        return (ch == "email" and guest.email) or (ch in ("whatsapp", "sms") and guest.phone)
 
-    batch = InviteBatch(event_id=event_id, channel=req.channel)
-    db.add(batch)
-    await db.flush()
+    total_sent = 0
+    results_for_channels = {}
+    any_sent = False
 
-    sent = 0
-    skipped_attempts = 0
-    for guest in guests:
-        ok, status = await _send_to_guest(guest, event, req.channel, batch.id, db)
-        if status == "max_attempts":
-            skipped_attempts += 1
+    for ch in channels:
+        if ch in {"whatsapp", "sms"}:
+            invalid_phone_guests = [
+                {"id": guest.id, "name": guest.name, "phone": guest.phone}
+                for guest in guests
+                if not is_valid_phone(guest.phone) and has_contact(guest, ch)
+            ]
+            if invalid_phone_guests:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "message": f"Fix incorrect phone numbers before sending via {ch}.",
+                        "invalid_phone_guests": invalid_phone_guests,
+                    },
+                )
+
+        eligible = [g for g in guests if has_contact(g, ch)]
+        if not eligible:
+            results_for_channels[ch] = {"sent": 0, "total": 0, "skipped_max_attempts": 0, "message": "No guests with contact info for this channel"}
             continue
-        if status != "skipped":
-            guest.invite_sent = True
-        if ok:
-            sent += 1
+
+        batch = InviteBatch(event_id=event_id, channel=ch)
+        db.add(batch)
         await db.flush()
 
-    batch.total_sent = sent
-    batch.status = "completed"
-    await db.commit()
+        sent = 0
+        skipped_attempts = 0
+        for guest in eligible:
+            ok, status = await _send_to_guest(guest, event, ch, batch.id, db)
+            if status == "max_attempts":
+                skipped_attempts += 1
+                continue
+            if status != "skipped":
+                any_sent = True
+            if ok:
+                sent += 1
+            await db.flush()
 
-    return {"batch_id": batch.id, "channel": req.channel, "sent": sent, "total": len(guests), "skipped_max_attempts": skipped_attempts}
+        batch.total_sent = sent
+        batch.status = "completed"
+        results_for_channels[ch] = {"batch_id": batch.id, "sent": sent, "total": len(eligible), "skipped_max_attempts": skipped_attempts}
+        total_sent += sent
+
+    if any_sent:
+        for guest in guests:
+            guest.invite_sent = True
+
+    await db.commit()
+    return {"channels": results_for_channels, "total_sent": total_sent, "total_guests": len(guests)}
 
 
 # ── Send invite to ONE specific guest ──
@@ -485,13 +523,14 @@ async def send_guest_invite(
     if not guest:
         raise HTTPException(status_code=404, detail="Guest not found")
 
+    channels = req.get_channels()
+
     if guest.invite_sent:
         if not force:
             raise HTTPException(
                 status_code=400,
                 detail=f"Invite already sent to {guest.name}. Use ?force=true to resend.",
             )
-        # Check if a valid resend payment exists for this guest
         payment_result = await db.execute(
             select(Payment).where(
                 Payment.event_id == event_id,
@@ -512,25 +551,38 @@ async def send_guest_invite(
                 },
             )
 
-    batch = InviteBatch(event_id=event_id, channel=req.channel)
-    db.add(batch)
-    await db.flush()
+    results = []
+    any_sent = False
+    for ch in channels:
+        def has_contact(ch: str) -> bool:
+            return (ch == "email" and guest.email) or (ch in ("whatsapp", "sms") and guest.phone)
+        if not has_contact(ch):
+            results.append({"channel": ch, "sent": False, "status": "skipped", "message": f"No contact info for {ch}"})
+            continue
 
-    ok, status = await _send_to_guest(guest, event, req.channel, batch.id, db)
+        batch = InviteBatch(event_id=event_id, channel=ch)
+        db.add(batch)
+        await db.flush()
 
-    if status == "max_attempts":
-        batch.total_sent = 0
+        ok, status = await _send_to_guest(guest, event, ch, batch.id, db)
+
+        if status == "max_attempts":
+            batch.total_sent = 0
+            batch.status = "completed"
+            results.append({"channel": ch, "sent": False, "status": "max_attempts"})
+            continue
+
+        if status != "skipped":
+            any_sent = True
+        batch.total_sent = 1 if ok else 0
         batch.status = "completed"
-        await db.commit()
-        return {"guest_id": guest_id, "channel": req.channel, "sent": False, "status": "max_attempts", "message": f"{guest.name} has reached the maximum of {MAX_INVITE_ATTEMPTS} invite attempts. Create a new event to invite them again."}
+        results.append({"channel": ch, "sent": ok, "status": status})
 
-    if status != "skipped":
+    if any_sent:
         guest.invite_sent = True
-    batch.total_sent = 1 if ok else 0
-    batch.status = "completed"
-    await db.commit()
 
-    return {"guest_id": guest_id, "channel": req.channel, "sent": ok, "status": status}
+    await db.commit()
+    return {"guest_id": guest_id, "channels": results}
 
 
 # ── Send QR code to ONE specific guest ──
@@ -557,17 +609,20 @@ async def send_guest_qr(
     if not guest:
         raise HTTPException(status_code=404, detail="Guest not found")
 
-    batch = InviteBatch(event_id=event_id, channel=req.channel)
-    db.add(batch)
-    await db.flush()
+    channels = req.get_channels()
+    results = []
+    for ch in channels:
+        batch = InviteBatch(event_id=event_id, channel=ch)
+        db.add(batch)
+        await db.flush()
 
-    ok, status = await _send_qr_to_guest(guest, event, req.channel, batch.id, db)
+        ok, status = await _send_qr_to_guest(guest, event, ch, batch.id, db)
+        batch.total_sent = 1 if ok else 0
+        batch.status = "completed"
+        results.append({"channel": ch, "sent": ok, "status": status})
 
-    batch.total_sent = 1 if ok else 0
-    batch.status = "completed"
     await db.commit()
-
-    return {"guest_id": guest_id, "channel": req.channel, "sent": ok, "status": status}
+    return {"guest_id": guest_id, "channels": results}
 
 
 # ── Send QR codes to ALL unsent guests ──
@@ -593,37 +648,44 @@ async def send_all_qrs(
     if not guests:
         raise HTTPException(status_code=400, detail="No guests to send QR codes to")
 
-    if req.channel in {"whatsapp", "sms"}:
-        invalid_phone_guests = [
-            {"id": guest.id, "name": guest.name, "phone": guest.phone}
-            for guest in guests
-            if not is_valid_phone(guest.phone)
-        ]
-        if invalid_phone_guests:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "message": "Fix incorrect phone numbers before sending QR codes.",
-                    "invalid_phone_guests": invalid_phone_guests,
-                },
-            )
+    channels = req.get_channels()
+    results_for_channels = {}
+    total_sent = 0
 
-    batch = InviteBatch(event_id=event_id, channel=req.channel)
-    db.add(batch)
-    await db.flush()
+    for ch in channels:
+        if ch in {"whatsapp", "sms"}:
+            invalid_phone_guests = [
+                {"id": guest.id, "name": guest.name, "phone": guest.phone}
+                for guest in guests
+                if not is_valid_phone(guest.phone)
+            ]
+            if invalid_phone_guests:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "message": f"Fix incorrect phone numbers before sending QR codes via {ch}.",
+                        "invalid_phone_guests": invalid_phone_guests,
+                    },
+                )
 
-    sent = 0
-    for guest in guests:
-        ok, status = await _send_qr_to_guest(guest, event, req.channel, batch.id, db)
-        if ok:
-            sent += 1
+        batch = InviteBatch(event_id=event_id, channel=ch)
+        db.add(batch)
         await db.flush()
 
-    batch.total_sent = sent
-    batch.status = "completed"
-    await db.commit()
+        sent = 0
+        for guest in guests:
+            ok, status = await _send_qr_to_guest(guest, event, ch, batch.id, db)
+            if ok:
+                sent += 1
+            await db.flush()
 
-    return {"batch_id": batch.id, "channel": req.channel, "sent": sent, "total": len(guests)}
+        batch.total_sent = sent
+        batch.status = "completed"
+        results_for_channels[ch] = {"batch_id": batch.id, "sent": sent, "total": len(guests)}
+        total_sent += sent
+
+    await db.commit()
+    return {"channels": results_for_channels, "total_sent": total_sent, "total_guests": len(guests)}
 
 
 # ── Re-send payment check ──
@@ -676,8 +738,12 @@ async def delivery_logs(
 
 
 class SendInvitesBatchRequest(BaseModel):
-    channel: str
+    channel: str = "email"
+    channels: Optional[List[str]] = None
     guest_ids: list[int]
+
+    def get_channels(self) -> List[str]:
+        return self.channels if self.channels else [self.channel]
 
 
 @router.post("/{event_id}/send-invites-batch")
@@ -704,39 +770,59 @@ async def send_invites_batch(
     if not guests:
         raise HTTPException(status_code=400, detail="No valid guests found")
 
-    if req.channel in {"whatsapp", "sms"}:
-        invalid = [g for g in guests if not is_valid_phone(g.phone)]
-        if invalid:
-            raise HTTPException(
-                status_code=400,
-                detail={"message": "Fix incorrect phone numbers before sending.", "invalid_phone_guests": [{"id": g.id, "name": g.name, "phone": g.phone} for g in invalid]},
-            )
+    channels = req.get_channels()
+    results_for_channels = {}
+    total_sent = 0
+    any_sent = False
 
-    batch = InviteBatch(event_id=event_id, channel=req.channel)
-    db.add(batch)
-    await db.flush()
+    def has_contact(guest: Guest, ch: str) -> bool:
+        return (ch == "email" and guest.email) or (ch in ("whatsapp", "sms") and guest.phone)
 
-    sent = 0
-    results = []
-    for guest in guests:
-        ok, status = await _send_to_guest(guest, event, req.channel, batch.id, db)
-        if status == "max_attempts":
-            results.append({"guest_id": guest.id, "name": guest.name, "status": "max_attempts"})
+    for ch in channels:
+        if ch in {"whatsapp", "sms"}:
+            invalid = [g for g in guests if not is_valid_phone(g.phone) and has_contact(g, ch)]
+            if invalid:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"message": f"Fix incorrect phone numbers before sending via {ch}.", "invalid_phone_guests": [{"id": g.id, "name": g.name, "phone": g.phone} for g in invalid]},
+                )
+
+        eligible = [g for g in guests if has_contact(g, ch)]
+        if not eligible:
+            results_for_channels[ch] = {"sent": 0, "total": 0, "results": []}
             continue
-        if status != "skipped":
-            guest.invite_sent = True
-        if ok:
-            sent += 1
-            results.append({"guest_id": guest.id, "name": guest.name, "status": "delivered"})
-        else:
-            results.append({"guest_id": guest.id, "name": guest.name, "status": status})
+
+        batch = InviteBatch(event_id=event_id, channel=ch)
+        db.add(batch)
         await db.flush()
 
-    batch.total_sent = sent
-    batch.status = "completed"
-    await db.commit()
+        sent = 0
+        results = []
+        for guest in eligible:
+            ok, status = await _send_to_guest(guest, event, ch, batch.id, db)
+            if status == "max_attempts":
+                results.append({"guest_id": guest.id, "name": guest.name, "status": "max_attempts"})
+                continue
+            if status != "skipped":
+                any_sent = True
+            if ok:
+                sent += 1
+                results.append({"guest_id": guest.id, "name": guest.name, "status": "delivered"})
+            else:
+                results.append({"guest_id": guest.id, "name": guest.name, "status": status})
+            await db.flush()
 
-    return {"batch_id": batch.id, "channel": req.channel, "sent": sent, "total": len(guests), "results": results}
+        batch.total_sent = sent
+        batch.status = "completed"
+        results_for_channels[ch] = {"batch_id": batch.id, "sent": sent, "total": len(eligible), "results": results}
+        total_sent += sent
+
+    if any_sent:
+        for guest in guests:
+            guest.invite_sent = True
+
+    await db.commit()
+    return {"channels": results_for_channels, "total_sent": total_sent, "total_guests": len(guests)}
 
 
 @router.get("/{event_id}/export-guests")
@@ -796,7 +882,7 @@ async def test_send(
         ok = await asyncio.wait_for(send_email(req.email, "Accredit.vip Test Message", "<h2>Test Send</h2><p>This is a test message from Accredit.vip.</p>"), timeout=15)
         sent.append(f"email to {req.email}: {'OK' if ok else 'FAILED'}")
     elif req.channel == "whatsapp" and req.phone:
-        ok = await _send_whatsapp(req.phone, "Hello! This is a test WhatsApp message from Accredit.vip.")
+        ok, _ = await _send_whatsapp(req.phone, "Hello! This is a test WhatsApp message from Accredit.vip.")
         sent.append(f"whatsapp to {req.phone}: {'OK' if ok else 'FAILED'}")
     elif req.channel == "sms" and req.phone:
         ok = await send_sms(req.phone, "Hello! This is a test SMS from Accredit.vip.")

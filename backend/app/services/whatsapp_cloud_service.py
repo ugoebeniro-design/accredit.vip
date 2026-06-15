@@ -2,7 +2,7 @@ import httpx
 from app.core.config import settings
 
 
-async def send_whatsapp_cloud(to: str, message: str, media_url: str | None = None) -> bool:
+async def send_whatsapp_cloud(to: str, message: str, media_url: str | None = None) -> tuple[bool, str | None]:
     """
     Send WhatsApp message via Meta WhatsApp Cloud API.
     Requires: WHATSAPP_CLOUD_TOKEN, WHATSAPP_CLOUD_PHONE_ID in settings.
@@ -11,7 +11,7 @@ async def send_whatsapp_cloud(to: str, message: str, media_url: str | None = Non
     phone_id = settings.WHATSAPP_CLOUD_PHONE_ID
     if not token or not phone_id:
         print(f"[WhatsApp Cloud Mock] To: {to}, Message: {message[:50]}...")
-        return True
+        return True, None
 
     data: dict = {
         "messaging_product": "whatsapp",
@@ -38,10 +38,13 @@ async def send_whatsapp_cloud(to: str, message: str, media_url: str | None = Non
             )
             if not res.is_success:
                 print(f"[WhatsApp Cloud Error] {res.status_code}: {res.text}")
-            return res.is_success
+                return False, res.text[:200]
+            body = res.json()
+            msg_id = body.get("messages", [{}])[0].get("id") if body.get("messages") else None
+            return True, msg_id
         except Exception as e:
             print(f"[WhatsApp Cloud Exception] {e}")
-            return False
+            return False, str(e)
 
 
 async def send_whatsapp_cloud_template(
@@ -49,7 +52,7 @@ async def send_whatsapp_cloud_template(
     template_name: str,
     parameters: list[str],
     media_url: str | None = None,
-) -> bool:
+) -> tuple[bool, str | None]:
     """
     Send a pre-approved template message via WhatsApp Cloud API.
     Use this for first-contact messages (no opt-in required).
@@ -58,7 +61,7 @@ async def send_whatsapp_cloud_template(
     phone_id = settings.WHATSAPP_CLOUD_PHONE_ID
     if not token or not phone_id:
         print(f"[WhatsApp Cloud Template Mock] To: {to}, Template: {template_name}")
-        return True
+        return True, None
 
     data: dict = {
         "messaging_product": "whatsapp",
@@ -96,7 +99,10 @@ async def send_whatsapp_cloud_template(
             )
             if not res.is_success:
                 print(f"[WhatsApp Cloud Template Error] {res.status_code}: {res.text}")
-            return res.is_success
+                return False, res.text[:200]
+            body = res.json()
+            msg_id = body.get("messages", [{}])[0].get("id") if body.get("messages") else None
+            return True, msg_id
         except Exception as e:
             print(f"[WhatsApp Cloud Template Exception] {e}")
-            return False
+            return False, str(e)

@@ -68,12 +68,11 @@ def set_auth_cookie(response: Response, token: str):
     response.set_cookie(
         key="access_token",
         value=token,
-        httponly=True,  # Prevent JavaScript access
-        secure=secure,  # HTTPS only in production
-        samesite="strict",  # CSRF protection
+        httponly=True,
+        secure=secure,
+        samesite="lax",
         max_age=max_age,
         path="/",
-        domain="accredit.vip" if not settings.DEBUG else None,
     )
 
 
