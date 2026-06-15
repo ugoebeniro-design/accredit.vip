@@ -32,8 +32,21 @@ FILE_SIGNATURES = {
     b"%PDF": ".pdf",
     b"PK\x03\x04": [".docx", ".xlsx", ".pptx"],  # OOXML
     b"\xd0\xcf\x11": ".doc",  # OLE (old Office)
-    b"RIFF": ".webp",
 }
+
+# Extended file validation for formats needing multi-byte-offset checks
+def _check_magic_bytes(contents: bytes, file_ext: str) -> bool:
+    for signature, ext in FILE_SIGNATURES.items():
+        if contents.startswith(signature):
+            if isinstance(ext, list):
+                if file_ext in ext:
+                    return True
+            elif file_ext == ext:
+                return True
+    # Special check for WEBP (starts with RIFF, has WEBP at offset 8)
+    if file_ext == ".webp" and contents[:4] == b"RIFF" and contents[8:12] == b"WEBP":
+        return True
+    return False
 
 
 class FileUploadSecurityService:
@@ -83,19 +96,7 @@ class FileUploadSecurityService:
             )
 
         # Verify file signature (magic bytes)
-        file_valid = False
-        for signature, ext in FILE_SIGNATURES.items():
-            if contents.startswith(signature):
-                if isinstance(ext, list):
-                    if file_ext in ext:
-                        file_valid = True
-                        break
-                else:
-                    if file_ext == ext:
-                        file_valid = True
-                        break
-
-        if not file_valid:
+        if not _check_magic_bytes(contents, file_ext):
             logger.warning(
                 f"File signature mismatch: {file.filename} (ext: {file_ext})"
             )

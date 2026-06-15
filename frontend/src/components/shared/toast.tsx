@@ -10,18 +10,20 @@ type ToastProps = {
   duration?: number;
 };
 
-export function Toast({ message, type = "success", visible, onClose, duration = 5000 }: ToastProps) {
+export function Toast({ message, type = "success", visible, onClose, duration = 8000 }: ToastProps) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (visible) {
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(onClose, duration);
+      timerRef.current = setTimeout(() => onCloseRef.current(), duration);
     }
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [visible, duration, onClose]);
+  }, [visible, duration]);
 
   if (!visible) return null;
 
