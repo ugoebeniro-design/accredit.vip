@@ -209,7 +209,7 @@ export default function RSVPPage() {
                   <button
                     onClick={() => setResponse(response === "yes" ? null : "yes")}
                     disabled={response === "no"}
-                    className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-t-xl font-bold text-base transition-all ${
+                    className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base transition-all ${
                       response === "yes"
                         ? "bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.4)] scale-[1.02]"
                         : response === "no"
@@ -220,7 +220,6 @@ export default function RSVPPage() {
                     <Check className="w-5 h-5" />
                     Yes, I&apos;ll Attend
                   </button>
-                  <div style={{ width: 0, height: 0, borderLeft: "14px solid transparent", borderRight: "14px solid transparent", borderTop: "12px solid " + (response === "yes" ? "#16a34a" : response === "no" ? "#d1d5db" : "#16a34a") }} />
                 </div>
 
                 {/* No button */}
@@ -228,7 +227,7 @@ export default function RSVPPage() {
                   <button
                     onClick={() => setResponse(response === "no" ? null : "no")}
                     disabled={response === "yes"}
-                    className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-t-xl font-bold text-base transition-all ${
+                    className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base transition-all ${
                       response === "no"
                         ? "bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(220,38,38,0.4)] scale-[1.02]"
                         : response === "yes"
@@ -239,7 +238,6 @@ export default function RSVPPage() {
                     <X className="w-5 h-5" />
                     Sorry, Can&apos;t Attend
                   </button>
-                  <div style={{ width: 0, height: 0, borderLeft: "14px solid transparent", borderRight: "14px solid transparent", borderTop: "12px solid " + (response === "no" ? "#dc2626" : response === "yes" ? "#d1d5db" : "#dc2626") }} />
                 </div>
               </div>
 
@@ -265,11 +263,10 @@ export default function RSVPPage() {
               <button
                 onClick={handleSubmit}
                 disabled={!response || submitting}
-                className="w-full px-6 py-4 rounded-t-xl bg-gradient-to-r from-[#E91E8C] to-[#C4166F] text-white font-bold text-base shadow-[0_4px_12px_rgba(233,30,140,0.4)] hover:shadow-[0_6px_16px_rgba(233,30,140,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-[#E91E8C] to-[#C4166F] text-white font-bold text-base shadow-[0_4px_12px_rgba(233,30,140,0.4)] hover:shadow-[0_6px_16px_rgba(233,30,140,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {submitting ? "Submitting..." : "Submit Response"}
               </button>
-              <div style={{ width: 0, height: 0, borderLeft: "16px solid transparent", borderRight: "16px solid transparent", borderTop: "12px solid #E91E8C" }} />
             </div>
           </div>
 
