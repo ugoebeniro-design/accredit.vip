@@ -13,11 +13,12 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".doc", ".docx"}
 ALLOWED_MIMETYPES = {
     "image/jpeg",
     "image/png",
     "image/gif",
+    "image/webp",
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -31,6 +32,7 @@ FILE_SIGNATURES = {
     b"%PDF": ".pdf",
     b"PK\x03\x04": [".docx", ".xlsx", ".pptx"],  # OOXML
     b"\xd0\xcf\x11": ".doc",  # OLE (old Office)
+    b"RIFF": ".webp",
 }
 
 
@@ -47,7 +49,7 @@ class FileUploadSecurityService:
             )
 
         # Check file size
-        if file.size and file.size > MAX_UPLOAD_SIZE:
+        if (file.size or 0) > MAX_UPLOAD_SIZE:
             max_mb = MAX_UPLOAD_SIZE / 1024 / 1024
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { getEvent, deleteEvent, type EventData } from "@/lib/api/events";
@@ -244,11 +244,17 @@ function EventDetailContent() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || "Cover upload failed");
+      }
       const data = await res.json();
       if (event) setEvent({ ...event, cover_image: data.url });
       getEvent(Number(id)).then(setEvent);
-    } catch {}
+      showToast("Cover image uploaded");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Cover upload failed", "error");
+    }
     setCoverUploading(false);
   };
 
@@ -263,9 +269,15 @@ function EventDetailContent() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || "Flier upload failed");
+      }
       loadFliers();
-    } catch {}
+      showToast("Flier uploaded");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Flier upload failed", "error");
+    }
     setFlierUploading(false);
   };
 
@@ -943,7 +955,9 @@ function EventDetailContent() {
 export default function EventDetailPage() {
   return (
     <ErrorBoundary>
-      <EventDetailContent />
+      <Suspense fallback={<EventDetailSkeleton />}>
+        <EventDetailContent />
+      </Suspense>
     </ErrorBoundary>
   );
 }
