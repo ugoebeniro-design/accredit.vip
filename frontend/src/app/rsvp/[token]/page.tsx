@@ -126,9 +126,16 @@ export default function RSVPPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f8f9fc] to-white">
+    <div className="min-h-screen bg-[#f8f9fc] relative overflow-hidden">
+      {/* Animated floating orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="animate-orb absolute -top-20 -left-20 w-72 h-72 rounded-full bg-gradient-to-br from-[#E91E8C]/10 to-transparent opacity-60" />
+        <div className="animate-orb absolute top-1/3 -right-16 w-56 h-56 rounded-full bg-gradient-to-bl from-[#E91E8C]/8 to-transparent opacity-50" style={{ animationDelay: "-3s" }} />
+        <div className="animate-orb absolute -bottom-32 left-1/4 w-80 h-80 rounded-full bg-gradient-to-tr from-[#E91E8C]/6 to-transparent opacity-40" style={{ animationDelay: "-6s" }} />
+      </div>
+
       {/* Branded header bar */}
-      <div className="bg-white border-b border-[#e8edf2] px-4 py-3">
+      <div className="relative bg-white/80 backdrop-blur-sm border-b border-[#e8edf2] px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image src="/logo-trim.png" alt="accredit.vip" width={130} height={24} className="h-5 w-auto object-contain" />
@@ -139,8 +146,8 @@ export default function RSVPPage() {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-8">
-        <div className="rounded-2xl bg-white border border-[#e8edf2] shadow-lg overflow-hidden">
+      <div className="relative max-w-lg mx-auto px-4 py-8">
+        <div className="rounded-2xl bg-white border border-[#e8edf2] shadow-lg overflow-hidden motion-pop">
           {/* Flyer image */}
           {rsvpData.cover_image && (
             <div className="h-56 sm:h-64 w-full bg-gray-100">
@@ -150,26 +157,26 @@ export default function RSVPPage() {
 
           <div className="p-6 sm:p-8">
             {/* Guest greeting */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-8 motion-rise" style={{ animationDelay: "0.1s" }}>
               <p className="text-sm text-[#94a3b8] uppercase tracking-wider mb-1">Dear {rsvpData.guest_name},</p>
               <h1 className="text-3xl font-bold text-[#0D1B2A] mt-2">You&apos;re Invited!</h1>
               <p className="text-[#64748b] mt-1">{rsvpData.host_name} cordially invites you to</p>
             </div>
 
             {/* Event details */}
-            <div className="space-y-4 mb-8 pb-8 border-b border-[#e8edf2]">
+            <div className="space-y-4 mb-8 pb-8 border-b border-[#e8edf2] motion-rise" style={{ animationDelay: "0.2s" }}>
               <div className="text-center">
                 <h2 className="text-2xl font-bold text-[#E91E8C]">{rsvpData.event_title}</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-                <div className="flex items-start gap-3 bg-[#f8f9fc] rounded-xl p-4">
+                <div className="flex items-start gap-3 bg-[#f8f9fc] rounded-xl p-4 motion-float-card">
                   <Calendar className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs text-[#94a3b8] uppercase tracking-wider mb-0.5">Date</p>
                     <p className="font-semibold text-[#0D1B2A]">{formatDate(rsvpData.event_date)}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 bg-[#f8f9fc] rounded-xl p-4">
+                <div className="flex items-start gap-3 bg-[#f8f9fc] rounded-xl p-4 motion-float-card-alt">
                   <Clock className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs text-[#94a3b8] uppercase tracking-wider mb-0.5">Time</p>
@@ -177,7 +184,7 @@ export default function RSVPPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-start gap-3 bg-[#f8f9fc] rounded-xl p-4">
+              <div className="flex items-start gap-3 bg-[#f8f9fc] rounded-xl p-4 motion-float-card" style={{ animationDelay: "-2s" }}>
                 <MapPin className="w-5 h-5 text-[#E91E8C] flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-[#94a3b8] uppercase tracking-wider mb-0.5">Venue</p>
@@ -187,7 +194,7 @@ export default function RSVPPage() {
             </div>
 
             {/* RSVP */}
-            <div className="mb-6">
+            <div className="mb-6 motion-rise" style={{ animationDelay: "0.3s" }}>
               <p className="text-center text-lg font-bold text-[#0D1B2A] mb-5">Will you attend?</p>
 
               {error && (
@@ -254,7 +261,7 @@ export default function RSVPPage() {
             </div>
 
             {/* Submit */}
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center motion-rise" style={{ animationDelay: "0.4s" }}>
               <button
                 onClick={handleSubmit}
                 disabled={!response || submitting}
@@ -267,7 +274,7 @@ export default function RSVPPage() {
           </div>
 
           {/* Footer branding */}
-          <div className="bg-[#f8f9fc] px-6 py-4 text-center border-t border-[#e8edf2]">
+          <div className="bg-[#f8f9fc] px-6 py-4 text-center border-t border-[#e8edf2] motion-fade-in" style={{ animationDelay: "0.5s" }}>
             <p className="text-xs text-[#94a3b8]">
               Powered by <a href="/" className="text-[#E91E8C] font-semibold hover:underline">Accredit.vip</a>
             </p>

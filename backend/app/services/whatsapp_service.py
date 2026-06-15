@@ -18,6 +18,7 @@ async def send_whatsapp(to: str, message: str, media_url: str | None = None) -> 
         "From": f"whatsapp:{from_}",
         "To": f"whatsapp:{to}",
         "Body": message,
+        "StatusCallback": f"{settings.FRONTEND_URL}/api/v1/webhooks/twilio/status",
     }
     if media_url:
         data["MediaUrl"] = media_url
