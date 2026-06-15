@@ -688,10 +688,10 @@ function EventDetailContent() {
                 {fliers.length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-slate-900 mb-4">Event Fliers</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-4">
                       {fliers.map((f) => (
                         <div key={f.id} className="rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative group">
-                          <img src={f.url} alt="Event flier" className="w-full object-contain max-h-96 bg-slate-100" />
+                          <img src={f.url} alt="Event flier" className="w-full object-contain bg-slate-100" />
                           <button
                             onClick={() => deleteFlier(f.id)}
                             className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
@@ -945,10 +945,17 @@ function EventDetailContent() {
                 <div className="pt-8 border-t border-slate-200">
                   <h3 className="text-lg font-bold text-slate-900 mb-4">Event Fliers</h3>
                   {fliers.length > 0 && (
-                    <div className="mb-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-4">
                       {fliers.map((f) => (
-                        <div key={f.id} className="rounded-lg overflow-hidden border border-slate-200 shadow-sm">
-                          <img src={f.url} alt="Flier" className="w-full h-24 object-cover" />
+                        <div key={f.id} className="rounded-lg overflow-hidden border border-slate-200 shadow-sm relative group">
+                          <img src={f.url} alt="Flier" className="w-full object-contain bg-slate-100" />
+                          <button
+                            onClick={() => deleteFlier(f.id)}
+                            className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+                            title="Delete flier"
+                          >
+                            ×
+                          </button>
                         </div>
                       ))}
                     </div>
