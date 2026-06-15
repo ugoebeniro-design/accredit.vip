@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, type FormEvent } from "react";
+import { useRef, useState, useEffect, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Users, Mail, Zap, Trash2, Edit2, Loader } from "lucide-react";
+import { Plus, Upload, Users, Mail, QrCode, Trash2, Edit2, Loader, MoreHorizontal } from "lucide-react";
 
 type Guest = {
   id: number;
@@ -107,6 +107,14 @@ export default function GuestsTabContent({
 }: GuestsTabContentProps) {
   const localFileRef = useRef<HTMLInputElement | null>(null);
   const resolvedFileRef = fileInputRef ?? localFileRef;
+  const [openMenuGuestId, setOpenMenuGuestId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (openMenuGuestId === null) return;
+    const close = () => setOpenMenuGuestId(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [openMenuGuestId]);
 
   return (
     <div className="space-y-8">
@@ -320,48 +328,44 @@ export default function GuestsTabContent({
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-1 ml-3 flex-shrink-0">
+                      <div className="relative ml-3 flex-shrink-0">
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => sendGuestInvite(guest.id)}
-                          title="Send invite"
+                          onClick={(e) => { e.stopPropagation(); setOpenMenuGuestId(openMenuGuestId === guest.id ? null : guest.id); }}
                           className="h-8 w-8 p-0"
                         >
-                          <Mail className="w-4 h-4" />
+                          <MoreHorizontal className="w-4 h-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => generateQR(guest.id)}
-                          disabled={generatingQR === guest.id}
-                          title="Generate QR"
-                          className="h-8 w-8 p-0"
-                        >
-                          {generatingQR === guest.id ? (
-                            <Loader className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Zap className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => startEdit(guest)}
-                          title="Edit"
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setDeleteConfirm(guest.id)}
-                          title="Delete"
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {openMenuGuestId === guest.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg border border-slate-200 shadow-lg z-10 py-1 min-w-[160px]">
+                            <button
+                              onClick={() => { sendGuestInvite(guest.id); setOpenMenuGuestId(null); }}
+                              className="w-full px-3 py-2 text-xs text-left flex items-center gap-2 hover:bg-slate-50"
+                            >
+                              <Mail className="w-3.5 h-3.5" /> Send Invite
+                            </button>
+                            <button
+                              onClick={() => { generateQR(guest.id); setOpenMenuGuestId(null); }}
+                              disabled={generatingQR === guest.id}
+                              className="w-full px-3 py-2 text-xs text-left flex items-center gap-2 hover:bg-slate-50"
+                            >
+                              {generatingQR === guest.id ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <QrCode className="w-3.5 h-3.5" />} QR Code
+                            </button>
+                            <button
+                              onClick={() => { startEdit(guest); setOpenMenuGuestId(null); }}
+                              className="w-full px-3 py-2 text-xs text-left flex items-center gap-2 hover:bg-slate-50"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" /> Edit
+                            </button>
+                            <button
+                              onClick={() => { setDeleteConfirm(guest.id); setOpenMenuGuestId(null); }}
+                              className="w-full px-3 py-2 text-xs text-left flex items-center gap-2 hover:bg-slate-50 text-red-600"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

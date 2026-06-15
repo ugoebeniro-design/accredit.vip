@@ -50,7 +50,7 @@ def is_valid_phone(value: str | None) -> bool:
     if not value:
         return False
     compact = re.sub(r"[\s().-]", "", value)
-    return bool(re.fullmatch(r"\+?[1-9]\d{7,14}", compact))
+    return bool(re.fullmatch(r"\+?\d{7,15}", compact))
 
 
 async def _send_whatsapp(to: str, message: str, media_url: str | None = None) -> tuple[bool, str | None]:
@@ -157,7 +157,7 @@ def _build_invite_message(
     if flyer_url:
         absolute_flyer = _absolute_url(flyer_url)
         if absolute_flyer:
-            flyer_html = f'<img src="{absolute_flyer}" alt="{event.title}" style="width:100%;max-width:600px;display:block;border-radius:0" />'
+            flyer_html = f'<img src="{absolute_flyer}" alt="{event.title}" style="width:100%;max-width:600px;max-height:400px;height:auto;display:block;border-radius:0" />'
     host_section = f'<p style="margin:0 0 4px;font-size:14px;font-weight:bold;color:#fff">Hosted by {event.host_name}</p>' if event.host_name else ''
 
     # Build dress code section with header if any dress codes exist
@@ -231,9 +231,9 @@ async def _send_to_guest(
     flyer = flyer_result.scalar_one_or_none()
     flyer_url = flyer.url if flyer else event.cover_image
 
-    # Generate styled QR with embedded image for WhatsApp/SMS
+    # Generate styled QR with embedded image
     qr_image_url = None
-    if flyer_url and channel in ("whatsapp", "sms"):
+    if flyer_url:
         try:
             qr_image_path = _upload_path_from_url(flyer_url)
             if qr_image_path and os.path.exists(qr_image_path):

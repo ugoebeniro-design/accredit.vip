@@ -57,10 +57,10 @@ function guestLimitFromRange(value?: string | null) {
 }
 
 function isValidPhone(value?: string | null) {
-  if (!value) return false;
-  const compact = value.replace(/[\s().-]/g, "");
-  return /^\+?[1-9]\d{7,14}$/.test(compact);
-}
+    if (!value) return false;
+    const compact = value.replace(/[\s().-]/g, "");
+    return /^\+?\d{7,15}$/.test(compact);
+  }
 
 function EventDetailContent() {
   const { id } = useParams<{ id: string }>();
