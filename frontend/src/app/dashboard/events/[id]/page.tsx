@@ -382,6 +382,7 @@ function EventDetailContent() {
         method: "POST", body,
       });
       setSendResult(res);
+      showToast("Invites sent successfully");
       loadLogs();
       loadGuests();
     } catch (err: any) {
@@ -395,7 +396,9 @@ function EventDetailContent() {
         });
         setSendError("Payment required to re-send invites.");
       } else {
-        setSendError(typeof detail === "string" ? detail : "Could not send invites.");
+        const errMsg = typeof detail === "string" ? detail : "Could not send invites.";
+        setSendError(errMsg);
+        showToast(errMsg, "error");
       }
     }
     setSending(false);
@@ -408,6 +411,9 @@ function EventDetailContent() {
       const res = await apiClient<any>(`/events/${id}/guests/${guestId}/send-invite?force=true`, { method: "POST", body: { channels } });
       if (res.channels?.some((c: any) => c.status === "max_attempts")) {
         setSendError("Maximum invite attempts reached for some channels.");
+        showToast("Maximum invite attempts reached", "error");
+      } else {
+        showToast("Invite sent successfully");
       }
       loadGuests();
     } catch (err: any) {
@@ -438,7 +444,9 @@ function EventDetailContent() {
           },
         });
       } else {
-        setSendError(typeof detail === "string" ? detail : "Could not send invite.");
+        const errMsg = typeof detail === "string" ? detail : "Could not send invite.";
+        setSendError(errMsg);
+        showToast(errMsg, "error");
       }
     }
   };
@@ -691,7 +699,7 @@ function EventDetailContent() {
                     <div className="flex flex-col gap-4">
                       {fliers.map((f) => (
                         <div key={f.id} className="rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative group">
-                          <img src={f.url} alt="Event flier" className="w-full object-contain bg-slate-100" />
+                          <img src={f.url} alt="Event flier" className="w-full object-contain max-h-64 bg-slate-100" />
                           <button
                             onClick={() => deleteFlier(f.id)}
                             className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
@@ -948,7 +956,7 @@ function EventDetailContent() {
                     <div className="flex flex-col gap-4">
                       {fliers.map((f) => (
                         <div key={f.id} className="rounded-lg overflow-hidden border border-slate-200 shadow-sm relative group">
-                          <img src={f.url} alt="Flier" className="w-full object-contain bg-slate-100" />
+                          <img src={f.url} alt="Flier" className="w-full object-contain max-h-64 bg-slate-100" />
                           <button
                             onClick={() => deleteFlier(f.id)}
                             className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
