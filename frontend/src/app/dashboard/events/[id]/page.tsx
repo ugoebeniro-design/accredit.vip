@@ -9,6 +9,7 @@ import { initiatePayment } from "@/lib/api/payments";
 import { EventDetailSkeleton } from "@/components/shared/loading-skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { Toast } from "@/components/shared/toast";
 import Link from "next/link";
 import { AlertTriangle, BarChart3, Users, Mail, Settings, Share2, Loader, HelpCircle, Bell, Ticket, Copy, Edit2, Zap } from "lucide-react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
@@ -84,6 +85,9 @@ function EventDetailContent() {
   const [csvResult, setCsvResult] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleting, setDeleting] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
   const [editingGuest, setEditingGuest] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
@@ -111,7 +115,7 @@ function EventDetailContent() {
   const [checkinStats, setCheckinStats] = useState<{ checked_in: number; rsvp_accepted: number; total_guests: number; recent_checkins: any[] } | null>(null);
   const [accreditationLog, setAccreditationLog] = useState<{ attempts: any[]; suspicious_count: number } | null>(null);
   const [showAccreditationLog, setShowAccreditationLog] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -265,10 +269,16 @@ function EventDetailContent() {
     setFlierUploading(false);
   };
 
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
+
   const addGuest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (guestLimit !== null && totalGuests >= guestLimit) {
-      setCsvResult(`Guest limit reached. This event allows up to ${guestLimit} guests.`);
+      showToast(`Guest limit reached. This event allows up to ${guestLimit} guests.`, "error");
       return;
     }
     try {
@@ -277,11 +287,12 @@ function EventDetailContent() {
         body: { name: guestName, phone: guestPhone || null, email: guestEmail || null },
       });
       setGuestName(""); setGuestPhone(""); setGuestEmail("");
+      showToast(`${guestName} added successfully`);
       loadGuests();
       loadRsvpStats();
       loadCheckinStats();
     } catch (err) {
-      setCsvResult(err instanceof Error ? err.message : "Could not add guest.");
+      showToast(err instanceof Error ? err.message : "Could not add guest.", "error");
     }
   };
 
@@ -302,12 +313,12 @@ function EventDetailContent() {
         const detail = typeof data.detail === "string" ? data.detail : "Upload failed";
         throw new Error(detail);
       }
-      setCsvResult(`Imported ${data.imported} guests`);
+      showToast(`Imported ${data.imported} guests`);
       setCsvFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       loadGuests(); loadRsvpStats();
     } catch (err) {
-      setCsvResult(err instanceof Error ? err.message : "Upload failed. Check CSV format (name, phone, email columns).");
+      showToast(err instanceof Error ? err.message : "Upload failed. Check CSV format (name, phone, email columns).", "error");
     }
     setCsvUploading(false);
   };
@@ -518,9 +529,14 @@ function EventDetailContent() {
 
   const handleDeleteGuest = async (guestId: number) => {
     try {
+      const deletedGuest = guests.find((g) => g.id === guestId);
       await apiClient(`/events/${id}/guests/${guestId}`, { method: "DELETE" });
-      setDeleteConfirm(null); loadGuests(); loadRsvpStats();
-    } catch {}
+      setDeleteConfirm(null);
+      showToast(`${deletedGuest?.name || "Guest"} deleted successfully`);
+      loadGuests(); loadRsvpStats();
+    } catch {
+      showToast("Could not delete guest. They may have existing invites or payments.", "error");
+    }
   };
 
   if (loading || !user) return null;
@@ -565,7 +581,7 @@ function EventDetailContent() {
     return (
       <button
         key={t.id}
-        onClick={() => setActiveTab(t.id)}
+        onClick={() => { setActiveTab(t.id); router.replace(`/dashboard/events/${id}?tab=${t.id}`, { scroll: false }); }}
         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
           isActive
             ? "bg-slate-900 text-white shadow-md"
@@ -913,6 +929,12 @@ function EventDetailContent() {
         confirmLabel="Yes, proceed"
         onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
         onCancel={() => setConfirmDialog(null)}
+      />
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        visible={toastVisible}
+        onClose={() => setToastVisible(false)}
       />
     </div>
   );

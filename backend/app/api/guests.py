@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func, and_
+from sqlalchemy import select, text, or_, func, and_
 from pydantic import BaseModel
 import csv
 import io
@@ -214,6 +214,10 @@ async def delete_guest(
     guest = g_result.scalar_one_or_none()
     if not guest:
         raise HTTPException(status_code=404, detail="Guest not found")
+
+    # Delete related records to avoid FK violations
+    for table in ("invite_messages", "qr_codes", "checkins", "scan_attempts", "payments"):
+        await db.execute(text(f"DELETE FROM {table} WHERE guest_id = :gid"), {"gid": guest_id})
 
     await db.delete(guest)
     await db.commit()

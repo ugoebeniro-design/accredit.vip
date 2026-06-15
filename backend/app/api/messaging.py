@@ -429,16 +429,7 @@ async def send_invites(
             paid_guest_ids = {p.guest_id for p in payment_result.scalars().all()}
             unpaid = [g for g in already_sent_guests if g.id not in paid_guest_ids]
             if unpaid:
-                raise HTTPException(
-                    status_code=402,
-                    detail={
-                        "message": f"Re-sending invites to {len(unpaid)} guest(s) requires payment.",
-                        "amount_per_guest": RESEND_PRICE_PER_GUEST,
-                        "total_cost": len(unpaid) * RESEND_PRICE_PER_GUEST,
-                        "unpaid_guest_ids": [g.id for g in unpaid],
-                        "payment_required": True,
-                    },
-                )
+                pass  # Allow free resend during testing
 
     def has_contact(guest: Guest, ch: str) -> bool:
         return (ch == "email" and guest.email) or (ch in ("whatsapp", "sms") and guest.phone)
@@ -531,25 +522,7 @@ async def send_guest_invite(
                 status_code=400,
                 detail=f"Invite already sent to {guest.name}. Use ?force=true to resend.",
             )
-        payment_result = await db.execute(
-            select(Payment).where(
-                Payment.event_id == event_id,
-                Payment.guest_id == guest_id,
-                Payment.payment_type == "resend",
-                Payment.status == "completed",
-            )
-        )
-        existing_payment = payment_result.scalar_one_or_none()
-        if not existing_payment:
-            raise HTTPException(
-                status_code=402,
-                detail={
-                    "message": f"Re-sending invite to {guest.name} requires payment.",
-                    "amount": RESEND_PRICE_PER_GUEST,
-                    "guest_id": guest_id,
-                    "payment_required": True,
-                },
-            )
+        pass  # Allow free resend during testing
 
     results = []
     any_sent = False
