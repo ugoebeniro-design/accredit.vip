@@ -108,6 +108,9 @@ function EventDetailContent() {
   const [selectedGuestIds, setSelectedGuestIds] = useState<number[]>([]);
   const [exporting, setExporting] = useState(false);
   const [exportStatus, setExportStatus] = useState("all");
+  const [exportMsgStatus, setExportMsgStatus] = useState("all");
+  const [exportMsgChannel, setExportMsgChannel] = useState("all");
+  const [exportingMsg, setExportingMsg] = useState(false);
   const [publishChannel, setPublishChannel] = useState("email");
   const [publishing, setPublishing] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
@@ -545,6 +548,26 @@ function EventDetailContent() {
     setExporting(false);
   };
 
+  const exportMessages = async () => {
+    setExportingMsg(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+      const res = await fetch(`${baseUrl}/events/${id}/export-messages?status=${exportMsgStatus}&channel=${exportMsgChannel}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `messages-event-${id}-${exportMsgStatus}-${exportMsgChannel}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+    setExportingMsg(false);
+  };
+
   const pageCount = Math.ceil(totalGuests / 10);
   const goToPage = (page: number) => {
     if (page < 0 || page >= pageCount) return;
@@ -890,6 +913,10 @@ function EventDetailContent() {
                 currentPage={currentPage}
                 pageCount={pageCount}
                 goToPage={goToPage}
+                exporting={exporting}
+                exportStatus={exportStatus}
+                setExportStatus={setExportStatus}
+                exportGuests={exportGuests}
               />
             )}
 
@@ -908,6 +935,12 @@ function EventDetailContent() {
                 invalidPhoneGuests={invalidPhoneGuests}
                 guestsWithMissingContact={guestsWithMissingContact}
                 guestCountRange={event.guest_count_range}
+                exportingMsg={exportingMsg}
+                exportMsgStatus={exportMsgStatus}
+                setExportMsgStatus={setExportMsgStatus}
+                exportMsgChannel={exportMsgChannel}
+                setExportMsgChannel={setExportMsgChannel}
+                exportMessages={exportMessages}
               />
             )}
 

@@ -1,10 +1,13 @@
 import qrcode
 from io import BytesIO
 import base64
+import logging
 from PIL import Image, ImageDraw
 import io
 import os
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 def generate_qr_code(data: str, size: int = 200) -> Image.Image:
@@ -56,8 +59,8 @@ def generate_image_qr_with_overlay(data: str, image_path: str | None = None, siz
         try:
             overlay = Image.open(image_path)
             qr_img = overlay_image_on_qr(qr_img, overlay)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to overlay image on QR: {e}")
 
     if qr_img.mode != "RGB":
         qr_img = qr_img.convert("RGB")
@@ -87,7 +90,8 @@ def qr_to_url(data: str, image_path: str | None = None, size: int = 200) -> str 
         with open(filepath, "wb") as f:
             f.write(png_bytes)
         return f"/uploads/qrs/{filename}"
-    except Exception:
+    except Exception as e:
+        logger.error(f"Failed to generate QR URL: {e}")
         return None
 
 
@@ -107,5 +111,6 @@ def styled_qr_to_url(data: str, image_data: bytes | None = None, size: int = 250
         with open(filepath, "wb") as f:
             f.write(png_bytes)
         return f"/uploads/qrs/{filename}"
-    except Exception:
+    except Exception as e:
+        logger.error(f"Failed to generate styled QR URL: {e}")
         return None

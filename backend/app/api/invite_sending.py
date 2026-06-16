@@ -77,6 +77,11 @@ async def send_invites(
                 if channel == "email":
                     rsvp_link = f"{settings.FRONTEND_URL}/rsvp/{guest.rsvp_token}"
 
+                    # Create InviteMessage record for tracking
+                    msg = InviteMessage(batch_id=batch.id, guest_id=guest.id, channel="email")
+                    db.add(msg)
+                    await db.flush()
+
                     # Read cover image if available
                     image_data = None
                     if event.cover_image:
@@ -88,7 +93,7 @@ async def send_invites(
                         except Exception as e:
                             print(f"Warning: Failed to read cover image: {e}")
 
-                    await send_guest_invitation(
+                    ok = await send_guest_invitation(
                         guest_email=guest.email,
                         guest_name=guest.name,
                         event_title=event.title,
@@ -102,14 +107,21 @@ async def send_invites(
                         male_dress_code=event.male_dress_code,
                         female_dress_code=event.female_dress_code,
                         image_data=image_data,
+                        message_id=msg.id,
                     )
+                    if ok:
+                        msg.status = "delivered"
+                        msg.sent_at = func.now()
+                    else:
+                        msg.status = "failed"
+                        msg.error = "Email send returned failure"
                     guest.invite_sent = True
                     guest.invite_attempts += 1
                     invites_sent += 1
                     send_results.append({
                         "guest_id": guest.id,
                         "channel": channel,
-                        "status": "sent",
+                        "status": msg.status,
                     })
                 else:
                     ok, status = await _send_to_guest(guest, event, channel, batch.id, db)

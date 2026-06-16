@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
-import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check } from "lucide-react";
+import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check, Download } from "lucide-react";
 
 type Guest = {
   id: number;
@@ -75,6 +75,10 @@ type GuestsTabContentProps = {
   currentPage: number;
   pageCount: number;
   goToPage: (page: number) => void;
+  exporting?: boolean;
+  exportStatus?: string;
+  setExportStatus?: (v: string) => void;
+  exportGuests?: () => Promise<void>;
 };
 
 export default function GuestsTabContent({
@@ -122,6 +126,10 @@ export default function GuestsTabContent({
   currentPage,
   pageCount,
   goToPage,
+  exporting,
+  exportStatus = "all",
+  setExportStatus,
+  exportGuests,
 }: GuestsTabContentProps) {
   const localFileRef = useRef<HTMLInputElement | null>(null);
   const resolvedFileRef = fileInputRef ?? localFileRef;
@@ -364,6 +372,35 @@ export default function GuestsTabContent({
           </Button>
         </div>
         {csvResult && <p className="text-sm text-emerald-600 font-medium mt-2">{csvResult}</p>}
+      </div>
+
+      {/* CSV Export Section */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <Download className="w-5 h-5" />
+          Export Guests
+        </h2>
+        <div className="flex gap-2 flex-wrap">
+          <select
+            value={exportStatus}
+            onChange={(e) => setExportStatus?.(e.target.value)}
+            className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          >
+            <option value="all">All Guests</option>
+            <option value="sent">Invite Sent</option>
+            <option value="delivered">Delivered</option>
+            <option value="failed">Failed</option>
+            <option value="not_sent">Not Sent</option>
+          </select>
+          <Button
+            onClick={exportGuests}
+            disabled={exporting}
+            className="h-10 px-4 font-medium bg-slate-900 hover:bg-slate-800 text-white"
+          >
+            {exporting ? <Loader className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {exporting ? "Exporting..." : "Export CSV"}
+          </Button>
+        </div>
       </div>
 
       {/* Guest Management */}

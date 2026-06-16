@@ -2,9 +2,11 @@
 
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel
+import io
 
 from app.core.database import get_db, async_session
 from app.core.config import settings
@@ -18,6 +20,7 @@ from app.services.sms_service import send_sms
 from app.services.whatsapp_service import send_whatsapp
 from app.services.whatsapp_cloud_service import send_whatsapp_cloud
 from app.services.qr_service import qr_to_url
+from app.services.banner_generator import generate_animated_logo_gif
 
 router = APIRouter()
 
@@ -203,3 +206,18 @@ async def submit_rsvp(
         "response": response_lower,
         "message": "Your attendance has been recorded" if response_lower == "yes" else "Your response has been recorded",
     }
+
+
+@router.get("/animated-logo")
+async def get_animated_logo():
+    """Serve the animated Accredit.vip logo with 'Create Your Event' CTA button."""
+    try:
+        gif_bytes = generate_animated_logo_gif(include_button=True)
+        return StreamingResponse(
+            io.BytesIO(gif_bytes),
+            media_type="image/gif",
+            headers={"Cache-Control": "public, max-age=3600"}
+        )
+    except Exception as e:
+        print(f"[Error] Failed to generate animated logo: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate animated logo")

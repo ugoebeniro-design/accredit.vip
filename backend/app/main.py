@@ -1,12 +1,7 @@
-import os, json, logging
+import os, logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from fastapi import FastAPI, Request, Depends, HTTPException
-from fastapi.responses import PlainTextResponse, StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from app.core.database import get_db
-from app.models.invite import InviteMessage
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -186,51 +181,3 @@ async def meta_webhook_verify(req: Request):
         return PlainTextResponse(challenge)
     raise HTTPException(status_code=403, detail="Verification failed")
 
-
-@app.post("/webhook")
-async def meta_webhook(req: Request, db: AsyncSession = Depends(get_db)):
-    """Meta WhatsApp Cloud API incoming messages and status updates."""
-    body = await req.json()
-    payload = json.dumps(body)
-
-    entry = body.get("entry", [])
-    for e in entry:
-        changes = e.get("changes", [])
-        for c in changes:
-            value = c.get("value", {})
-
-            for s in value.get("statuses", []):
-                message_id = s.get("id")
-                status = s.get("status")
-                if not message_id:
-                    continue
-                result = await db.execute(
-                    select(InviteMessage).where(
-                        InviteMessage.id == int(message_id)
-                        if message_id.isdigit()
-                        else InviteMessage.id == -1
-                    )
-                )
-                msg = result.scalar_one_or_none()
-                if msg:
-                    if status in ("delivered", "sent"):
-                        msg.delivered_at = datetime.now(timezone.utc)
-                    elif status == "read":
-                        msg.opened_at = datetime.now(timezone.utc)
-                    elif status == "failed":
-                        msg.status = "failed"
-                        msg.error = s.get("errors", [{}])[0].get("title", "Delivery failed")
-                    if status in ("delivered", "sent", "read"):
-                        msg.status = status
-                    msg.webhook_payload = payload[:500]
-                    await db.commit()
-
-            for m in value.get("messages", []):
-                from_number = m.get("from", "")
-                msg_type = m.get("type", "")
-                text_body = ""
-                if msg_type == "text":
-                    text_body = m.get("text", {}).get("body", "")
-                logger.info(f"Incoming WhatsApp from {from_number}: {text_body[:100]}")
-
-    return {"status": "ok"}

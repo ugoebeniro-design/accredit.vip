@@ -45,9 +45,7 @@ async def whatsapp_webhook(req: Request, db: AsyncSession = Depends(get_db)):
                     continue
                 result = await db.execute(
                     select(InviteMessage).where(
-                        InviteMessage.id == int(message_id)
-                        if message_id.isdigit()
-                        else InviteMessage.id == -1
+                        InviteMessage.provider_message_id == message_id
                     )
                 )
                 msg = result.scalar_one_or_none()

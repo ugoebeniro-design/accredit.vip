@@ -6,7 +6,7 @@ from typing import Optional
 from app.core.config import settings
 from app.services.email_service import send_email
 from app.services.qr_generator import generate_styled_qr
-from app.services.banner_generator import generate_animated_banner_gif
+from app.services.banner_generator import generate_animated_banner_gif, generate_animated_logo_gif
 import base64
 
 async def send_payment_confirmation(
@@ -132,6 +132,7 @@ async def send_guest_invitation(
     male_dress_code: Optional[str] = None,
     female_dress_code: Optional[str] = None,
     image_data: Optional[bytes] = None,
+    message_id: Optional[int] = None,
 ):
     """Send invitation email to guest with RSVP link."""
     from datetime import datetime as _dt
@@ -193,6 +194,19 @@ async def send_guest_invitation(
         except Exception as e:
             print(f"Warning: Failed to generate QR code for email: {e}")
 
+    # Generate and embed animated logo as base64
+    animated_logo_html = ""
+    try:
+        logo_gif_bytes = generate_animated_logo_gif()
+        logo_base64 = base64.b64encode(logo_gif_bytes).decode('utf-8')
+        animated_logo_html = f'''
+                <div style="text-align: center; margin: 20px 0;">
+                    <img src="data:image/gif;base64,{logo_base64}" alt="Accredit.vip" style="width: 100%; max-width: 500px; height: auto; display: block; margin: 0 auto;">
+                </div>
+        '''
+    except Exception as e:
+        print(f"Warning: Failed to generate animated logo: {e}")
+
     # Generate and embed animated banner as base64
     banner_html = ""
     try:
@@ -229,7 +243,9 @@ async def send_guest_invitation(
         </head>
         <body>
             <div class="container">
-                <div style="background: linear-gradient(135deg, #E91E8C 0%, #C4166F 50%, #E91E8C 100%); padding: 32px 24px; text-align: center; border-radius: 12px; margin-bottom: 20px;">
+                {animated_logo_html}
+
+                <div style="background: linear-gradient(135deg, #E91E8C 0%, #C4166F 50%, #E91E8C 100%); padding: 32px 24px; text-align: center; border-radius: 12px; margin-bottom: 20px; margin-top: 20px;">
                     <div style="margin-bottom: 12px;">
                         <p style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: 1px; font-family: Arial, sans-serif;">Join accredit.vip</p>
                         <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 500;">Premium Event Infrastructure</p>
@@ -309,6 +325,6 @@ async def send_guest_invitation(
             </div>
         </body>
     </html>
-    """
+    """ + tracking_pixel
 
     return await send_email(guest_email, f"You're Invited to {event_title}!", html_content)

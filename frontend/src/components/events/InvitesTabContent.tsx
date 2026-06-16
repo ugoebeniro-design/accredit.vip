@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Send, AlertCircle, Lightbulb, CheckCircle, AlertTriangle, Loader, Mail, MessageSquare, Smartphone } from "lucide-react";
+import { Send, AlertCircle, Lightbulb, CheckCircle, AlertTriangle, Loader, Mail, MessageSquare, Smartphone, Download } from "lucide-react";
 
 type Guest = {
   id: number;
@@ -35,6 +35,12 @@ type InvitesTabContentProps = {
   invalidPhoneGuests: Guest[];
   guestsWithMissingContact: Guest[];
   guestCountRange?: string | null;
+  exportingMsg?: boolean;
+  exportMsgStatus?: string;
+  setExportMsgStatus?: (v: string) => void;
+  exportMsgChannel?: string;
+  setExportMsgChannel?: (v: string) => void;
+  exportMessages?: () => Promise<void>;
 };
 
 const CHANNEL_OPTIONS = [
@@ -77,6 +83,12 @@ export default function InvitesTabContent({
   invalidPhoneGuests,
   guestsWithMissingContact,
   guestCountRange,
+  exportingMsg,
+  exportMsgStatus = "all",
+  setExportMsgStatus,
+  exportMsgChannel = "all",
+  setExportMsgChannel,
+  exportMessages,
 }: InvitesTabContentProps) {
   const phoneSelected = channels.some((c) => c === "whatsapp" || c === "sms");
   const emailSelected = channels.includes("email");
@@ -329,6 +341,46 @@ export default function InvitesTabContent({
           </div>
         </div>
       )}
+
+      {/* Export Messages Section */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <Download className="w-5 h-5" />
+          Export Messages
+        </h2>
+        <div className="flex gap-2 flex-wrap">
+          <select
+            value={exportMsgStatus}
+            onChange={(e) => setExportMsgStatus?.(e.target.value)}
+            className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          >
+            <option value="all">All Statuses</option>
+            <option value="sent">Sent</option>
+            <option value="delivered">Delivered</option>
+            <option value="failed">Failed</option>
+            <option value="read">Read</option>
+            <option value="queued">Queued</option>
+          </select>
+          <select
+            value={exportMsgChannel}
+            onChange={(e) => setExportMsgChannel?.(e.target.value)}
+            className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          >
+            <option value="all">All Channels</option>
+            <option value="email">Email</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="sms">SMS</option>
+          </select>
+          <Button
+            onClick={exportMessages}
+            disabled={exportingMsg}
+            className="h-10 px-4 font-medium bg-slate-900 hover:bg-slate-800 text-white"
+          >
+            {exportingMsg ? <Loader className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {exportingMsg ? "Exporting..." : "Export CSV"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

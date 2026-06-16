@@ -241,7 +241,7 @@ async def _send_to_guest(
             if provider_id:
                 msg.provider_message_id = provider_id
             elif not ok:
-                msg.error = provider_id
+                msg.error = provider_id or "WhatsApp send failed (no error detail)"
         elif channel == "sms" and guest.phone:
             ok = await send_sms(guest.phone, body)
         else:
@@ -332,7 +332,7 @@ async def _send_qr_to_guest(
             if provider_id:
                 msg.provider_message_id = provider_id
             elif not ok:
-                msg.error = provider_id
+                msg.error = provider_id or "WhatsApp send failed (no error detail)"
         elif channel == "sms" and guest.phone:
             ok = await send_sms(guest.phone, body)
         else:
@@ -801,6 +801,59 @@ async def export_guests(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=guests-event-{event_id}-{status}.csv"},
+    )
+
+
+@router.get("/{event_id}/export-messages")
+async def export_messages(
+    event_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    status: str = Query("all", description="Filter: all, sent, delivered, failed, queued, read"),
+    channel: str = Query("all", description="Filter: all, email, whatsapp, sms"),
+):
+    """Export invite messages with delivery status as CSV."""
+    event_result = await db.execute(
+        select(Event).where(Event.id == event_id, Event.organizer_id == user.id)
+    )
+    if not event_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    query = (
+        select(InviteMessage)
+        .join(Guest, InviteMessage.guest_id == Guest.id)
+        .where(Guest.event_id == event_id)
+    )
+    if status != "all":
+        query = query.where(InviteMessage.status == status)
+    if channel != "all":
+        query = query.where(InviteMessage.channel == channel)
+    query = query.order_by(InviteMessage.created_at.desc())
+
+    result = await db.execute(query)
+    messages = result.scalars().all()
+
+    import csv, io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Guest ID", "Channel", "Status", "Sent At", "Delivered At", "Opened At", "Error", "Provider Message ID", "Created At"])
+    for m in messages:
+        writer.writerow([
+            m.id, m.guest_id, m.channel, m.status,
+            m.sent_at.isoformat() if m.sent_at else "",
+            m.delivered_at.isoformat() if m.delivered_at else "",
+            m.opened_at.isoformat() if m.opened_at else "",
+            m.error or "",
+            m.provider_message_id or "",
+            m.created_at.isoformat() if m.created_at else "",
+        ])
+
+    from fastapi.responses import StreamingResponse
+    filename = f"messages-event-{event_id}-{status}-{channel}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 

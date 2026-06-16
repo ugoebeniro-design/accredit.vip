@@ -173,6 +173,16 @@ export default function RSVPPage() {
       </div>
 
       <div className="relative max-w-lg mx-auto px-4 py-8">
+        {/* Animated Logo with CTA */}
+        <div className="mb-6 flex justify-center motion-pop">
+          <img
+            src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/rsvp/animated-logo`}
+            alt="Accredit.vip"
+            className="w-full max-w-sm h-auto"
+            loading="eager"
+          />
+        </div>
+
         <div className="rounded-2xl bg-white border border-[#e8edf2] shadow-lg overflow-hidden motion-pop">
           {/* Flyer image */}
           {rsvpData.cover_image && (
