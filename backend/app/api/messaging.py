@@ -23,7 +23,6 @@ from app.services.sms_service import send_sms
 from app.services.whatsapp_service import send_whatsapp
 from app.services.whatsapp_cloud_service import send_whatsapp_cloud
 from app.services.qr_service import qr_to_url, styled_qr_to_url
-from app.services.qr_generator import generate_styled_qr
 
 RESEND_PRICE_PER_GUEST = 500  # NGN per guest for re-sending
 
@@ -210,7 +209,7 @@ def _build_invite_message(
     return subject, body, html
 
 
-MAX_INVITE_ATTEMPTS = 3
+MAX_INVITE_ATTEMPTS = 999
 
 
 async def _send_to_guest(
@@ -224,56 +223,28 @@ async def _send_to_guest(
         return False, "max_attempts"
 
     guest.invite_attempts += 1
-    qr = await get_or_create_guest_qr(db, event.id, guest.id)
-    qr_token_url = f"{settings.FRONTEND_URL}/qr/{qr.token}"
 
     flyer_result = await db.execute(select(FlierAsset).where(FlierAsset.event_id == event.id).order_by(FlierAsset.created_at.desc()))
     flyer = flyer_result.scalar_one_or_none()
     flyer_url = flyer.url if flyer else event.cover_image
 
-    # Generate styled QR with embedded image
-    qr_image_url = None
-    if flyer_url:
-        try:
-            qr_image_path = _upload_path_from_url(flyer_url)
-            if qr_image_path and os.path.exists(qr_image_path):
-                with open(qr_image_path, 'rb') as f:
-                    image_data = f.read()
-                styled_qr_url = styled_qr_to_url(
-                    qr_token_url,
-                    image_data=image_data,
-                    size=250
-                )
-                if styled_qr_url:
-                    qr_image_url = styled_qr_url
-        except Exception as e:
-            print(f"Warning: Failed to generate styled QR: {e}")
-
-    # Fallback to old QR if styled generation failed
-    if not qr_image_url:
-        qr_image_path = _upload_path_from_url(flyer_url) if flyer_url else None
-        qr_image_url = qr_to_url(qr_token_url, image_path=qr_image_path, size=250)
-
     msg = InviteMessage(batch_id=batch_id, guest_id=guest.id, channel=channel)
     db.add(msg)
     await db.flush()
 
-    subject, body, html = _build_invite_message(guest, event, qr_url=qr_token_url, flyer_url=flyer_url, qr_image_url=qr_image_url, message_id=msg.id)
+    subject, body, html = _build_invite_message(guest, event, flyer_url=flyer_url, message_id=msg.id)
 
     try:
         if channel == "email" and guest.email:
             from_addr = f"{(event.host_name or 'Accredit.vip')} via Accredit.vip <noreply@wristbandsng.com>"
             ok = await asyncio.wait_for(send_email(guest.email, subject, html, from_addr=from_addr), timeout=15)
         elif channel == "whatsapp" and guest.phone:
-            media_to_send = _absolute_url(flyer_url) or _absolute_url(qr_image_url)
+            media_to_send = _absolute_url(flyer_url) if flyer_url else None
             ok, provider_id = await _send_whatsapp(guest.phone, body, media_url=media_to_send)
             if provider_id:
                 msg.provider_message_id = provider_id
             elif not ok:
                 msg.error = provider_id
-            qr_abs = _absolute_url(qr_image_url)
-            if not ok and qr_abs and qr_abs != media_to_send:
-                await _send_whatsapp(guest.phone, "Your entry QR code is ready!", media_url=qr_abs)
         elif channel == "sms" and guest.phone:
             ok = await send_sms(guest.phone, body)
         else:
