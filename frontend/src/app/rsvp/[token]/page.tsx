@@ -112,22 +112,16 @@ export default function RSVPPage() {
 
   if (submitted) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4" style={{ background: submittedResponse === "yes" ? `linear-gradient(to bottom right, ${themeColor}08, ${themeColor}04)` : "linear-gradient(to bottom right, #fef2f2, #fef2f2)" }}>
-        <div className="max-w-md w-full rounded-2xl bg-white p-8 text-center shadow-lg" style={{ borderColor: submittedResponse === "yes" ? `${themeColor}30` : "#fecdd3" }}>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: submittedResponse === "yes" ? `${themeColor}15` : "#fef2f2" }}>
-            {submittedResponse === "yes" ? (
-              <svg className="h-8 w-8" fill="none" stroke={themeColor} strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg className="h-8 w-8 text-[#dc2626]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            )}
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#f0fdf4] to-[#ecfdf5] px-4">
+        <div className="max-w-md w-full rounded-2xl bg-white p-8 border border-[#d1fae5] text-center shadow-lg">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#f0fdf4]">
+            <svg className="h-8 w-8 text-[#10b981]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
           </div>
           {submittedResponse === "yes" ? (
             <>
-              <h1 className="text-2xl font-bold" style={{ color: themeColor }}>You&apos;re Confirmed</h1>
+              <h1 className="text-2xl font-bold text-[#0D1B2A]">You&apos;re Confirmed</h1>
               <p className="mt-2 text-[#64748b] leading-relaxed">
                 Thank you, {guestName || rsvpData?.guest_name || "Guest"}. Your attendance has been recorded.
               </p>
@@ -137,7 +131,7 @@ export default function RSVPPage() {
             </>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-[#dc2626]">Response Recorded</h1>
+              <h1 className="text-2xl font-bold text-[#0D1B2A]">Response Recorded</h1>
               <p className="mt-2 text-[#64748b] leading-relaxed">
                 Thank you, {guestName || rsvpData?.guest_name || "Guest"}. Your response has been received and noted.
               </p>
@@ -173,16 +167,6 @@ export default function RSVPPage() {
       </div>
 
       <div className="relative max-w-lg mx-auto px-4 py-8">
-        {/* Animated Logo with CTA */}
-        <div className="mb-6 flex justify-center motion-pop">
-          <img
-            src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/rsvp/animated-logo`}
-            alt="Accredit.vip"
-            className="w-full max-w-sm h-auto"
-            loading="eager"
-          />
-        </div>
-
         <div className="rounded-2xl bg-white border border-[#e8edf2] shadow-lg overflow-hidden motion-pop">
           {/* Flyer image */}
           {rsvpData.cover_image && (
@@ -243,8 +227,7 @@ export default function RSVPPage() {
                 <button
                   onClick={() => submitRsvp("yes")}
                   disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base text-white shadow-md hover:scale-[1.02] transition-all disabled:opacity-60"
-                  style={{ backgroundColor: themeColor }}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.3)] hover:shadow-[0_6px_16px_rgba(22,163,74,0.45)] hover:scale-[1.02] transition-all disabled:opacity-60"
                 >
                   <Check className="w-5 h-5" />
                   {submitting ? "Submitting..." : "Yes, I'll Attend"}
