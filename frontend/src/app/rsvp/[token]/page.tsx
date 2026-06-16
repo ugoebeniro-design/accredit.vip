@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Calendar, Clock, MapPin, Check, X, MessageSquare } from "lucide-react";
+import { Calendar, Clock, MapPin, Check, X } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
 interface RSVPData {
@@ -41,10 +41,9 @@ export default function RSVPPage() {
   const [rsvpData, setRsvpData] = useState<RSVPData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [response, setResponse] = useState<"yes" | "no" | null>(null);
-  const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedResponse, setSubmittedResponse] = useState<"yes" | "no">("yes");
 
   useEffect(() => {
     const loadRsvpData = async () => {
@@ -60,15 +59,15 @@ export default function RSVPPage() {
     if (token) loadRsvpData();
   }, [token]);
 
-  const handleSubmit = async () => {
-    if (!response) return;
+  const submitRsvp = async (selected: "yes" | "no") => {
     setSubmitting(true);
     setError("");
     try {
       await apiClient(`/rsvp/${token}`, {
         method: "POST",
-        body: { response, note },
+        body: { response: selected },
       });
+      setSubmittedResponse(selected);
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit RSVP");
@@ -118,7 +117,7 @@ export default function RSVPPage() {
           </div>
           <h1 className="text-2xl font-bold text-[#0D1B2A]">Thank You!</h1>
           <p className="mt-2 text-[#64748b]">
-            Your response has been recorded. {response === "yes" ? "See you at the event!" : "We'll miss you!"}
+            Your response has been recorded. {submittedResponse === "yes" ? "See you at the event!" : "We'll miss you!"}
           </p>
         </div>
       </div>
@@ -204,69 +203,24 @@ export default function RSVPPage() {
               )}
 
               <div className="space-y-3">
-                {/* Yes button */}
-                <div className="flex flex-col items-center">
-                  <button
-                    onClick={() => setResponse(response === "yes" ? null : "yes")}
-                    disabled={response === "no"}
-                    className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base transition-all ${
-                      response === "yes"
-                        ? "bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.4)] scale-[1.02]"
-                        : response === "no"
-                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.3)] hover:shadow-[0_6px_16px_rgba(22,163,74,0.45)] hover:scale-[1.02]"
-                    }`}
-                  >
-                    <Check className="w-5 h-5" />
-                    Yes, I&apos;ll Attend
-                  </button>
-                </div>
+                <button
+                  onClick={() => submitRsvp("yes")}
+                  disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.3)] hover:shadow-[0_6px_16px_rgba(22,163,74,0.45)] hover:scale-[1.02] transition-all disabled:opacity-60"
+                >
+                  <Check className="w-5 h-5" />
+                  {submitting ? "Submitting..." : "Yes, I'll Attend"}
+                </button>
 
-                {/* No button */}
-                <div className="flex flex-col items-center">
-                  <button
-                    onClick={() => setResponse(response === "no" ? null : "no")}
-                    disabled={response === "yes"}
-                    className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base transition-all ${
-                      response === "no"
-                        ? "bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(220,38,38,0.4)] scale-[1.02]"
-                        : response === "yes"
-                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(220,38,38,0.3)] hover:shadow-[0_6px_16px_rgba(220,38,38,0.45)] hover:scale-[1.02]"
-                    }`}
-                  >
-                    <X className="w-5 h-5" />
-                    Sorry, Can&apos;t Attend
-                  </button>
-                </div>
+                <button
+                  onClick={() => submitRsvp("no")}
+                  disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(220,38,38,0.3)] hover:shadow-[0_6px_16px_rgba(220,38,38,0.45)] hover:scale-[1.02] transition-all disabled:opacity-60"
+                >
+                  <X className="w-5 h-5" />
+                  {submitting ? "Submitting..." : "Sorry, Can't Attend"}
+                </button>
               </div>
-
-              {response === "no" && (
-                <div className="mt-4">
-                  <label className="flex items-center gap-2 text-sm font-semibold text-[#64748b] mb-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Let us know why (optional)
-                  </label>
-                  <textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="Share your reason..."
-                    rows={3}
-                    className="w-full rounded-xl border border-[#e8edf2] px-4 py-3 text-sm text-[#0D1B2A] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E91E8C] resize-none"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Submit */}
-            <div className="flex flex-col items-center motion-rise" style={{ animationDelay: "0.4s" }}>
-              <button
-                onClick={handleSubmit}
-                disabled={!response || submitting}
-                className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-[#E91E8C] to-[#C4166F] text-white font-bold text-base shadow-[0_4px_12px_rgba(233,30,140,0.4)] hover:shadow-[0_6px_16px_rgba(233,30,140,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {submitting ? "Submitting..." : "Submit Response"}
-              </button>
             </div>
           </div>
 
