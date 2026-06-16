@@ -318,17 +318,18 @@ function EventDetailContent() {
     setToastVisible(true);
   };
 
-  const addGuest = async (e: React.FormEvent) => {
+  const addGuest = async (e: React.FormEvent, customData?: Record<string, any>) => {
     e.preventDefault();
     if (guestLimit !== null && totalGuests >= guestLimit) {
       showToast(`Guest limit reached. This event allows up to ${guestLimit} guests.`, "error");
       return;
     }
     try {
-      await apiClient(`/events/${id}/guests`, {
-        method: "POST",
-        body: { name: guestName, phone: guestPhone || null, email: guestEmail || null },
-      });
+      const body: Record<string, any> = { name: guestName, phone: guestPhone || null, email: guestEmail || null };
+      if (customData && Object.keys(customData).length > 0) {
+        body.custom_data = customData;
+      }
+      await apiClient(`/events/${id}/guests`, { method: "POST", body });
       setGuestName(""); setGuestPhone(""); setGuestEmail("");
       showToast(`${guestName} added successfully`);
       loadGuests();
@@ -568,7 +569,7 @@ function EventDetailContent() {
     setEditEmail(guest.email || "");
   };
 
-  const saveEdit = async (guestId: number) => {
+  const saveEdit = async (guestId: number, customData?: Record<string, any>) => {
     if (!editName.trim()) {
       showToast("Guest name is required", "error");
       return;
@@ -583,9 +584,13 @@ function EventDetailContent() {
     }
     try {
       setSavingGuest(guestId);
+      const body: Record<string, any> = { name: editName, phone: editPhone || null, email: editEmail || null };
+      if (customData && Object.keys(customData).length > 0) {
+        body.custom_data = customData;
+      }
       await apiClient(`/events/${id}/guests/${guestId}`, {
         method: "PUT",
-        body: { name: editName, phone: editPhone || null, email: editEmail || null },
+        body,
       });
       showToast("Guest updated successfully");
       setEditingGuest(null);

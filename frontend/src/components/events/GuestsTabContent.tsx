@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { apiClient } from "@/lib/api-client";
 import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check } from "lucide-react";
 
 type Guest = {
@@ -16,6 +17,7 @@ type Guest = {
   invite_viewed_at?: string | null;
   tags?: string[];
   notes?: string;
+  custom_data?: Record<string, any>;
   communication_status?: Record<string, { status: string; sent_count: number; last_sent?: string }>;
 };
 
@@ -39,7 +41,7 @@ type GuestsTabContentProps = {
   setGuestPhone: (v: string) => void;
   guestEmail: string;
   setGuestEmail: (v: string) => void;
-  addGuest: (e: FormEvent) => Promise<void>;
+  addGuest: (e: FormEvent, customData?: Record<string, any>) => Promise<void>;
   csvFile: File | null;
   setCsvFile: (f: File | null) => void;
   csvUploading: boolean;
@@ -61,7 +63,7 @@ type GuestsTabContentProps = {
   setEditPhone: (v: string) => void;
   editEmail: string;
   setEditEmail: (v: string) => void;
-  saveEdit: (guestId: number) => Promise<void>;
+  saveEdit: (guestId: number, customData?: Record<string, any>) => Promise<void>;
   savingGuest: number | null;
   deleteConfirm: number | null;
   setDeleteConfirm: (v: number | null) => void;
@@ -130,13 +132,10 @@ export default function GuestsTabContent({
   useEffect(() => {
     const fetchCustomFields = async () => {
       try {
-        const response = await fetch(`/api/events/${eventId}/custom-fields`);
-        if (response.ok) {
-          const data = await response.json();
-          setCustomFields(data.custom_fields || []);
-        }
-      } catch (error) {
-        console.error("Failed to fetch custom fields:", error);
+        const data = await apiClient<any>(`/events/${eventId}/custom-fields`);
+        setCustomFields(data.custom_fields || []);
+      } catch (_e) {
+        // custom fields not available
       }
     };
 
@@ -235,6 +234,18 @@ export default function GuestsTabContent({
     }
   };
 
+  // Populate customFieldValues when editing a guest
+  useEffect(() => {
+    if (editingGuest !== null) {
+      const guest = guests.find((g) => g.id === editingGuest);
+      if (guest?.custom_data) {
+        setCustomFieldValues(guest.custom_data);
+      } else {
+        setCustomFieldValues({});
+      }
+    }
+  }, [editingGuest]);
+
   return (
     <div className="space-y-6">
       {/* Statistics Dashboard */}
@@ -264,19 +275,7 @@ export default function GuestsTabContent({
           <Plus className="w-5 h-5" />
           Add Guest
         </h2>
-        <form onSubmit={(e) => {
-          // If custom fields exist, we need to handle the submission with custom_data
-          if (customFields.length > 0) {
-            e.preventDefault();
-            // Call parent's addGuest but also we need to send custom_data
-            // For now, just call the parent function - it will handle basic fields
-            // Custom data integration would require parent function modification
-            addGuest(e);
-          } else {
-            // No custom fields, use parent's function normally
-            addGuest(e);
-          }
-        }} className="space-y-4">
+        <form onSubmit={(e) => addGuest(e, customFieldValues)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-xs font-medium text-slate-700 block mb-1.5">Full Name *</label>
@@ -663,9 +662,9 @@ export default function GuestsTabContent({
             {/* Action Buttons */}
             <div className="flex gap-3 pt-2 border-t border-slate-200">
               <Button
-                onClick={() => saveEdit(editingGuest)}
+                onClick={() => saveEdit(editingGuest, customFieldValues)}
                 disabled={!editName.trim() || savingGuest !== null}
-                className="flex-1 bg-teal-600 hover:bg-teal-700 text-white h-10 font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white h-10 font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {savingGuest !== null ? (
                   <>

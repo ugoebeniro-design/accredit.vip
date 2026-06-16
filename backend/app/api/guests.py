@@ -40,6 +40,7 @@ class GuestCreate(BaseModel):
     name: str
     phone: str | None = None
     email: str | None = None
+    custom_data: dict | None = None
 
 
 @router.post("/{event_id}/guests")
@@ -164,6 +165,7 @@ class GuestUpdate(BaseModel):
     name: str | None = None
     phone: str | None = None
     email: str | None = None
+    custom_data: dict | None = None
 
 
 @router.put("/{event_id}/guests/{guest_id}")
