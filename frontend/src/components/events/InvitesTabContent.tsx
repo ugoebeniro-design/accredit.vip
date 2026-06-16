@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Send, AlertCircle, Lightbulb, CheckCircle, AlertTriangle, Loader } from "lucide-react";
+import { Send, AlertCircle, Lightbulb, CheckCircle, AlertTriangle, Loader, Mail, MessageSquare, Smartphone } from "lucide-react";
 
 type Guest = {
   id: number;
@@ -83,17 +83,54 @@ export default function InvitesTabContent({
   const totalPrice = guestCountRange ? calculateTotalPrice(guestCountRange, channels) : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Messaging Statistics Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-blue-600 mb-1">Sent</p>
+              <p className="text-2xl font-bold text-blue-900">
+                {sendResult?.total_sent || 0}
+              </p>
+            </div>
+            <Mail className="w-8 h-8 text-blue-300" />
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg border border-emerald-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-emerald-600 mb-1">Delivered</p>
+              <p className="text-2xl font-bold text-emerald-900">
+                {sendResult?.channels ? Object.values(sendResult.channels).reduce((sum: number, ch: any) => sum + (ch.sent || 0), 0) : 0}
+              </p>
+            </div>
+            <CheckCircle className="w-8 h-8 text-emerald-300" />
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg border border-amber-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-amber-600 mb-1">Pending</p>
+              <p className="text-2xl font-bold text-amber-900">
+                {(sendResult?.total_guests || 0) - (sendResult?.total_sent || 0)}
+              </p>
+            </div>
+            <Loader className="w-8 h-8 text-amber-300" />
+          </div>
+        </div>
+      </div>
+
       {/* Send Invitations Section */}
       <div>
-        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
           <Send className="w-5 h-5" />
-          Send Invitations
+          Messaging & Communication
         </h2>
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 space-y-4">
+        <div className="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
           {/* Channel Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Delivery Channels</label>
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Select Delivery Channels</label>
             <div className="flex flex-wrap gap-3">
               {CHANNEL_OPTIONS.map((opt) => {
                 const active = channels.includes(opt.value);
@@ -251,7 +288,7 @@ export default function InvitesTabContent({
       {/* Delivery Logs Section */}
       {logs.length > 0 && (
         <div>
-          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
             <CheckCircle className="w-5 h-5" />
             Delivery History
           </h2>
