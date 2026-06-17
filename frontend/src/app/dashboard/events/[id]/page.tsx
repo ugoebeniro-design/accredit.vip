@@ -15,7 +15,6 @@ import { AlertTriangle, ArrowLeft, BarChart3, Users, Mail, Settings, Share2, Loa
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import GuestsTabContent from "@/components/events/GuestsTabContent";
-import InvitesTabContent from "@/components/events/InvitesTabContent";
 import QuestionsTabContent from "@/components/events/QuestionsTabContent";
 import RemindersTabContent from "@/components/events/RemindersTabContent";
 import CouponsTabContent from "@/components/events/CouponsTabContent";
@@ -673,7 +672,6 @@ function EventDetailContent() {
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "guests", label: "Guests", icon: Users, badge: totalGuests },
-    { id: "invites", label: "Send Invites", icon: Mail },
     { id: "questions", label: "Questions", icon: HelpCircle },
     { id: "reminders", label: "Reminders", icon: Bell },
     { id: "coupons", label: "Coupons", icon: Ticket },
@@ -714,7 +712,7 @@ function EventDetailContent() {
         onMenuClick={() => setMobileNavOpen(true)}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1">
         <DashboardSidebar
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -722,7 +720,7 @@ function EventDetailContent() {
           onMobileNavClose={() => setMobileNavOpen(false)}
         />
 
-        <div className="flex-1 px-4 py-6 overflow-y-auto">
+        <div className={`flex-1 px-4 py-6 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
           <div className="container mx-auto max-w-7xl">
             <div className="flex items-center gap-2 mb-6 flex-wrap">
               {allTabs}
@@ -926,11 +924,6 @@ function EventDetailContent() {
                 exportStatus={exportStatus}
                 setExportStatus={setExportStatus}
                 exportGuests={exportGuests}
-              />
-            )}
-
-            {activeTab === "invites" && (
-              <InvitesTabContent
                 channels={channels}
                 setChannels={setChannels}
                 sending={sending}
@@ -941,7 +934,6 @@ function EventDetailContent() {
                 sendResult={sendResult}
                 sendError={sendError}
                 logs={logs}
-                guests={guests}
                 invalidPhoneGuests={invalidPhoneGuests}
                 guestsWithMissingContact={guestsWithMissingContact}
                 guestCountRange={event.guest_count_range}

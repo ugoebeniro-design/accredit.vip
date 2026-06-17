@@ -56,7 +56,7 @@ export function DashboardSidebar({
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex flex-col transition-all duration-300 ${
           mobileNavOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen`}
+        } lg:translate-x-0`}
         style={{
           background: "#0D1B2A",
           width: sidebarOpen ? "256px" : "80px",

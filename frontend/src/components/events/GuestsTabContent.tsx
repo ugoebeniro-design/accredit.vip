@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
-import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check, Download, QrCode, Tag } from "lucide-react";
+import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check, Download, QrCode, Tag, Send } from "lucide-react";
 
 type Guest = {
   id: number;
@@ -80,10 +80,29 @@ type GuestsTabContentProps = {
   currentPage: number;
   pageCount: number;
   goToPage: (page: number) => void;
+  channels: string[];
+  setChannels: (v: string[]) => void;
+  sending: boolean;
+  canSendInvites: boolean;
+  sendInvites: (force?: boolean) => Promise<void>;
+  sendAllQrs: () => Promise<void>;
+  testSend: () => Promise<void>;
+  sendResult: { channels?: Record<string, any>; total_sent?: number; total_guests?: number } | null;
+  sendError: string | null;
+  logs: any[];
+  invalidPhoneGuests: Guest[];
+  guestsWithMissingContact: Guest[];
+  guestCountRange?: string | null;
   exporting?: boolean;
   exportStatus?: string;
   setExportStatus?: (v: string) => void;
   exportGuests?: () => Promise<void>;
+  exportingMsg?: boolean;
+  exportMsgStatus?: string;
+  setExportMsgStatus?: (v: string) => void;
+  exportMsgChannel?: string;
+  setExportMsgChannel?: (v: string) => void;
+  exportMessages?: () => Promise<void>;
 };
 
 function isValidPhone(value?: string | null) {
@@ -144,6 +163,25 @@ export default function GuestsTabContent({
   exportStatus = "all",
   setExportStatus,
   exportGuests,
+  channels,
+  setChannels,
+  sending,
+  canSendInvites,
+  sendInvites,
+  sendAllQrs,
+  testSend,
+  sendResult,
+  sendError,
+  logs,
+  invalidPhoneGuests,
+  guestsWithMissingContact,
+  guestCountRange,
+  exportingMsg,
+  exportMsgStatus = "all",
+  setExportMsgStatus,
+  exportMsgChannel = "all",
+  setExportMsgChannel,
+  exportMessages,
 }: GuestsTabContentProps) {
   const localFileRef = useRef<HTMLInputElement | null>(null);
   const resolvedFileRef = fileInputRef ?? localFileRef;
@@ -427,6 +465,77 @@ export default function GuestsTabContent({
 
       {/* Guest Management */}
       <div className="space-y-4">
+        {/* Send Controls */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Send Invites
+            </h2>
+            {guestCountRange && (
+              <span className="text-xs text-slate-400">
+                Price: NGN {channels.reduce((sum, ch) => {
+                  const table: Record<string, Record<string, number>> = {
+                    "1-100": { email: 100000, whatsapp: 200000, sms: 300000 },
+                    "101-200": { email: 200000, whatsapp: 350000, sms: 500000 },
+                    "201-400": { email: 350000, whatsapp: 500000, sms: 750000 },
+                    "400+": { email: 500000, whatsapp: 750000, sms: 1000000 },
+                  };
+                  const prices = table[guestCountRange] || table["1-100"];
+                  return sum + (prices[ch] || 0);
+                }, 0).toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex gap-2">
+              {["email", "whatsapp", "sms"].map((ch) => (
+                <label key={ch} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium cursor-pointer transition-colors ${channels.includes(ch) ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"}`}>
+                  <input type="checkbox" checked={channels.includes(ch)} onChange={() => setChannels(channels.includes(ch) ? channels.filter(c => c !== ch) : [...channels, ch])} className="sr-only" />
+                  <span className="capitalize">{ch}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {invalidPhoneGuests.length > 0 && channels.some(c => c === "whatsapp" || c === "sms") && (
+                <span className="text-xs text-amber-600">{invalidPhoneGuests.length} invalid phone(s)</span>
+              )}
+              {guestsWithMissingContact.length > 0 && (
+                <span className="text-xs text-amber-600">{guestsWithMissingContact.length} missing contact(s)</span>
+              )}
+            </div>
+
+            <div className="flex gap-2 ml-auto">
+              <Button onClick={() => sendInvites(false)} disabled={sending || !canSendInvites} className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-4 font-medium rounded-lg disabled:opacity-50 flex items-center gap-2">
+                {sending ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {sending ? "Sending..." : "Send Invites"}
+              </Button>
+              <Button onClick={() => sendInvites(true)} disabled={sending || !canSendInvites} variant="outline" className="h-10 px-4 font-medium rounded-lg">
+                Resend All
+              </Button>
+              <Button onClick={sendAllQrs} variant="outline" className="h-10 px-4 font-medium rounded-lg">
+                Send QR
+              </Button>
+              <Button onClick={testSend} variant="outline" className="h-10 px-4 font-medium rounded-lg">
+                Test
+              </Button>
+            </div>
+          </div>
+
+          {sendError && (
+            <div className="mt-3 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">{sendError}</div>
+          )}
+
+          {sendResult && (
+            <div className="mt-3 rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-700 flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              Sent {sendResult.total_sent || 0} / {sendResult.total_guests || 0}
+            </div>
+          )}
+        </div>
+
         <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
           <Users className="w-5 h-5" />
           Guest List ({totalGuests})
@@ -707,6 +816,41 @@ export default function GuestsTabContent({
           </>
         )}
       </div>
+
+      {/* Delivery Log */}
+      {logs.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <Mail className="w-5 h-5" />
+            Delivery Log
+            <span className="text-xs font-normal text-slate-400 ml-1">({logs.length})</span>
+          </h2>
+          <div className="max-h-64 overflow-y-auto space-y-2">
+            {logs.slice(0, 50).map((log, i) => (
+              <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-slate-900">{log.guest_name || log.name || `Guest #${log.guest_id}`}</span>
+                  <span className="text-xs text-slate-400 capitalize">{log.channel || "—"}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs font-medium ${log.status === "delivered" || log.status === "sent" ? "text-emerald-600" : log.status === "failed" ? "text-red-600" : "text-slate-400"}`}>
+                    {log.status || "pending"}
+                  </span>
+                  {log.sent_at && <span className="text-xs text-slate-400">{new Date(log.sent_at).toLocaleString()}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 mt-4">
+            {exportMessages && (
+              <Button onClick={exportMessages} variant="outline" className="h-9 px-3 text-xs font-medium rounded-lg" disabled={exportingMsg}>
+                {exportingMsg ? <Loader className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                Export CSV
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Send Review Modal */}
       {sendReviewGuest && (
