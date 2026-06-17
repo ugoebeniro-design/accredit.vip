@@ -705,8 +705,8 @@ function EventDetailContent() {
   });
 
   return (
-    <div className="h-screen bg-slate-50 flex flex-col">
-      <div className={`flex-shrink-0 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
+    <div className="min-h-screen bg-slate-50">
+      <div className={`sticky top-0 z-30 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
         <DashboardTopbar
           title={event.title}
           subtitle="Event Details"
@@ -714,7 +714,7 @@ function EventDetailContent() {
         />
       </div>
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex">
         <DashboardSidebar
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -722,14 +722,14 @@ function EventDetailContent() {
           onMobileNavClose={() => setMobileNavOpen(false)}
         />
 
-        <div className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
-          <div className="sticky top-0 z-20 bg-slate-50 pb-2 pt-2 sm:pt-0 px-4 sm:px-6 shadow-sm border-b border-slate-200">
+        <div className={`flex-1 min-w-0 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
+          <div className="sticky top-16 z-20 bg-slate-50 pb-2 pt-2 px-4 sm:px-6 shadow-sm border-b border-slate-200">
             <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
               {allTabs}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+          <div className="px-4 sm:px-6 py-6">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
             {activeTab === "overview" && (
               <div>
@@ -1113,8 +1113,10 @@ function EventDetailContent() {
               </div>
             )}
               </div>
+            </div>
           </div>
         </div>
+      </div>
       </div>
 
       <ConfirmDialog

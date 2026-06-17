@@ -318,7 +318,7 @@ export default function GuestsTabContent({
   return (
     <div className="space-y-6">
       {/* Statistics Dashboard */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200 p-4">
           <p className="text-xs font-medium text-slate-600 mb-1">Total Guests</p>
           <p className="text-2xl font-bold text-slate-900">{totalGuests}</p>
@@ -339,7 +339,7 @@ export default function GuestsTabContent({
       </div>
 
       {/* Add Guest Section */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
         <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
           <Plus className="w-5 h-5" />
           Add Guest
@@ -410,7 +410,7 @@ export default function GuestsTabContent({
       </div>
 
       {/* Bulk Import Section */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
         <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
           <Upload className="w-5 h-5" />
           Bulk Import
@@ -436,7 +436,7 @@ export default function GuestsTabContent({
       </div>
 
       {/* Export Section */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
         <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
           <Download className="w-5 h-5" />
           Reports & Exports
@@ -476,14 +476,14 @@ export default function GuestsTabContent({
       {/* Guest Management */}
       <div className="space-y-4">
         {/* Send Controls */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
+          <div className="flex items-start sm:items-center justify-between mb-4 gap-2 flex-col sm:flex-row">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Mail className="w-5 h-5" />
               Send Invites
             </h2>
             {guestCountRange && (
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-400 flex-shrink-0">
                 Price: NGN {channels.reduce((sum, ch) => {
                   const table: Record<string, Record<string, number>> = {
                     "1-100": { email: 100000, whatsapp: 200000, sms: 300000 },
@@ -518,17 +518,17 @@ export default function GuestsTabContent({
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              <Button onClick={() => sendInvites(false)} disabled={sending || !canSendInvites} className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-4 font-medium rounded-lg disabled:opacity-50 flex items-center gap-2">
+              <Button onClick={() => sendInvites(false)} disabled={sending || !canSendInvites} className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-3 sm:px-4 font-medium rounded-lg disabled:opacity-50 flex items-center gap-1.5 text-xs sm:text-sm">
                 {sending ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {sending ? "Sending..." : "Send Invites"}
+                {sending ? "Sending..." : <><span className="hidden sm:inline">Send </span>Invites</>}
               </Button>
-              <Button onClick={() => sendInvites(true)} disabled={sending || !canSendInvites} variant="outline" className="h-10 px-4 font-medium rounded-lg">
-                Resend All
+              <Button onClick={() => sendInvites(true)} disabled={sending || !canSendInvites} variant="outline" className="h-10 px-3 sm:px-4 font-medium rounded-lg text-xs sm:text-sm">
+                Resend
               </Button>
-              <Button onClick={sendAllQrs} variant="outline" className="h-10 px-4 font-medium rounded-lg">
+              <Button onClick={sendAllQrs} variant="outline" className="h-10 px-3 sm:px-4 font-medium rounded-lg text-xs sm:text-sm">
                 Send QR
               </Button>
-              <Button onClick={testSend} variant="outline" className="h-10 px-4 font-medium rounded-lg">
+              <Button onClick={testSend} variant="outline" className="h-10 px-3 sm:px-4 font-medium rounded-lg text-xs sm:text-sm">
                 Test
               </Button>
             </div>
@@ -560,8 +560,8 @@ export default function GuestsTabContent({
           <>
             {/* Search & Filter */}
             <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3">
-              <div className="flex gap-2 flex-wrap">
-                <div className="flex-1 min-w-[200px] sm:min-w-[250px] relative">
+              <div className="flex gap-2 flex-col sm:flex-row">
+                <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
@@ -600,7 +600,7 @@ export default function GuestsTabContent({
 
             {/* Batch Audit Summary */}
             {guests.length > 0 && (
-              <div className="flex items-center gap-4 text-xs text-slate-500 px-1">
+              <div className="flex items-center gap-4 text-xs text-slate-500 px-1 flex-wrap">
                 <span className="font-medium text-slate-700">{guests.length} on this page</span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
                   Sent: {guests.filter(g => g.invite_sent).length}
