@@ -1116,8 +1116,6 @@ function EventDetailContent() {
             </div>
           </div>
         </div>
-      </div>
-      </div>
 
       <ConfirmDialog
         open={!!confirmDialog}
