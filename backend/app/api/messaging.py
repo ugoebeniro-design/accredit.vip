@@ -790,18 +790,39 @@ async def export_guests(
     result = await db.execute(query)
     guests = result.scalars().all()
 
-    import csv, io
+    import csv, io, json
     output = io.StringIO()
+    # BOM for Excel UTF-8 support
+    output.write("\ufeff")
     writer = csv.writer(output)
-    writer.writerow(["Name", "Phone", "Email", "RSVP Status", "Invite Sent", "Invite Attempts", "Invite Viewed At"])
+    writer.writerow([
+        "Name", "Phone", "Email", "RSVP Status", "RSVP Note", "RSVPed At",
+        "Invite Sent", "Invite Attempts", "Invite Viewed At",
+        "Notes", "Tags", "Custom Data", "Created At",
+    ])
     for g in guests:
-        writer.writerow([g.name, g.phone or "", g.email or "", g.rsvp_status, "Yes" if g.invite_sent else "No", g.invite_attempts or 0, g.invite_viewed_at.isoformat() if g.invite_viewed_at else ""])
+        writer.writerow([
+            g.name,
+            g.phone or "",
+            g.email or "",
+            g.rsvp_status,
+            g.rsvp_note or "",
+            g.rsvped_at.isoformat() if g.rsvped_at else "",
+            "Yes" if g.invite_sent else "No",
+            g.invite_attempts or 0,
+            g.invite_viewed_at.isoformat() if g.invite_viewed_at else "",
+            g.notes or "",
+            json.dumps(g.tags or [], ensure_ascii=False),
+            json.dumps(g.custom_data or {}, ensure_ascii=False),
+            g.created_at.isoformat() if g.created_at else "",
+        ])
 
     from fastapi.responses import StreamingResponse
+    filename = f"guests-event-{event_id}-{status}.csv"
     return StreamingResponse(
         iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=guests-event-{event_id}-{status}.csv"},
+        media_type="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 
@@ -821,7 +842,7 @@ async def export_messages(
         raise HTTPException(status_code=404, detail="Event not found")
 
     query = (
-        select(InviteMessage)
+        select(InviteMessage, Guest.name)
         .join(Guest, InviteMessage.guest_id == Guest.id)
         .where(Guest.event_id == event_id)
     )
@@ -832,15 +853,17 @@ async def export_messages(
     query = query.order_by(InviteMessage.created_at.desc())
 
     result = await db.execute(query)
-    messages = result.scalars().all()
+    rows = result.all()
 
-    import csv, io
+    import csv, io, json
     output = io.StringIO()
+    output.write("\ufeff")
     writer = csv.writer(output)
-    writer.writerow(["ID", "Guest ID", "Channel", "Status", "Sent At", "Delivered At", "Opened At", "Error", "Provider Message ID", "Created At"])
-    for m in messages:
+    writer.writerow(["ID", "Guest ID", "Guest Name", "Channel", "Status", "Sent At", "Delivered At", "Opened At", "Error", "Provider Message ID", "Created At"])
+    for m, guest_name in rows:
         writer.writerow([
-            m.id, m.guest_id, m.channel, m.status,
+            m.id, m.guest_id, guest_name,
+            m.channel, m.status,
             m.sent_at.isoformat() if m.sent_at else "",
             m.delivered_at.isoformat() if m.delivered_at else "",
             m.opened_at.isoformat() if m.opened_at else "",
@@ -853,7 +876,7 @@ async def export_messages(
     filename = f"messages-event-{event_id}-{status}-{channel}.csv"
     return StreamingResponse(
         iter([output.getvalue()]),
-        media_type="text/csv",
+        media_type="text/csv; charset=utf-8-sig",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 

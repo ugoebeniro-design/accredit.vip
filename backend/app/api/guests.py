@@ -256,3 +256,26 @@ async def delete_guest(
     await db.delete(guest)
     await db.commit()
     return {"message": "Guest deleted"}
+
+
+@router.get("/{event_id}/rsvp-stats")
+async def get_rsvp_stats(
+    event_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Event).where(Event.id == event_id, Event.organizer_id == user.id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    guests = await db.execute(select(Guest).where(Guest.event_id == event_id))
+    all_guests = guests.scalars().all()
+
+    return {
+        "total": len(all_guests),
+        "accepted": len([g for g in all_guests if g.rsvp_status == "accepted"]),
+        "declined": len([g for g in all_guests if g.rsvp_status == "declined"]),
+        "pending": len([g for g in all_guests if g.rsvp_status == "pending"]),
+    }

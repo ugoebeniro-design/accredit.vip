@@ -3,7 +3,8 @@
 import { useRef, useState, useEffect, useCallback, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
-import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check, Download, QrCode, Tag, Send } from "lucide-react";
+import Link from "next/link";
+import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check, Download, QrCode, Tag, Send, Eye, X, Circle, Minus, Printer } from "lucide-react";
 
 type Guest = {
   id: number;
@@ -401,7 +402,7 @@ export default function GuestsTabContent({
           <Button
             type="submit"
             disabled={guestLimit !== null && totalGuests >= guestLimit}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white h-10 font-medium"
+            className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-6 font-medium"
           >
             Add Guest
           </Button>
@@ -434,32 +435,41 @@ export default function GuestsTabContent({
         {csvResult && <p className="text-sm text-emerald-600 font-medium mt-2">{csvResult}</p>}
       </div>
 
-      {/* CSV Export Section */}
+      {/* Export Section */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
           <Download className="w-5 h-5" />
-          Export Guests
+          Reports & Exports
         </h2>
-        <div className="flex gap-2 flex-wrap">
-          <select
-            value={exportStatus}
-            onChange={(e) => setExportStatus?.(e.target.value)}
-            className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+        <div className="flex flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <select
+              value={exportStatus}
+              onChange={(e) => setExportStatus?.(e.target.value)}
+              className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+            >
+              <option value="all">All Guests</option>
+              <option value="sent">Invite Sent</option>
+              <option value="delivered">Delivered</option>
+              <option value="failed">Failed</option>
+              <option value="not_sent">Not Sent</option>
+            </select>
+            <Button
+              onClick={exportGuests}
+              disabled={exporting}
+              className="h-10 px-4 font-medium bg-slate-900 hover:bg-slate-800 text-white"
+            >
+              {exporting ? <Loader className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {exporting ? "Exporting..." : "CSV"}
+            </Button>
+          </div>
+          <Link
+            href={`/dashboard/events/${eventId}/report`}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
           >
-            <option value="all">All Guests</option>
-            <option value="sent">Invite Sent</option>
-            <option value="delivered">Delivered</option>
-            <option value="failed">Failed</option>
-            <option value="not_sent">Not Sent</option>
-          </select>
-          <Button
-            onClick={exportGuests}
-            disabled={exporting}
-            className="h-10 px-4 font-medium bg-slate-900 hover:bg-slate-800 text-white"
-          >
-            {exporting ? <Loader className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            {exporting ? "Exporting..." : "Export CSV"}
-          </Button>
+            <Printer className="w-4 h-4" />
+            Detailed Report
+          </Link>
         </div>
       </div>
 
@@ -507,7 +517,7 @@ export default function GuestsTabContent({
               )}
             </div>
 
-            <div className="flex gap-2 ml-auto">
+            <div className="flex gap-2 flex-wrap">
               <Button onClick={() => sendInvites(false)} disabled={sending || !canSendInvites} className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-4 font-medium rounded-lg disabled:opacity-50 flex items-center gap-2">
                 {sending ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {sending ? "Sending..." : "Send Invites"}
@@ -551,7 +561,7 @@ export default function GuestsTabContent({
             {/* Search & Filter */}
             <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3">
               <div className="flex gap-2 flex-wrap">
-                <div className="flex-1 min-w-[250px] relative">
+                <div className="flex-1 min-w-[200px] sm:min-w-[250px] relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
@@ -576,9 +586,9 @@ export default function GuestsTabContent({
                   className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
                   <option value="">All Guests</option>
-                  <option value="accepted">✓ Accepted</option>
-                  <option value="pending">○ Pending</option>
-                  <option value="declined">✗ Declined</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="pending">Pending</option>
+                  <option value="declined">Declined</option>
                 </select>
                 {(guestSearch || guestRsvpFilter) && (
                   <Button variant="ghost" size="sm" onClick={resetGuestFilter} className="text-xs h-10">
@@ -709,9 +719,9 @@ export default function GuestsTabContent({
                                   ? "bg-red-100 text-red-700 border-red-200"
                                   : "bg-amber-100 text-amber-700 border-amber-200"
                             }`}>
-                              {guest.rsvp_status === "accepted" && "✓ Accepted"}
-                              {guest.rsvp_status === "declined" && "✗ Declined"}
-                              {guest.rsvp_status === "pending" && "○ Pending"}
+                              {guest.rsvp_status === "accepted" && <><Check className="w-3 h-3 -mt-0.5" /> Accepted</>}
+                              {guest.rsvp_status === "declined" && <><X className="w-3 h-3 -mt-0.5" /> Declined</>}
+                              {guest.rsvp_status === "pending" && <><Circle className="w-3 h-3 -mt-0.5" /> Pending</>}
                             </span>
                           </td>
                           <td className="px-4 py-4 text-center">
@@ -731,11 +741,11 @@ export default function GuestsTabContent({
                                   : info.status === "delivered" || info.status === "sent" ? "bg-blue-50 text-blue-700"
                                   : info.status === "failed" ? "bg-red-50 text-red-700"
                                   : "bg-slate-50 text-slate-500";
-                                const statusIcon = info.status === "read" || info.status === "opened" ? "👁"
-                                  : info.status === "delivered" ? "✓"
-                                  : info.status === "sent" ? "◌"
-                                  : info.status === "failed" ? "✗"
-                                  : "—";
+                                const statusIcon = info.status === "read" || info.status === "opened" ? <Eye className="w-3 h-3" />
+                                  : info.status === "delivered" ? <Check className="w-3 h-3" />
+                                  : info.status === "sent" ? <Circle className="w-3 h-3" />
+                                  : info.status === "failed" ? <X className="w-3 h-3" />
+                                  : <Minus className="w-3 h-3" />;
                                 return (
                                   <span key={ch} className={`px-2 py-1 rounded-full font-medium flex items-center gap-1 ${statusColor}`} title={`${ch}: ${info.status}${info.delivered_at ? ` delivered ${new Date(info.delivered_at).toLocaleString()}` : ""}${info.opened_at ? ` opened ${new Date(info.opened_at).toLocaleString()}` : ""}`}>
                                     {statusIcon} <span className="capitalize">{ch}</span>

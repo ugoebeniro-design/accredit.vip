@@ -11,7 +11,7 @@ import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Toast } from "@/components/shared/toast";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, BarChart3, Users, Mail, Settings, Share2, Loader, HelpCircle, Bell, Ticket, Copy, Edit2, Zap, Calendar, Clock, MapPin, ExternalLink } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, Users, Mail, Settings, Share2, Loader, HelpCircle, Bell, Ticket, Copy, Edit2, Zap, Calendar, Clock, MapPin, ExternalLink, ImageIcon, Shirt } from "lucide-react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import GuestsTabContent from "@/components/events/GuestsTabContent";
@@ -722,10 +722,12 @@ function EventDetailContent() {
           onMobileNavClose={() => setMobileNavOpen(false)}
         />
 
-        <div className={`flex-1 px-4 py-6 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
-          <div className="container mx-auto max-w-7xl">
-            <div className="flex items-center gap-2 mb-6 flex-wrap">
-              {allTabs}
+        <div className={`flex-1 px-4 sm:px-6 py-6 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
+          <div className="w-full">
+            <div className="sticky top-0 z-20 bg-slate-50 pb-4 -mx-4 sm:-mx-6 px-4 sm:px-6">
+              <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
+                {allTabs}
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -854,7 +856,7 @@ function EventDetailContent() {
                     )}
                     {event.dress_code && (
                       <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
-                        <span className="w-5 h-5 flex items-center justify-center text-slate-500 flex-shrink-0 mt-0.5">👔</span>
+                        <Shirt className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Dress Code</p>
                           <p className="font-bold text-slate-900">{event.dress_code}</p>
@@ -1043,97 +1045,74 @@ function EventDetailContent() {
             )}
 
             {activeTab === "settings" && (
-              <div className="space-y-8">
-                <div className="flex items-center justify-between pb-6 border-b border-slate-200">
+              <div className="p-6 space-y-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">Event Settings</h3>
-                    <p className="text-sm text-slate-600 mt-1">Manage event details, cover image, and fliers</p>
+                    <h2 className="text-lg font-bold text-slate-900">Event Settings</h2>
+                    <p className="text-sm text-slate-500 mt-1">Manage event details, cover image, and fliers</p>
                   </div>
-                  <Link href={`/dashboard/events/${id}/edit`} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                  <Link href={`/dashboard/events/${id}/edit`} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm">
                     <Edit2 className="w-4 h-4" />
-                    Edit Event Details
+                    Edit Details
                   </Link>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">Cover Image</h3>
-                  {event.cover_image && (
-                    <div className="mb-4 rounded-lg overflow-hidden border border-slate-200 shadow-sm relative group">
-                      <img src={event.cover_image} alt="Current cover" className="w-full object-contain max-h-96 bg-slate-100" />
-                      <button
-                        onClick={deleteCover}
-                        className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
-                        title="Remove cover"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )}
-                  <label className="block">
-                    <input
-                      ref={coverInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) {
-                          uploadCover(f);
-                          if (coverInputRef.current) coverInputRef.current.value = "";
-                        }
-                      }}
-                      className="block w-full text-sm text-slate-600 file:mr-3 file:mb-2 file:px-4 file:py-2.5 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 file:cursor-pointer file:transition-colors"
-                    />
-                  </label>
-                  {coverUploading && (
-                    <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
-                      <Loader className="w-4 h-4 animate-spin" />
-                      Uploading...
-                    </div>
-                  )}
+
+                <div className="border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" /> Cover Image
+                  </h3>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    {event.cover_image && (
+                      <div className="mb-4 rounded-lg overflow-hidden border border-slate-200 shadow-sm relative group">
+                        <img src={event.cover_image} alt="Current cover" className="w-full object-contain max-h-64 bg-white" />
+                        <button onClick={deleteCover} className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700" title="Remove cover">×</button>
+                      </div>
+                    )}
+                    <label className="flex items-center justify-center w-full cursor-pointer">
+                      <div className="flex flex-col items-center gap-2 py-6">
+                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+                          <ImageIcon className="w-5 h-5 text-slate-500" />
+                        </div>
+                        <p className="text-sm font-medium text-slate-600">Click to upload cover image</p>
+                        <p className="text-xs text-slate-400">PNG, JPG up to 10MB</p>
+                      </div>
+                      <input ref={coverInputRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { uploadCover(f); if (coverInputRef.current) coverInputRef.current.value = ""; } }} className="hidden" />
+                    </label>
+                    {coverUploading && <div className="mt-2 flex items-center gap-2 text-sm text-slate-600"><Loader className="w-4 h-4 animate-spin" /> Uploading...</div>}
+                  </div>
                 </div>
 
-                <div className="pt-8 border-t border-slate-200">
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">Event Fliers</h3>
-                  {fliers.length > 0 && (
-                    <div className="flex flex-col gap-4">
-                      {fliers.map((f) => (
-                        <div key={f.id} className="rounded-lg overflow-hidden border border-slate-200 shadow-sm relative group">
-                          <img src={f.url} alt="Flier" className="w-full object-contain max-h-64 bg-slate-100" />
-                          <button
-                            onClick={() => deleteFlier(f.id)}
-                            className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
-                            title="Delete flier"
-                          >
-                            ×
-                          </button>
+                <div className="border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <Copy className="w-4 h-4" /> Event Fliers
+                  </h3>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    {fliers.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                        {fliers.map((f) => (
+                          <div key={f.id} className="rounded-lg overflow-hidden border border-slate-200 shadow-sm relative group bg-white">
+                            <img src={f.url} alt="Flier" className="w-full object-contain max-h-48" />
+                            <button onClick={() => deleteFlier(f.id)} className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700" title="Delete flier">×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <label className="flex items-center justify-center w-full cursor-pointer">
+                      <div className="flex flex-col items-center gap-2 py-6">
+                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+                          <Copy className="w-5 h-5 text-slate-500" />
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  <label className="block">
-                    <input
-                      ref={flierInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) {
-                          uploadFlier(f);
-                          if (flierInputRef.current) flierInputRef.current.value = "";
-                        }
-                      }}
-                      className="block w-full text-sm text-slate-600 file:mr-3 file:mb-2 file:px-4 file:py-2.5 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 file:cursor-pointer file:transition-colors"
-                    />
-                  </label>
-                  {flierUploading && (
-                    <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
-                      <Loader className="w-4 h-4 animate-spin" />
-                      Uploading...
-                    </div>
-                  )}
+                        <p className="text-sm font-medium text-slate-600">Click to upload flier</p>
+                        <p className="text-xs text-slate-400">PNG, JPG up to 10MB</p>
+                      </div>
+                      <input ref={flierInputRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { uploadFlier(f); if (flierInputRef.current) flierInputRef.current.value = ""; } }} className="hidden" />
+                    </label>
+                    {flierUploading && <div className="mt-2 flex items-center gap-2 text-sm text-slate-600"><Loader className="w-4 h-4 animate-spin" /> Uploading...</div>}
+                  </div>
                 </div>
               </div>
             )}
-            </div>
+              </div>
           </div>
         </div>
       </div>

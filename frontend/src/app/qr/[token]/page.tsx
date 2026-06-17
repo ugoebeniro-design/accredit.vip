@@ -118,7 +118,7 @@ export default function QrTicketPage() {
                 <p className="text-xs text-amber-600">Guest has not responded yet</p>
               </div>
             </div>
-          ) : ticket.rsvp_status === "no" ? (
+          ) : ticket.rsvp_status === "declined" ? (
             <div className="rounded-xl bg-red-50 border border-red-200 p-4 flex items-center gap-3">
               <XCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
               <div>

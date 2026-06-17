@@ -320,7 +320,7 @@ async def get_guest_stats(
 
     # Trial events don't count toward dashboard RSVP stats
     if event.status == "trial":
-        return {"total": 1, "invited": 1, "pending": 1, "rsvp_yes": 0, "rsvp_no": 0, "rsvp_pending": 0}
+        return {"total": 1, "invited": 1, "not_responded": 1, "accepted": 0, "declined": 0, "pending": 0}
 
     guests = await db.execute(select(Guest).where(Guest.event_id == event_id))
     all_guests = guests.scalars().all()
@@ -328,10 +328,10 @@ async def get_guest_stats(
     return {
         "total": len(all_guests),
         "invited": len([g for g in all_guests if g.invite_sent]),
-        "pending": len([g for g in all_guests if not g.invite_sent]),
-        "rsvp_yes": len([g for g in all_guests if g.rsvp_status == "accepted"]),
-        "rsvp_no": len([g for g in all_guests if g.rsvp_status == "declined"]),
-        "rsvp_pending": len([g for g in all_guests if g.rsvp_status == "pending"]),
+        "not_responded": len([g for g in all_guests if not g.invite_sent]),
+        "accepted": len([g for g in all_guests if g.rsvp_status == "accepted"]),
+        "declined": len([g for g in all_guests if g.rsvp_status == "declined"]),
+        "pending": len([g for g in all_guests if g.rsvp_status == "pending"]),
     }
 
 
