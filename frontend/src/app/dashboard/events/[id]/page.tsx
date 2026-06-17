@@ -714,7 +714,7 @@ function EventDetailContent() {
         onMenuClick={() => setMobileNavOpen(true)}
       />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -722,7 +722,7 @@ function EventDetailContent() {
           onMobileNavClose={() => setMobileNavOpen(false)}
         />
 
-        <div className="flex-1 px-4 py-6 overflow-auto">
+        <div className="flex-1 px-4 py-6 overflow-y-auto">
           <div className="container mx-auto max-w-7xl">
             <div className="flex items-center gap-2 mb-6 flex-wrap">
               {allTabs}
@@ -916,6 +916,7 @@ function EventDetailContent() {
                 handleDeleteGuest={handleDeleteGuest}
                 startEdit={startEdit}
                 sendGuestInvite={sendGuestInvite}
+                triggerSearch={loadGuests}
                 generateQR={generateQR}
                 generatingQR={generatingQR}
                 currentPage={currentPage}

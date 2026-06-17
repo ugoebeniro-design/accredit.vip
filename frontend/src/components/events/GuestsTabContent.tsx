@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, type FormEvent } from "react";
+import { useRef, useState, useEffect, useCallback, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
 import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check, Download, QrCode, Tag } from "lucide-react";
@@ -56,6 +56,7 @@ type GuestsTabContentProps = {
   guestRsvpFilter: string;
   setGuestRsvpFilter: (v: string) => void;
   handleGuestSearch: (e: FormEvent) => void;
+  triggerSearch: (search?: string, rsvpStatus?: string, page?: number) => void;
   resetGuestFilter: () => void;
   editingGuest: number | null;
   setEditingGuest: (v: number | null) => void;
@@ -115,6 +116,7 @@ export default function GuestsTabContent({
   guestRsvpFilter,
   setGuestRsvpFilter,
   handleGuestSearch,
+  triggerSearch,
   resetGuestFilter,
   editingGuest,
   setEditingGuest,
@@ -153,6 +155,7 @@ export default function GuestsTabContent({
   const [bulkSending, setBulkSending] = useState(false);
   const [sendReviewGuest, setSendReviewGuest] = useState<Guest | null>(null);
   const [sendReviewForce, setSendReviewForce] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     const fetchCustomFields = async () => {
@@ -443,13 +446,22 @@ export default function GuestsTabContent({
                     type="text"
                     placeholder="Search by name, phone, or email..."
                     value={guestSearch}
-                    onChange={(e) => setGuestSearch(e.target.value)}
+                    onChange={(e) => {
+                      setGuestSearch(e.target.value);
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                      searchTimerRef.current = setTimeout(() => {
+                        triggerSearch(e.target.value, guestRsvpFilter, 0);
+                      }, 300);
+                    }}
                     className="flex h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />
                 </div>
                 <select
                   value={guestRsvpFilter}
-                  onChange={(e) => setGuestRsvpFilter(e.target.value)}
+                  onChange={(e) => {
+                    setGuestRsvpFilter(e.target.value);
+                    triggerSearch(guestSearch, e.target.value, 0);
+                  }}
                   className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
                   <option value="">All Guests</option>
@@ -464,6 +476,25 @@ export default function GuestsTabContent({
                 )}
               </div>
             </div>
+
+            {/* Batch Audit Summary */}
+            {guests.length > 0 && (
+              <div className="flex items-center gap-4 text-xs text-slate-500 px-1">
+                <span className="font-medium text-slate-700">{guests.length} on this page</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                  Sent: {guests.filter(g => g.invite_sent).length}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                  Viewed: {guests.filter(g => g.invite_viewed_at).length}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                  Issue: {guests.filter(g => g.rsvp_status === "" || g.rsvp_status === "pending").length}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-700">
+                  No contact: {guests.filter(g => !g.email && !g.phone).length}
+                </span>
+              </div>
+            )}
 
             {/* Bulk Actions */}
             {selectedGuests.size > 0 && (
