@@ -835,7 +835,7 @@ function EventDetailContent() {
                         <Calendar className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Date</p>
-                          <p className="font-bold text-slate-900">{new Date(event.event_date).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+                          <p className="font-bold text-secondary">{new Date(event.event_date).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
                         </div>
                       </div>
                     )}
@@ -844,7 +844,7 @@ function EventDetailContent() {
                         <Clock className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Time</p>
-                          <p className="font-bold text-slate-900">{(() => { const p = event.event_time.split(":"); if (p.length < 2) return event.event_time; const h = parseInt(p[0]); return `${h % 12 || 12}:${p[1]} ${h >= 12 ? "PM" : "AM"}`; })()}</p>
+                          <p className="font-bold text-secondary">{(() => { const p = event.event_time.split(":"); if (p.length < 2) return event.event_time; const h = parseInt(p[0]); return `${h % 12 || 12}:${p[1]} ${h >= 12 ? "PM" : "AM"}`; })()}</p>
                         </div>
                       </div>
                     )}
@@ -853,7 +853,7 @@ function EventDetailContent() {
                         <MapPin className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Venue</p>
-                          <p className="font-bold text-slate-900">{event.venue}</p>
+                          <p className="font-bold text-secondary">{event.venue}</p>
                         </div>
                       </div>
                     )}
@@ -862,7 +862,7 @@ function EventDetailContent() {
                         <Shirt className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Dress Code</p>
-                          <p className="font-bold text-slate-900">{event.dress_code}</p>
+                          <p className="font-bold text-secondary">{event.dress_code}</p>
                         </div>
                       </div>
                     )}
@@ -871,7 +871,7 @@ function EventDetailContent() {
                   {/* Description */}
                   {event.description && (
                     <div>
-                      <h2 className="text-sm font-bold text-slate-900 mb-2">About This Event</h2>
+                      <h2 className="text-sm font-bold text-secondary mb-2">About This Event</h2>
                       <p className="text-sm text-slate-600 leading-relaxed">{event.description}</p>
                     </div>
                   )}
@@ -879,7 +879,7 @@ function EventDetailContent() {
                   {/* Fliers */}
                   {fliers.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900 mb-3">Event Fliers</h3>
+                      <h3 className="text-sm font-bold text-secondary mb-3">Event Fliers</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {fliers.map((f) => (
                           <div key={f.id} className="rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative group">
@@ -894,7 +894,7 @@ function EventDetailContent() {
                   {/* Share */}
                   {event.slug && (
                     <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
-                      <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-secondary mb-2 flex items-center gap-2">
                         <Share2 className="w-4 h-4 text-blue-600" />
                         Share This Event
                       </h3>
@@ -907,7 +907,7 @@ function EventDetailContent() {
                   {/* Publish Section */}
                   {event.status !== "published" && (
                     <div className="rounded-xl bg-amber-50 border border-amber-200 p-5 space-y-4">
-                      <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                      <h3 className="font-bold text-secondary flex items-center gap-2">
                         <Zap className="w-5 h-5 text-amber-600" />
                         Publish Event
                       </h3>
@@ -929,7 +929,7 @@ function EventDetailContent() {
                   {/* Ticket Sales */}
                   {purchases.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900 mb-3">Ticket Sales ({purchases.length})</h3>
+                      <h3 className="text-sm font-bold text-secondary mb-3">Ticket Sales ({purchases.length})</h3>
                       <div className="space-y-2">
                         {purchases.map((p) => (
                           <div key={p.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors">
@@ -1051,7 +1051,7 @@ function EventDetailContent() {
               <div className="p-6 space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900">Event Settings</h2>
+                    <h2 className="text-lg font-bold text-secondary">Event Settings</h2>
                     <p className="text-sm text-slate-500 mt-1">Manage event details, cover image, and fliers</p>
                   </div>
                   <Link href={`/dashboard/events/${id}/edit`} className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-secondary text-white text-sm font-medium hover:bg-secondary/80 transition-colors shadow-sm">
@@ -1061,7 +1061,7 @@ function EventDetailContent() {
                 </div>
 
                 <div className="border-t border-slate-100 pt-6">
-                  <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-secondary mb-3 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" /> Cover Image
                   </h3>
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -1086,7 +1086,7 @@ function EventDetailContent() {
                 </div>
 
                 <div className="border-t border-slate-100 pt-6">
-                  <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-secondary mb-3 flex items-center gap-2">
                     <Copy className="w-4 h-4" /> Event Fliers
                   </h3>
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">

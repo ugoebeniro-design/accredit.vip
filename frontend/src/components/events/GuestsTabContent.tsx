@@ -416,13 +416,13 @@ export default function GuestsTabContent({
           Bulk Import
         </h2>
         <p className="text-sm text-slate-600 mb-4">Upload CSV with columns: name, phone, email</p>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             ref={resolvedFileRef}
             type="file"
             accept=".csv"
             onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
-            className="flex h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-slate-900 file:px-3 file:py-1 file:text-xs file:text-white file:font-medium hover:file:bg-slate-800"
+            className="flex h-10 w-full sm:flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-secondary file:px-3 file:py-1 file:text-xs file:text-white file:font-medium hover:file:bg-secondary/80"
           />
           <Button
             onClick={uploadCsv}
@@ -522,13 +522,13 @@ export default function GuestsTabContent({
                 {sending ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {sending ? "Sending..." : <><span className="hidden sm:inline">Send </span>Invites</>}
               </Button>
-              <Button onClick={() => sendInvites(true)} disabled={sending || !canSendInvites} variant="outline" className="h-10 px-3 sm:px-4 font-medium rounded-lg text-xs sm:text-sm">
+              <Button onClick={() => sendInvites(true)} disabled={sending || !canSendInvites} variant="outline" className="h-9 px-3 font-medium rounded-lg text-xs">
                 Resend
               </Button>
-              <Button onClick={sendAllQrs} variant="outline" className="h-10 px-3 sm:px-4 font-medium rounded-lg text-xs sm:text-sm">
+              <Button onClick={sendAllQrs} variant="outline" className="h-9 px-3 font-medium rounded-lg text-xs">
                 Send QR
               </Button>
-              <Button onClick={testSend} variant="outline" className="h-10 px-3 sm:px-4 font-medium rounded-lg text-xs sm:text-sm">
+              <Button onClick={testSend} variant="outline" className="h-9 px-3 font-medium rounded-lg text-xs">
                 Test
               </Button>
             </div>
@@ -642,7 +642,7 @@ export default function GuestsTabContent({
             )}
 
             {/* Guest Table */}
-            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <div className="rounded-lg border border-slate-200 bg-white" style={{ overflowX: "auto", overflowY: "visible", WebkitOverflowScrolling: "touch" }}>
               <table className="w-full">
                 <thead className="bg-slate-100 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
@@ -751,7 +751,7 @@ export default function GuestsTabContent({
                                 return (
                                   <span key={ch} className={`px-2 py-1 rounded-full font-medium flex items-center gap-1 ${statusColor}`}>
                                     {statusIcon} <span className="capitalize">{ch}</span>
-                                    {timeStr && <span className="text-[10px] opacity-70 hidden sm:inline">{timeStr}</span>}
+                                    {timeStr && <span className="text-[10px] opacity-70">{timeStr}</span>}
                                   </span>
                                 );
                               })}
@@ -764,7 +764,7 @@ export default function GuestsTabContent({
                                 <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-medium flex items-center gap-1">
                                   <Check className="w-3 h-3" />
                                   Viewed
-                                  {(() => { const d = new Date(guest.invite_viewed_at); const diff = Date.now() - d.getTime(); const t = diff < 60000 ? "now" : diff < 3600000 ? `${Math.floor(diff / 60000)}m` : diff < 86400000 ? `${Math.floor(diff / 3600000)}h` : d.toLocaleDateString(); return <span className="text-[10px] opacity-70 hidden sm:inline">{t}</span>; })()}
+                                  {(() => { const d = new Date(guest.invite_viewed_at); const diff = Date.now() - d.getTime(); const t = diff < 60000 ? "now" : diff < 3600000 ? `${Math.floor(diff / 60000)}m` : diff < 86400000 ? `${Math.floor(diff / 3600000)}h` : d.toLocaleDateString(); return <span className="text-[10px] opacity-70">{t}</span>; })()}
                                 </span>
                               )}
                               {!guest.invite_sent && (!guest.communication_status || Object.keys(guest.communication_status).length === 0) && (
@@ -852,7 +852,7 @@ export default function GuestsTabContent({
 
       {/* Delivery Log */}
       {logs.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
           <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
             <Mail className="w-5 h-5" />
             Delivery Log
@@ -953,11 +953,11 @@ export default function GuestsTabContent({
                   setSendReviewForce(false);
                 }}
                 disabled={sendReviewGuest.invite_sent && !sendReviewForce}
-                className="flex-1 bg-slate-900 hover:bg-slate-800 text-white h-10 font-medium rounded-lg disabled:opacity-50"
+                className="flex-1 bg-primary hover:bg-primary/90 text-white h-9 font-medium rounded-lg text-sm disabled:opacity-50"
               >
                 Send Invite
               </Button>
-              <Button onClick={() => { setSendReviewGuest(null); setSendReviewForce(false); }} variant="outline" className="flex-1 h-10 font-medium rounded-lg">
+              <Button onClick={() => { setSendReviewGuest(null); setSendReviewForce(false); }} variant="outline" className="flex-1 h-9 text-sm font-medium rounded-lg">
                 Cancel
               </Button>
             </div>
@@ -987,7 +987,7 @@ export default function GuestsTabContent({
                 </div>
               )}
             </div>
-            <Button onClick={() => { setBulkResult(null); setShowChannelModal(false); setSelectedGuests(new Set()); }} className="w-full bg-slate-900 hover:bg-slate-800 text-white h-10 font-medium rounded-lg">
+            <Button onClick={() => { setBulkResult(null); setShowChannelModal(false); setSelectedGuests(new Set()); }} className="w-full bg-primary hover:bg-primary/90 text-white h-9 text-sm font-medium rounded-lg">
               Done
             </Button>
           </div>
@@ -1084,13 +1084,13 @@ export default function GuestsTabContent({
                   setBulkResult({ sent, failed, total, errors });
                 }}
                 disabled={bulkChannels.length === 0 || bulkSending}
-                className="flex-1 bg-slate-900 hover:bg-slate-800 text-white h-10 font-medium rounded-lg disabled:opacity-50"
+                className="flex-1 bg-primary hover:bg-primary/90 text-white h-9 text-sm font-medium rounded-lg disabled:opacity-50"
               >
                 {bulkSending
                   ? <><Loader className="w-4 h-4 animate-spin" /> Sending {bulkProgress.current} of {bulkProgress.total}...</>
                   : `Send to ${selectedGuests.size} guest${selectedGuests.size !== 1 ? 's' : ''}`}
               </Button>
-              <Button onClick={() => { setShowChannelModal(false); setBulkChannels(["email"]); }} variant="outline" className="flex-1 h-10 font-medium rounded-lg">
+              <Button onClick={() => { setShowChannelModal(false); setBulkChannels(["email"]); }} variant="outline" className="flex-1 h-9 text-sm font-medium rounded-lg">
                 Cancel
               </Button>
             </div>
@@ -1136,7 +1136,7 @@ export default function GuestsTabContent({
               </div>
 
               {/* Phone & Email */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide block mb-2">Phone</label>
                   <input
@@ -1199,7 +1199,7 @@ export default function GuestsTabContent({
               <Button
                 onClick={() => saveEdit(editingGuest, customFieldValues)}
                 disabled={!editName.trim() || savingGuest !== null}
-                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white h-10 font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 bg-primary hover:bg-primary/90 text-white h-9 text-sm font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {savingGuest !== null ? (
                   <>
@@ -1217,7 +1217,7 @@ export default function GuestsTabContent({
                 onClick={() => setEditingGuest(null)}
                 disabled={savingGuest !== null}
                 variant="outline"
-                className="flex-1 h-10 font-medium rounded-lg"
+                className="flex-1 h-9 text-sm font-medium rounded-lg"
               >
                 Cancel
               </Button>
