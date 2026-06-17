@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, AlertCircle, Lightbulb, CheckCircle, AlertTriangle, Loader, Mail, MessageSquare, Smartphone, Download } from "lucide-react";
 
