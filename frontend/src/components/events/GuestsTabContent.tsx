@@ -16,7 +16,7 @@ type Guest = {
   invite_attempts?: number;
   invite_viewed_at?: string | null;
   tags?: string[];
-  notes?: string;
+  notes?: string | null;
   custom_data?: Record<string, any>;
   communication_status?: Record<string, { status: string; sent_count: number; last_sent?: string }>;
 };
