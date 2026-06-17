@@ -761,7 +761,7 @@ export default function GuestsTabContent({
                           <td className="px-4 py-4 text-center">
                             <span className="text-xs text-slate-500">
                               {guest.created_at
-                                ? new Date(guest.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                                ? new Date(guest.created_at).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" })
                                 : "—"}
                             </span>
                           </td>

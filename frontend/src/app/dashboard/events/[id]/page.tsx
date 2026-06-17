@@ -11,7 +11,7 @@ import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Toast } from "@/components/shared/toast";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, BarChart3, Users, Mail, Settings, Share2, Loader, HelpCircle, Bell, Ticket, Copy, Edit2, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, Users, Mail, Settings, Share2, Loader, HelpCircle, Bell, Ticket, Copy, Edit2, Zap, Calendar, Clock, MapPin, ExternalLink } from "lucide-react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import GuestsTabContent from "@/components/events/GuestsTabContent";
@@ -728,148 +728,222 @@ function EventDetailContent() {
               {allTabs}
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             {activeTab === "overview" && (
-              <div className="space-y-8">
-                {event.cover_image && (
-                  <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm -mx-4 sm:-mx-0">
-                    <img src={event.cover_image} alt="Event cover" className="w-full object-contain max-h-[500px] bg-slate-100" />
-                  </div>
-                )}
-                {event.description && (
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900 mb-3">About This Event</h2>
-                    <p className="text-slate-700 leading-relaxed">{event.description}</p>
-                  </div>
-                )}
-
-                {event.dress_code && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
-                    <h3 className="font-bold text-slate-900 mb-2">Dress Code</h3>
-                    <p className="text-slate-700">{event.dress_code}</p>
-                  </div>
-                )}
-
-                {fliers.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-4">Event Fliers</h3>
-                    <div className="flex flex-col gap-4">
-                      {fliers.map((f) => (
-                        <div key={f.id} className="rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative group">
-                          <img src={f.url} alt="Event flier" className="w-full object-contain max-h-64 bg-slate-100" />
-                          <button
-                            onClick={() => deleteFlier(f.id)}
-                            className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
-                            title="Delete flier"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+              <div>
+                {/* Hero Header */}
+                <div className={`relative ${event.cover_image ? "h-64 sm:h-80" : "h-48"} overflow-hidden`}>
+                  {event.cover_image ? (
+                    <img src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{event.title}</h1>
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-white/80">
+                      {event.event_date && (
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(event.event_date).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "long", day: "numeric" })}
+                        </span>
+                      )}
+                      {event.event_time && (
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="w-4 h-4" />
+                          {(() => {
+                            const parts = event.event_time.split(":");
+                            if (parts.length < 2) return event.event_time;
+                            const h = parseInt(parts[0]), m = parts[1];
+                            return `${h % 12 || 12}:${m} ${h >= 12 ? "PM" : "AM"}`;
+                          })()}
+                        </span>
+                      )}
+                      {event.venue && (
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4" />
+                          {event.venue}
+                        </span>
+                      )}
+                      {event.host_name && (
+                        <span className="flex items-center gap-1.5">
+                          <Users className="w-4 h-4" />
+                          Hosted by {event.host_name}
+                        </span>
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
 
-                {event.slug && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                    <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-                      <Share2 className="w-5 h-5 text-blue-600" />
-                      Share This Event
-                    </h3>
-                    <div className="bg-white rounded-lg p-3 font-mono text-sm text-slate-700 break-all border border-blue-100 select-all">
-                      {typeof window !== "undefined" ? `${window.location.origin}/e/${event.slug}` : ""}
+                <div className="p-6 sm:p-8 space-y-6">
+                  {/* Stats Dashboard */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 p-4">
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Guests</p>
+                      <p className="text-2xl font-bold text-slate-900">{totalGuests}</p>
+                    </div>
+                    <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 p-4">
+                      <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide mb-1">Accepted</p>
+                      <p className="text-2xl font-bold text-emerald-900">{rsvpStats?.accepted ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 p-4">
+                      <p className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-1">Pending</p>
+                      <p className="text-2xl font-bold text-amber-900">{rsvpStats?.pending ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl bg-gradient-to-br from-red-50 to-red-100 border border-red-200 p-4">
+                      <p className="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">Declined</p>
+                      <p className="text-2xl font-bold text-red-900">{rsvpStats?.declined ?? 0}</p>
                     </div>
                   </div>
-                )}
 
-                {/* Publish Section */}
-                {event.status !== "published" && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 space-y-4">
-                    <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                      <Zap className="w-5 h-5 text-amber-600" />
-                      Publish Event
-                    </h3>
-                    <p className="text-sm text-slate-700">
-                      Publish this event to make it visible to the public and allow ticket purchases.
-                    </p>
-
-                    {/* Channel selection for publish */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Delivery Channel</label>
-                      <div className="flex flex-wrap gap-2">
-                        {["email", "whatsapp", "sms"].map((ch) => {
-                          const active = publishChannel === ch;
-                          return (
-                            <button
-                              key={ch}
-                              type="button"
-                              onClick={() => setPublishChannel(ch)}
-                              className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all capitalize ${
-                                active
-                                  ? "bg-slate-900 text-white border-slate-900"
-                                  : "bg-white text-slate-700 border-slate-200 hover:border-slate-400"
-                              }`}
-                            >
-                              {ch}
-                            </button>
-                          );
-                        })}
+                  {/* Check-in Progress */}
+                  {checkinStats && (
+                    <div className="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-bold text-blue-900">Check-in Progress</p>
+                        <span className="text-xs font-medium text-blue-600">{checkinStats.checked_in} / {checkinStats.total_guests} checked in</span>
+                      </div>
+                      <div className="w-full bg-white/60 rounded-full h-3 overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500" style={{ width: `${checkinStats.total_guests > 0 ? (checkinStats.checked_in / checkinStats.total_guests) * 100 : 0}%` }} />
                       </div>
                     </div>
+                  )}
 
-                    {/* Coupon Code Input */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">
-                        Coupon Code <span className="text-xs text-slate-500">(optional — use 100% off coupon to bypass payment)</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter coupon code"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-                      />
-                    </div>
-
-                    {publishError && (
-                      <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{publishError}</p>
-                    )}
-
-                    <button
-                      onClick={handlePublish}
-                      disabled={publishing}
-                      className="w-full h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {publishing ? (
-                        <><Loader className="w-4 h-4 animate-spin" /> Publishing...</>
-                      ) : (
-                        <><Zap className="w-4 h-4" /> Publish Event</>
-                      )}
+                  {/* Quick Actions */}
+                  <div className="flex flex-wrap gap-3">
+                    <button onClick={() => setActiveTab("guests")} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                      <Users className="w-4 h-4" />
+                      Manage Guests
                     </button>
+                    {event.slug && (
+                      <a href={`/e/${event.slug}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+                        <ExternalLink className="w-4 h-4" />
+                        View Public Page
+                      </a>
+                    )}
                   </div>
-                )}
 
-                {purchases.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-4">Ticket Sales ({purchases.length})</h3>
-                    <div className="space-y-2">
-                      {purchases.map((p) => (
-                        <div key={p.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-slate-900">{p.buyer_name}</p>
-                              <p className="text-sm text-slate-600">{p.buyer_email}{p.buyer_phone && ` • ${p.buyer_phone}`}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-slate-900">{p.quantity} ticket(s)</p>
-                              <p className="text-sm text-slate-600">NGN {p.amount?.toLocaleString()}</p>
+                  {/* Event Details Card */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {event.event_date && (
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
+                        <Calendar className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Date</p>
+                          <p className="font-bold text-slate-900">{new Date(event.event_date).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+                        </div>
+                      </div>
+                    )}
+                    {event.event_time && (
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
+                        <Clock className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Time</p>
+                          <p className="font-bold text-slate-900">{(() => { const p = event.event_time.split(":"); if (p.length < 2) return event.event_time; const h = parseInt(p[0]); return `${h % 12 || 12}:${p[1]} ${h >= 12 ? "PM" : "AM"}`; })()}</p>
+                        </div>
+                      </div>
+                    )}
+                    {event.venue && (
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
+                        <MapPin className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Venue</p>
+                          <p className="font-bold text-slate-900">{event.venue}</p>
+                        </div>
+                      </div>
+                    )}
+                    {event.dress_code && (
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
+                        <span className="w-5 h-5 flex items-center justify-center text-slate-500 flex-shrink-0 mt-0.5">👔</span>
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Dress Code</p>
+                          <p className="font-bold text-slate-900">{event.dress_code}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  {event.description && (
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900 mb-2">About This Event</h2>
+                      <p className="text-sm text-slate-600 leading-relaxed">{event.description}</p>
+                    </div>
+                  )}
+
+                  {/* Fliers */}
+                  {fliers.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 mb-3">Event Fliers</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {fliers.map((f) => (
+                          <div key={f.id} className="rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative group">
+                            <img src={f.url} alt="Event flier" className="w-full object-contain max-h-64 bg-slate-100" />
+                            <button onClick={() => deleteFlier(f.id)} className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700" title="Delete flier">×</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Share */}
+                  {event.slug && (
+                    <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
+                      <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <Share2 className="w-4 h-4 text-blue-600" />
+                        Share This Event
+                      </h3>
+                      <div className="bg-white rounded-lg p-3 font-mono text-xs text-slate-700 break-all border border-blue-100 select-all">
+                        {typeof window !== "undefined" ? `${window.location.origin}/e/${event.slug}` : ""}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Publish Section */}
+                  {event.status !== "published" && (
+                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-5 space-y-4">
+                      <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-amber-600" />
+                        Publish Event
+                      </h3>
+                      <p className="text-sm text-slate-600">Publish to make the event visible to the public and allow ticket purchases.</p>
+                      <div className="flex flex-wrap gap-2">
+                        {["email", "whatsapp", "sms"].map((ch) => (
+                          <button key={ch} type="button" onClick={() => setPublishChannel(ch)}
+                            className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all capitalize ${publishChannel === ch ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400"}`}>{ch}</button>
+                        ))}
+                      </div>
+                      <input type="text" placeholder="Coupon code (optional)" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+                      {publishError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{publishError}</p>}
+                      <button onClick={handlePublish} disabled={publishing} className="w-full h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                        {publishing ? <><Loader className="w-4 h-4 animate-spin" /> Publishing...</> : <><Zap className="w-4 h-4" /> Publish Event</>}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Ticket Sales */}
+                  {purchases.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 mb-3">Ticket Sales ({purchases.length})</h3>
+                      <div className="space-y-2">
+                        {purchases.map((p) => (
+                          <div key={p.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-slate-900">{p.buyer_name}</p>
+                                <p className="text-sm text-slate-500">{p.buyer_email}{p.buyer_phone && ` • ${p.buyer_phone}`}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-slate-900">{p.quantity} ticket(s)</p>
+                                <p className="text-sm text-slate-500">NGN {p.amount?.toLocaleString()}</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
 
