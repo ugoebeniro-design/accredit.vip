@@ -153,6 +153,8 @@ export default function GuestsTabContent({
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [bulkChannels, setBulkChannels] = useState<string[]>(["email"]);
   const [bulkSending, setBulkSending] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
+  const [bulkResult, setBulkResult] = useState<{ sent: number; failed: number; total: number; errors: string[] } | null>(null);
   const [sendReviewGuest, setSendReviewGuest] = useState<Guest | null>(null);
   const [sendReviewForce, setSendReviewForce] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -786,8 +788,37 @@ export default function GuestsTabContent({
         </div>
       )}
 
+      {/* Bulk Send Result Summary */}
+      {bulkResult && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setBulkResult(null)}>
+          <div className="bg-white rounded-xl border border-slate-200 w-full max-w-sm p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-slate-900">Send Complete</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Successfully sent</span>
+                <span className="font-semibold text-emerald-700">{bulkResult.sent}/{bulkResult.total}</span>
+              </div>
+              {bulkResult.failed > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Failed</span>
+                  <span className="font-semibold text-red-600">{bulkResult.failed}</span>
+                </div>
+              )}
+              {bulkResult.errors.length > 0 && (
+                <div className="mt-2 p-2 bg-red-50 rounded-lg text-xs text-red-700 max-h-24 overflow-y-auto">
+                  {bulkResult.errors.map((e, i) => <p key={i}>{e}</p>)}
+                </div>
+              )}
+            </div>
+            <Button onClick={() => { setBulkResult(null); setShowChannelModal(false); setSelectedGuests(new Set()); }} className="w-full bg-slate-900 hover:bg-slate-800 text-white h-10 font-medium rounded-lg">
+              Done
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Channel Selection Modal for Bulk Send */}
-      {showChannelModal && (
+      {showChannelModal && !bulkResult && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl border border-slate-200 w-full max-w-sm p-6 space-y-5">
             <div>
@@ -831,26 +862,58 @@ export default function GuestsTabContent({
               <Button
                 onClick={async () => {
                   if (bulkChannels.length === 0) return;
+                  const guestIds = Array.from(selectedGuests);
+                  const total = guestIds.length;
+                  let sent = 0;
+                  let failed = 0;
+                  const errors: string[] = [];
+                  const token = localStorage.getItem("access_token");
+                  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
                   setBulkSending(true);
-                  try {
-                    const token = localStorage.getItem("access_token");
-                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-                    await fetch(`${baseUrl}/events/${eventId}/send-invites-batch`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                      body: JSON.stringify({ channels: bulkChannels, guest_ids: Array.from(selectedGuests) }),
-                    });
-                    setSelectedGuests(new Set());
-                    setShowChannelModal(false);
-                  } catch {}
+
+                  for (let i = 0; i < total; i += 5) {
+                    const chunk = guestIds.slice(i, i + 5);
+                    setBulkProgress({ current: Math.min(i + 5, total), total });
+                    try {
+                      const res = await fetch(`${baseUrl}/events/${eventId}/send-invites-batch`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                        body: JSON.stringify({ channels: bulkChannels, guest_ids: chunk }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) {
+                        const msg = data?.detail?.message || data?.detail || "Request failed";
+                        errors.push(`Batch ${Math.floor(i / 5) + 1}: ${msg}`);
+                        failed += chunk.length;
+                      } else if (data?.results) {
+                        for (const chRes of Object.values(data.results) as any[]) {
+                          const arr = Array.isArray(chRes) ? chRes : (chRes as any)?.results || [];
+                          for (const r of arr) {
+                            if (r.status === "delivered" || r.status === "sent") sent++;
+                            else failed++;
+                          }
+                        }
+                      } else {
+                        sent += chunk.length;
+                      }
+                    } catch (e: any) {
+                      errors.push(`Batch ${Math.floor(i / 5) + 1}: ${e.message || "Network error"}`);
+                      failed += chunk.length;
+                    }
+                  }
+
                   setBulkSending(false);
+                  setBulkProgress({ current: 0, total: 0 });
+                  setBulkResult({ sent, failed, total, errors });
                 }}
                 disabled={bulkChannels.length === 0 || bulkSending}
                 className="flex-1 bg-slate-900 hover:bg-slate-800 text-white h-10 font-medium rounded-lg disabled:opacity-50"
               >
-                {bulkSending ? <><Loader className="w-4 h-4 animate-spin" /> Sending...</> : "Send"}
+                {bulkSending
+                  ? <><Loader className="w-4 h-4 animate-spin" /> Sending {bulkProgress.current} of {bulkProgress.total}...</>
+                  : `Send to ${selectedGuests.size} guest${selectedGuests.size !== 1 ? 's' : ''}`}
               </Button>
-              <Button onClick={() => setShowChannelModal(false)} variant="outline" className="flex-1 h-10 font-medium rounded-lg">
+              <Button onClick={() => { setShowChannelModal(false); setBulkChannels(["email"]); }} variant="outline" className="flex-1 h-10 font-medium rounded-lg">
                 Cancel
               </Button>
             </div>
