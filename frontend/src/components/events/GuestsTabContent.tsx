@@ -144,6 +144,8 @@ export default function GuestsTabContent({
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [bulkChannels, setBulkChannels] = useState<string[]>(["email"]);
   const [bulkSending, setBulkSending] = useState(false);
+  const [sendReviewGuest, setSendReviewGuest] = useState<Guest | null>(null);
+  const [sendReviewForce, setSendReviewForce] = useState(false);
 
   useEffect(() => {
     const fetchCustomFields = async () => {
@@ -592,7 +594,7 @@ export default function GuestsTabContent({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => sendGuestInvite(guest.id)}
+                                onClick={() => setSendReviewGuest(guest)}
                                 title="Send message"
                                 className="h-8 w-8 p-0 hover:bg-blue-50"
                               >
@@ -641,6 +643,75 @@ export default function GuestsTabContent({
           </>
         )}
       </div>
+
+      {/* Send Review Modal */}
+      {sendReviewGuest && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-slate-200 w-full max-w-md p-6 space-y-5">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Send Invite</h2>
+              <p className="text-sm text-slate-500 mt-1">Review before sending</p>
+            </div>
+
+            <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-500">Guest</span>
+                <span className="text-sm font-semibold text-slate-900">{sendReviewGuest.name}</span>
+              </div>
+              {sendReviewGuest.email && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-500">Email</span>
+                  <span className="text-sm text-slate-900">{sendReviewGuest.email}</span>
+                </div>
+              )}
+              {sendReviewGuest.phone && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-500">Phone</span>
+                  <span className="text-sm text-slate-900">{sendReviewGuest.phone}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wide">Invite Contents</p>
+              <p className="text-sm text-slate-700">The invite will include event details, an RSVP link, and a QR code for check-in. Message is delivered via your selected channels.</p>
+            </div>
+
+            {sendReviewGuest.invite_sent && (
+              <label className="flex items-center gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendReviewForce}
+                  onChange={(e) => setSendReviewForce(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <div>
+                  <span className="text-sm font-medium text-amber-900">Resend anyway</span>
+                  <p className="text-xs text-amber-700">This guest has already been invited ({sendReviewGuest.invite_attempts || 1}/3 attempts)</p>
+                </div>
+              </label>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={async () => {
+                  if (sendReviewGuest.invite_sent && !sendReviewForce) return;
+                  sendReviewGuest.invite_sent ? sendGuestInvite(sendReviewGuest.id) : sendGuestInvite(sendReviewGuest.id);
+                  setSendReviewGuest(null);
+                  setSendReviewForce(false);
+                }}
+                disabled={sendReviewGuest.invite_sent && !sendReviewForce}
+                className="flex-1 bg-slate-900 hover:bg-slate-800 text-white h-10 font-medium rounded-lg disabled:opacity-50"
+              >
+                Send Invite
+              </Button>
+              <Button onClick={() => { setSendReviewGuest(null); setSendReviewForce(false); }} variant="outline" className="flex-1 h-10 font-medium rounded-lg">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Channel Selection Modal for Bulk Send */}
       {showChannelModal && (

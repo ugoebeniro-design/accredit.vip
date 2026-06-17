@@ -42,9 +42,10 @@ export default function QuestionsTabContent({ eventId }: QuestionsTabContentProp
     <div className="space-y-4">
       <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 flex gap-3">
         <HelpCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-900">
-          Add custom questions that guests will answer during RSVP.
-        </p>
+        <div className="text-sm text-blue-900">
+          <p className="font-semibold mb-1">How RSVP Questions Work</p>
+          <p>Questions you add here will be shown to guests when they open their RSVP link. They must answer required questions before they can confirm attendance. Supports text, dropdown, and checkbox types.</p>
+        </div>
       </div>
 
       {saveMsg && (
@@ -56,9 +57,19 @@ export default function QuestionsTabContent({ eventId }: QuestionsTabContentProp
       <div className="space-y-3">
         {questions.map((q, i) => (
           <div key={i} className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Question {i + 1}{q.required ? <span className="text-red-500 ml-1">*Required</span> : ""}</span>
+              <button
+                onClick={() => remove(i)}
+                className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" />
+                Remove
+              </button>
+            </div>
             <div className="space-y-3">
               <input
-                placeholder="Question text"
+                placeholder="e.g. What meal would you prefer?"
                 value={q.label}
                 onChange={(e) => update(i, "label", e.target.value)}
                 className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
@@ -69,9 +80,9 @@ export default function QuestionsTabContent({ eventId }: QuestionsTabContentProp
                   onChange={(e) => update(i, "type", e.target.value)}
                   className="h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
-                  <option value="text">Text</option>
-                  <option value="select">Dropdown</option>
-                  <option value="checkbox">Checkbox</option>
+                  <option value="text">Text (short answer)</option>
+                  <option value="select">Dropdown (choose one)</option>
+                  <option value="checkbox">Checkbox (yes/no)</option>
                 </select>
                 <label className="flex items-center gap-2 text-sm h-10 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
                   <input
@@ -82,27 +93,41 @@ export default function QuestionsTabContent({ eventId }: QuestionsTabContentProp
                   />
                   <span>Required</span>
                 </label>
-                <button
-                  onClick={() => remove(i)}
-                  className="ml-auto h-10 px-3 rounded-lg border border-red-200 hover:bg-red-50 text-red-600 text-sm font-medium transition-colors flex items-center gap-1"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Remove
-                </button>
               </div>
               {q.type === "select" && (
-                <input
-                  placeholder="Options (comma separated)"
-                  onChange={(e) =>
-                    update(i, "options", e.target.value.split(",").map((s: string) => s.trim()))
-                  }
-                  className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-                />
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Options (one per line)</label>
+                  <textarea
+                    placeholder="Chicken&#10;Fish&#10;Vegetarian"
+                    onChange={(e) =>
+                      update(i, "options", e.target.value.split("\n").map((s: string) => s.trim()).filter(Boolean))
+                    }
+                    rows={3}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 resize-none"
+                  />
+                </div>
               )}
             </div>
           </div>
         ))}
       </div>
+
+      {questions.length > 0 && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Preview</p>
+          <div className="space-y-2">
+            {questions.map((q, i) => (
+              <div key={i} className="bg-white rounded-lg border border-slate-200 p-3">
+                <p className="text-sm font-medium text-slate-900">{q.label || "Untitled question"}{q.required ? <span className="text-red-500 ml-1">*</span> : ""}</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {q.type === "text" ? "Short answer text field" : q.type === "select" ? "Dropdown selection" : "Yes/No checkbox"}
+                  {q.options?.length > 0 ? ` — ${q.options.join(", ")}` : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <button
         onClick={addQuestion}
@@ -116,7 +141,7 @@ export default function QuestionsTabContent({ eventId }: QuestionsTabContentProp
         <button
           onClick={save}
           disabled={saving}
-          className="w-full h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors disabled:opacity-50"
+          className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors disabled:opacity-50 h-10 px-6"
         >
           {saving ? "Saving..." : "Save Questions"}
         </button>

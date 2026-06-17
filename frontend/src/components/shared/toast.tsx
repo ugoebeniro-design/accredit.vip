@@ -32,7 +32,7 @@ export function Toast({ message, type = "success", visible, onClose }: ToastProp
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl px-5 py-3 shadow-lg border transition-all duration-300 opacity-100 translate-y-0 ${
+      className={`fixed top-20 right-6 z-50 flex items-center gap-3 rounded-xl px-5 py-3 shadow-lg border transition-all duration-300 opacity-100 translate-y-0 ${
         type === "success"
           ? "bg-emerald-50 border-emerald-200 text-emerald-800"
           : "bg-red-50 border-red-200 text-red-800"
