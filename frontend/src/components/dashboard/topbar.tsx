@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Menu, Plus } from "lucide-react";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function DashboardTopbar({
   title,
@@ -25,12 +26,15 @@ export function DashboardTopbar({
           {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
         </div>
       </div>
-      {actions || (
-        <Link href="/dashboard/create" className="btn-primary text-xs py-2 px-4 inline-flex items-center gap-2">
-          <Plus className="w-3.5 h-3.5" />
-          New Event
-        </Link>
-      )}
+      <div className="flex items-center gap-3">
+        <NotificationBell />
+        {actions || (
+          <Link href="/dashboard/create" className="btn-primary text-xs py-2 px-4 inline-flex items-center gap-2">
+            <Plus className="w-3.5 h-3.5" />
+            New Event
+          </Link>
+        )}
+      </div>
     </header>
   );
 }

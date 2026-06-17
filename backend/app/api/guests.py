@@ -9,7 +9,9 @@ import re
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
+from app.models.guest import Guest
 from app.models.event import Event
+
 from app.models.guest import Guest
 
 router = APIRouter()
@@ -165,6 +167,8 @@ class GuestUpdate(BaseModel):
     name: str | None = None
     phone: str | None = None
     email: str | None = None
+    notes: str | None = None
+    tags: list[str] | None = None
     custom_data: dict | None = None
 
 

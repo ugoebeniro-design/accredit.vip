@@ -1,5 +1,6 @@
 import uuid
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, JSON, func
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
@@ -19,9 +20,14 @@ class Guest(Base):
     invite_attempts = Column(Integer, default=0)
     invite_viewed_at = Column(DateTime(timezone=True), nullable=True)
     custom_data = Column(JSON, nullable=True, default={})
+    notes = Column(String, nullable=True)
+    tags = Column(JSON, nullable=True, default=[])
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    qr_codes = relationship("QRCode", backref="guest", lazy="selectin")
+
     def to_dict(self):
+        qr = self.qr_codes[0] if self.qr_codes else None
         return {
             "id": self.id,
             "event_id": self.event_id,
@@ -34,5 +40,9 @@ class Guest(Base):
             "invite_sent": self.invite_sent,
             "invite_attempts": self.invite_attempts,
             "invite_viewed_at": self.invite_viewed_at.isoformat() if self.invite_viewed_at else None,
+            "custom_data": self.custom_data,
+            "notes": self.notes,
+            "tags": self.tags or [],
+            "qr_token": qr.token if qr else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

@@ -32,6 +32,10 @@ type Guest = {
   invite_sent: boolean;
   invite_attempts?: number;
   invite_viewed_at?: string | null;
+  notes?: string | null;
+  tags?: string[];
+  qr_token?: string | null;
+  custom_data?: Record<string, any>;
 };
 
 type SendResult = {
@@ -92,6 +96,7 @@ function EventDetailContent() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editNotes, setEditNotes] = useState("");
   const [savingGuest, setSavingGuest] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [purchases, setPurchases] = useState<any[]>([]);
@@ -590,6 +595,7 @@ function EventDetailContent() {
     setEditName(guest.name);
     setEditPhone(guest.phone || "");
     setEditEmail(guest.email || "");
+    setEditNotes(guest.notes || "");
   };
 
   const saveEdit = async (guestId: number, customData?: Record<string, any>) => {
@@ -607,7 +613,7 @@ function EventDetailContent() {
     }
     try {
       setSavingGuest(guestId);
-      const body: Record<string, any> = { name: editName, phone: editPhone || null, email: editEmail || null };
+      const body: Record<string, any> = { name: editName, phone: editPhone || null, email: editEmail || null, notes: editNotes || null };
       if (customData && Object.keys(customData).length > 0) {
         body.custom_data = customData;
       }
@@ -901,6 +907,8 @@ function EventDetailContent() {
                 setEditPhone={setEditPhone}
                 editEmail={editEmail}
                 setEditEmail={setEditEmail}
+                editNotes={editNotes}
+                setEditNotes={setEditNotes}
                 saveEdit={saveEdit}
                 savingGuest={savingGuest}
                 deleteConfirm={deleteConfirm}
@@ -932,6 +940,7 @@ function EventDetailContent() {
                 sendResult={sendResult}
                 sendError={sendError}
                 logs={logs}
+                guests={guests}
                 invalidPhoneGuests={invalidPhoneGuests}
                 guestsWithMissingContact={guestsWithMissingContact}
                 guestCountRange={event.guest_count_range}

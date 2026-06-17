@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api-client";
-import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check, Download } from "lucide-react";
+import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check, Download, QrCode, Tag } from "lucide-react";
 
 type Guest = {
   id: number;
@@ -63,13 +63,15 @@ type GuestsTabContentProps = {
   setEditPhone: (v: string) => void;
   editEmail: string;
   setEditEmail: (v: string) => void;
+  editNotes: string;
+  setEditNotes: (v: string) => void;
   saveEdit: (guestId: number, customData?: Record<string, any>) => Promise<void>;
   savingGuest: number | null;
   deleteConfirm: number | null;
   setDeleteConfirm: (v: number | null) => void;
   handleDeleteGuest: (guestId: number) => Promise<void>;
   startEdit: (guest: Guest) => void;
-  sendGuestInvite: (guestId: number) => Promise<void>;
+  sendGuestInvite: (guestId: number, channels?: string[]) => Promise<void>;
   generateQR: (guestId: number) => Promise<void>;
   generatingQR: number | null;
   currentPage: number;
@@ -114,6 +116,8 @@ export default function GuestsTabContent({
   setEditPhone,
   editEmail,
   setEditEmail,
+  editNotes,
+  setEditNotes,
   saveEdit,
   savingGuest,
   deleteConfirm,
@@ -136,6 +140,9 @@ export default function GuestsTabContent({
   const [selectedGuests, setSelectedGuests] = useState<Set<number>>(new Set());
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
+  const [showChannelModal, setShowChannelModal] = useState(false);
+  const [bulkChannels, setBulkChannels] = useState<string[]>(["email"]);
+  const [bulkSending, setBulkSending] = useState(false);
 
   useEffect(() => {
     const fetchCustomFields = async () => {
@@ -462,6 +469,7 @@ export default function GuestsTabContent({
                   </Button>
                   <Button
                     size="sm"
+                    onClick={() => setShowChannelModal(true)}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1"
                   >
                     <Mail className="w-4 h-4" />
@@ -487,6 +495,7 @@ export default function GuestsTabContent({
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Guest</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Contact</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700">RSVP Status</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700">QR</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700">Message Status</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700">Actions</th>
                   </tr>
@@ -495,7 +504,7 @@ export default function GuestsTabContent({
                   {guests.map((guest) => (
                     <tr key={guest.id} className="hover:bg-slate-50 transition-colors">
                       {deleteConfirm === guest.id ? (
-                        <td colSpan={6} className="px-4 py-4">
+                        <td colSpan={7} className="px-4 py-4">
                           <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
                             <p className="text-sm font-medium text-slate-900">Delete {guest.name}? This cannot be undone.</p>
                             <div className="flex gap-2">
@@ -521,6 +530,16 @@ export default function GuestsTabContent({
                           <td className="px-4 py-4">
                             <p className="text-sm font-semibold text-slate-900">{guest.name}</p>
                             {guest.notes && <p className="text-xs text-slate-500 mt-1">{guest.notes}</p>}
+                            {guest.tags && guest.tags.length > 0 && (
+                              <div className="flex gap-1 mt-1.5 flex-wrap">
+                                {guest.tags.map((tag) => (
+                                  <span key={tag} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
+                                    <Tag className="w-2.5 h-2.5" />
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-4">
                             <div className="space-y-1">
@@ -541,6 +560,16 @@ export default function GuestsTabContent({
                               {guest.rsvp_status === "declined" && "✗ Declined"}
                               {guest.rsvp_status === "pending" && "○ Pending"}
                             </span>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            {guest.qr_token ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                                <QrCode className="w-3 h-3" />
+                                Generated
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-4 text-center">
                             <div className="flex items-center justify-center gap-1 flex-wrap text-xs">
@@ -612,6 +641,61 @@ export default function GuestsTabContent({
         )}
       </div>
 
+      {/* Channel Selection Modal for Bulk Send */}
+      {showChannelModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-slate-200 w-full max-w-sm p-6 space-y-5">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Send Message</h2>
+              <p className="text-sm text-slate-600 mt-1">Select channels for {selectedGuests.size} guest(s)</p>
+            </div>
+            <div className="space-y-2">
+              {["email", "whatsapp", "sms"].map((ch) => (
+                <label key={ch} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={bulkChannels.includes(ch)}
+                    onChange={() => setBulkChannels((prev) => prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch])}
+                    className="rounded border-slate-300"
+                  />
+                  <span className="text-sm font-medium text-slate-900 capitalize">{ch}</span>
+                </label>
+              ))}
+              {bulkChannels.length === 0 && (
+                <p className="text-xs text-red-600">Select at least one channel</p>
+              )}
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={async () => {
+                  if (bulkChannels.length === 0) return;
+                  setBulkSending(true);
+                  try {
+                    const token = localStorage.getItem("access_token");
+                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+                    await fetch(`${baseUrl}/events/${eventId}/send-invites-batch`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                      body: JSON.stringify({ channels: bulkChannels, guest_ids: Array.from(selectedGuests) }),
+                    });
+                    setSelectedGuests(new Set());
+                    setShowChannelModal(false);
+                  } catch {}
+                  setBulkSending(false);
+                }}
+                disabled={bulkChannels.length === 0 || bulkSending}
+                className="flex-1 bg-slate-900 hover:bg-slate-800 text-white h-10 font-medium rounded-lg disabled:opacity-50"
+              >
+                {bulkSending ? <><Loader className="w-4 h-4 animate-spin" /> Sending...</> : "Send"}
+              </Button>
+              <Button onClick={() => setShowChannelModal(false)} variant="outline" className="flex-1 h-10 font-medium rounded-lg">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Guest Modal */}
       {editingGuest && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -670,6 +754,18 @@ export default function GuestsTabContent({
                     className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />
                 </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide block mb-2">Notes</label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Internal notes about this guest"
+                  rows={2}
+                  className="flex w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 resize-none"
+                />
               </div>
 
               {/* Custom Fields */}

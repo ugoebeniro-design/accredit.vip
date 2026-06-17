@@ -13,6 +13,10 @@ type Guest = {
   invite_sent: boolean;
   invite_attempts?: number;
   invite_viewed_at?: string | null;
+  notes?: string | null;
+  tags?: string[];
+  qr_token?: string | null;
+  custom_data?: Record<string, any>;
 };
 
 type SendResult = {
@@ -32,6 +36,7 @@ type InvitesTabContentProps = {
   sendResult: SendResult | null;
   sendError: string | null;
   logs: any[];
+  guests: Guest[];
   invalidPhoneGuests: Guest[];
   guestsWithMissingContact: Guest[];
   guestCountRange?: string | null;
@@ -80,6 +85,7 @@ export default function InvitesTabContent({
   sendResult,
   sendError,
   logs,
+  guests,
   invalidPhoneGuests,
   guestsWithMissingContact,
   guestCountRange,
@@ -93,6 +99,31 @@ export default function InvitesTabContent({
   const phoneSelected = channels.some((c) => c === "whatsapp" || c === "sms");
   const emailSelected = channels.includes("email");
   const totalPrice = guestCountRange ? calculateTotalPrice(guestCountRange, channels) : 0;
+  const [targetFilter, setTargetFilter] = useState("all");
+
+  const matchedGuests = guests.filter((g) => {
+    if (targetFilter === "all") return true;
+    if (targetFilter === "accepted") return g.rsvp_status === "accepted";
+    if (targetFilter === "pending") return g.rsvp_status === "pending";
+    if (targetFilter === "declined") return g.rsvp_status === "declined";
+    if (targetFilter === "not_sent") return !g.invite_sent;
+    if (targetFilter === "no_contact") {
+      const missingEmail = emailSelected && !g.email;
+      const missingPhone = phoneSelected && !g.phone;
+      return missingEmail || missingPhone;
+    }
+    return true;
+  });
+
+  const acceptedCount = guests.filter((g) => g.rsvp_status === "accepted").length;
+  const pendingCount = guests.filter((g) => g.rsvp_status === "pending").length;
+  const declinedCount = guests.filter((g) => g.rsvp_status === "declined").length;
+  const notSentCount = guests.filter((g) => !g.invite_sent).length;
+  const noContactCount = guests.filter((g) => {
+    const missingEmail = emailSelected && !g.email;
+    const missingPhone = phoneSelected && !g.phone;
+    return missingEmail || missingPhone;
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -220,6 +251,41 @@ export default function InvitesTabContent({
               </p>
             </div>
           )}
+
+          {/* Target Audience Filter */}
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide block mb-3">Target Audience</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: "all", label: `All (${guests.length})` },
+                { value: "accepted", label: `Accepted (${acceptedCount})` },
+                { value: "pending", label: `Pending (${pendingCount})` },
+                { value: "declined", label: `Declined (${declinedCount})` },
+                { value: "not_sent", label: `Not Sent (${notSentCount})` },
+                { value: "no_contact", label: `No Contact (${noContactCount})` },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setTargetFilter(opt.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                    targetFilter === opt.value
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-white text-slate-700 border-slate-200 hover:border-slate-400"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              {targetFilter === "no_contact"
+                ? "Guests missing required contact info for selected channels"
+                : targetFilter !== "all"
+                  ? `${matchedGuests.length} guest(s) match this filter`
+                  : `Sending to all ${guests.length} guest(s)`}
+            </p>
+          </div>
 
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap pt-2">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
-import { Bell, CheckCircle } from "lucide-react";
+import { Bell, CheckCircle, UserPlus } from "lucide-react";
 
 type WaitlistTabContentProps = {
   eventId: string;
@@ -19,6 +19,13 @@ export default function WaitlistTabContent({ eventId }: WaitlistTabContentProps)
     try {
       await apiClient(`/waitlist/${entryId}/notify`, { method: "POST" });
       setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, notified: true } : e)));
+    } catch {}
+  };
+
+  const promoteToGuest = async (entry: any) => {
+    try {
+      await apiClient(`/waitlist/${entry.id}/promote`, { method: "POST" });
+      setEntries((prev) => prev.filter((e) => e.id !== entry.id));
     } catch {}
   };
 
@@ -55,19 +62,28 @@ export default function WaitlistTabContent({ eventId }: WaitlistTabContentProps)
                   <p className="text-xs text-slate-500 mt-1">Qty: {e.quantity}</p>
                 </div>
                 <div className="ml-4 flex-shrink-0">
-                  {e.notified ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-xs font-medium text-emerald-700">
-                      <CheckCircle className="w-3 h-3" />
-                      Notified
-                    </span>
-                  ) : (
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => markNotified(e.id)}
-                      className="px-3 py-1.5 text-xs font-medium text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      onClick={() => promoteToGuest(e)}
+                      className="px-3 py-1.5 text-xs font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors inline-flex items-center gap-1"
                     >
-                      Mark Notified
+                      <UserPlus className="w-3 h-3" />
+                      Promote
                     </button>
-                  )}
+                    {e.notified ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-xs font-medium text-emerald-700">
+                        <CheckCircle className="w-3 h-3" />
+                        Notified
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => markNotified(e.id)}
+                        className="px-3 py-1.5 text-xs font-medium text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      >
+                        Mark Notified
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

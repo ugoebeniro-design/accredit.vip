@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.models.waitlist import WaitlistEntry
 from app.models.event import Event
+from app.models.guest import Guest
 from app.core.security import get_current_user
 from app.models.user import User
 
@@ -56,3 +57,29 @@ async def mark_notified(entry_id: int, user: User = Depends(get_current_user), d
     entry.notified = True
     await db.commit()
     return {"message": "Marked as notified"}
+
+
+@router.post("/waitlist/{entry_id}/promote")
+async def promote_to_guest(entry_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    entry = await db.get(WaitlistEntry, entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    event = await db.get(Event, entry.event_id)
+    if not event or event.organizer_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    existing = await db.execute(
+        select(Guest).where(Guest.event_id == entry.event_id, Guest.email == entry.email)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Guest with this email already exists")
+    guest = Guest(
+        event_id=entry.event_id,
+        name=entry.name,
+        email=entry.email,
+        phone=entry.phone,
+    )
+    db.add(guest)
+    entry.notified = True
+    await db.commit()
+    await db.refresh(guest)
+    return guest
