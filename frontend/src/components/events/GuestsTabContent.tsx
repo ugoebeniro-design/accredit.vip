@@ -17,6 +17,7 @@ type Guest = {
   invite_viewed_at?: string | null;
   tags?: string[];
   notes?: string | null;
+  qr_token?: string | null;
   custom_data?: Record<string, any>;
   communication_status?: Record<string, { status: string; sent_count: number; last_sent?: string }>;
 };
