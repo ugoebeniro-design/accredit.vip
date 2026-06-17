@@ -48,20 +48,20 @@ function DashboardContent() {
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
         <DashboardTopbar title="Dashboard" subtitle={`${totalEvents} event${totalEvents !== 1 ? "s" : ""}`} onMenuClick={() => setMobileNavOpen(true)} />
 
-        <main className="flex-1 px-6 py-8 overflow-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+        <main className="flex-1 px-4 py-4 sm:px-6 sm:py-8 overflow-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 mb-6 sm:mb-8">
             {[
-              { label: "Total Events", value: totalEvents, icon: <CalendarDays className="h-6 w-6" />, color: "#E91E8C", bg: "rgba(233,30,140,0.08)" },
-              { label: "Active Events", value: activeEvents, icon: <CheckCircle2 className="h-6 w-6" />, color: "#10b981", bg: "rgba(16,185,129,0.08)" },
-              { label: "Draft Events", value: draftEvents, icon: <FileText className="h-6 w-6" />, color: "#f59e0b", bg: "rgba(245,158,11,0.08)" },
+              { label: "Total Events", value: totalEvents, icon: <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6" />, color: "#E91E8C", bg: "rgba(233,30,140,0.08)" },
+              { label: "Active Events", value: activeEvents, icon: <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6" />, color: "#10b981", bg: "rgba(16,185,129,0.08)" },
+              { label: "Draft Events", value: draftEvents, icon: <FileText className="h-5 w-5 sm:h-6 sm:w-6" />, color: "#f59e0b", bg: "rgba(245,158,11,0.08)" },
             ].map((stat) => (
-              <div key={stat.label} className="rounded-2xl p-5 flex items-center gap-4" style={{ background: "white", border: "1px solid #e8edf2", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: stat.bg, color: stat.color }}>
+              <div key={stat.label} className="rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4" style={{ background: "white", border: "1px solid #e8edf2", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: stat.bg, color: stat.color }}>
                   {stat.icon}
                 </div>
                 <div>
-                  <p className="text-2xl font-extrabold text-[#0D1B2A]">{stat.value}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{stat.label}</p>
+                  <p className="text-xl sm:text-2xl font-extrabold text-[#0D1B2A]">{stat.value}</p>
+                  <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">{stat.label}</p>
                 </div>
               </div>
             ))}
@@ -75,7 +75,7 @@ function DashboardContent() {
           </div>
 
           {eventsLoading ? (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {[1, 2, 3, 4, 5, 6].map((i) => <EventCardSkeleton key={i} />)}
             </div>
           ) : events.length === 0 ? (
@@ -91,7 +91,7 @@ function DashboardContent() {
               </Link>
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {events.map((event) => <EventCard key={event.id} event={event} />)}
             </div>
           )}

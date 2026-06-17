@@ -11,7 +11,7 @@ import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Toast } from "@/components/shared/toast";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, BarChart3, Users, Mail, Settings, Share2, Loader, HelpCircle, Bell, Ticket, Copy, Edit2, Zap, Calendar, Clock, MapPin, ExternalLink, ImageIcon, Shirt } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, Users, Mail, Settings, Share2, Loader, HelpCircle, Bell, Ticket, Copy, Edit2, Zap, Calendar, Clock, MapPin, ExternalLink, ImageIcon, Shirt, ChevronRight } from "lucide-react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import GuestsTabContent from "@/components/events/GuestsTabContent";
@@ -123,6 +123,13 @@ function EventDetailContent() {
   const [checkinStats, setCheckinStats] = useState<{ checked_in: number; rsvp_accepted: number; total_guests: number; recent_checkins: any[] } | null>(null);
   const [accreditationLog, setAccreditationLog] = useState<{ attempts: any[]; suspicious_count: number } | null>(null);
   const [showAccreditationLog, setShowAccreditationLog] = useState(false);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const tabContainerRef = useRef<HTMLDivElement>(null);
+  const [tabsFixed, setTabsFixed] = useState(false);
+  const [tabsWidth, setTabsWidth] = useState(0);
+  const [tabsLeft, setTabsLeft] = useState(0);
+  const [tabsHeight, setTabsHeight] = useState(0);
+  const [canScrollRight, setCanScrollRight] = useState(true);
   const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -165,6 +172,45 @@ function EventDetailContent() {
       getEvent(Number(id)).then(setEvent).catch(() => {});
     }
   }, [searchParams, id]);
+
+  useEffect(() => {
+    const tabsEl = tabsRef.current;
+    if (!tabsEl) return;
+    const onScroll = () => {
+      const rect = tabsEl.getBoundingClientRect();
+      const topbarH = 64;
+      setTabsFixed(rect.top <= topbarH);
+      setTabsWidth(rect.width);
+      setTabsLeft(rect.left);
+      setTabsHeight(tabsEl.offsetHeight);
+    };
+    const onScrollEnd = () => {
+      const container = tabContainerRef.current;
+      if (!container) return;
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
+    };
+    const onPageScroll = () => { onScroll(); onScrollEnd(); };
+    window.addEventListener("scroll", onPageScroll, { passive: true });
+    window.addEventListener("resize", onPageScroll);
+    onPageScroll();
+    return () => {
+      window.removeEventListener("scroll", onPageScroll);
+      window.removeEventListener("resize", onPageScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    const container = tabContainerRef.current;
+    if (!container) return;
+    const onContainerScroll = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
+    };
+    container.addEventListener("scroll", onContainerScroll, { passive: true });
+    onContainerScroll();
+    return () => container.removeEventListener("scroll", onContainerScroll);
+  }, [activeTab]);
 
   const [couponCode, setCouponCode] = useState("");
 
@@ -723,15 +769,22 @@ function EventDetailContent() {
         />
 
         <div className={`flex-1 min-w-0 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
-          <div className="sticky top-16 z-20 bg-slate-50 pb-2 pt-2 px-4 sm:px-6 shadow-sm border-b border-slate-200">
+          <div
+            ref={tabsRef}
+            className={`z-20 bg-slate-50 pb-2 pt-2 px-4 sm:px-6 shadow-sm border-b border-slate-200 transition-none ${tabsFixed ? "fixed left-0 right-0 top-16" : ""}`}
+            style={tabsFixed ? { left: tabsLeft, width: tabsWidth } : undefined}
+          >
             <div className="relative">
-              <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
+              <div ref={tabContainerRef} className="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
                 {allTabs}
               </div>
-              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent sm:hidden" />
+              <div className={`pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-slate-50 to-transparent flex items-center justify-end pr-1 transition-opacity duration-500 ${canScrollRight ? "opacity-100" : "opacity-0"}`}>
+                <ChevronRight className="w-4 h-4 text-primary animate-pulse" />
+              </div>
             </div>
           </div>
 
+          {tabsFixed && <div style={{ height: tabsHeight }} />}
           <div className="px-4 sm:px-6 py-6">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
             {activeTab === "overview" && (

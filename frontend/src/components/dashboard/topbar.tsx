@@ -29,9 +29,9 @@ export function DashboardTopbar({
       <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
         <NotificationBell />
         {actions || (
-          <Link href="/dashboard/create" className="btn-primary text-xs py-1.5 sm:py-2 px-3 sm:px-4 inline-flex items-center gap-1.5 sm:gap-2">
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">New</span><span>Event</span>
+          <Link href="/dashboard/create" className="btn-primary text-xs py-1.5 sm:py-2 px-2 sm:px-4 inline-flex items-center gap-1 sm:gap-2">
+            <Plus className="w-4 h-4" />
+            <span className="max-[400px]:hidden">New Event</span>
           </Link>
         )}
       </div>
