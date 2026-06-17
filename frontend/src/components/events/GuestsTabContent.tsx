@@ -918,10 +918,41 @@ export default function GuestsTabContent({
                             <QrCode className="w-2.5 h-2.5" /> QR Ready
                           </span>
                         ) : null}
-                        {guest.invite_viewed_at && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700">
-                            <Check className="w-2.5 h-2.5" /> Viewed
+                      </div>
+                      {/* Message status */}
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        {guest.communication_status && Object.entries(guest.communication_status).map(([ch, info]: [string, any]) => {
+                          const statusColor = info.status === "read" || info.status === "opened" ? "bg-emerald-50 text-emerald-700"
+                            : info.status === "delivered" || info.status === "sent" ? "bg-blue-50 text-blue-700"
+                            : info.status === "failed" ? "bg-red-50 text-red-700"
+                            : "bg-slate-50 text-slate-500";
+                          const statusIcon = info.status === "read" || info.status === "opened" ? <Eye className="w-2.5 h-2.5" />
+                            : info.status === "delivered" ? <Check className="w-2.5 h-2.5" />
+                            : info.status === "sent" ? <Circle className="w-2.5 h-2.5" />
+                            : info.status === "failed" ? <X className="w-2.5 h-2.5" />
+                            : <Minus className="w-2.5 h-2.5" />;
+                          const ts = info.delivered_at || info.opened_at || info.sent_at;
+                          const timeStr = ts ? (() => { const d = new Date(ts); const now = new Date(); const diff = now.getTime() - d.getTime(); if (diff < 60000) return "now"; if (diff < 3600000) return `${Math.floor(diff / 60000)}m`; if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`; if (diff < 172800000) return "yesterday"; return d.toLocaleDateString(); })() : null;
+                          return (
+                            <span key={ch} className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${statusColor}`}>
+                              {statusIcon} <span className="capitalize">{ch}</span>
+                              {timeStr && <span className="opacity-70">{timeStr}</span>}
+                            </span>
+                          );
+                        })}
+                        {(!guest.communication_status || Object.keys(guest.communication_status).length === 0) && guest.invite_sent && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700">
+                            Sent {guest.invite_attempts || 1}/3
                           </span>
+                        )}
+                        {guest.invite_viewed_at && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700">
+                            <Check className="w-2.5 h-2.5" /> Viewed
+                            {(() => { const d = new Date(guest.invite_viewed_at); const diff = Date.now() - d.getTime(); const t = diff < 60000 ? "now" : diff < 3600000 ? `${Math.floor(diff / 60000)}m` : diff < 86400000 ? `${Math.floor(diff / 3600000)}h` : d.toLocaleDateString(); return <span className="opacity-70"> {t}</span>; })()}
+                          </span>
+                        )}
+                        {!guest.invite_sent && (!guest.communication_status || Object.keys(guest.communication_status).length === 0) && (
+                          <span className="text-[10px] text-slate-400">No message sent</span>
                         )}
                       </div>
                       {guest.created_at && (
