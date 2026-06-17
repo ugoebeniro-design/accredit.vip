@@ -228,7 +228,7 @@ export default function GuestsTabContent({
   const pendingCount = guests.filter(g => g.rsvp_status === "pending").length;
 
   const renderCustomField = (field: CustomField, value: any, onChange: (val: any) => void) => {
-    const baseClasses = "flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900";
+    const baseClasses = "flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary";
 
     switch (field.type) {
       case "select":
@@ -352,7 +352,7 @@ export default function GuestsTabContent({
                 placeholder="Guest name"
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 required
               />
             </div>
@@ -362,7 +362,7 @@ export default function GuestsTabContent({
                 placeholder="Phone number"
                 value={guestPhone}
                 onChange={(e) => setGuestPhone(e.target.value)}
-                className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
@@ -371,7 +371,7 @@ export default function GuestsTabContent({
                 placeholder="Email address"
                 value={guestEmail}
                 onChange={(e) => setGuestEmail(e.target.value)}
-                className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -402,7 +402,7 @@ export default function GuestsTabContent({
           <Button
             type="submit"
             disabled={guestLimit !== null && totalGuests >= guestLimit}
-            className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-6 font-medium"
+            className="bg-primary hover:bg-primary/90 text-white h-9 px-4 font-medium text-sm"
           >
             Add Guest
           </Button>
@@ -427,7 +427,7 @@ export default function GuestsTabContent({
           <Button
             onClick={uploadCsv}
             disabled={!csvFile || csvUploading}
-            className="h-10 px-4 font-medium bg-slate-900 hover:bg-slate-800 text-white"
+            className="h-9 px-3 text-sm font-medium bg-secondary hover:bg-secondary/80 text-white"
           >
             {csvUploading ? <Loader className="w-4 h-4 animate-spin" /> : "Upload"}
           </Button>
@@ -437,7 +437,7 @@ export default function GuestsTabContent({
 
       {/* Export Section */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
-        <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <h2 className="text-base font-bold text-secondary mb-4 flex items-center gap-2">
           <Download className="w-5 h-5" />
           Reports & Exports
         </h2>
@@ -446,7 +446,7 @@ export default function GuestsTabContent({
             <select
               value={exportStatus}
               onChange={(e) => setExportStatus?.(e.target.value)}
-              className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+              className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="all">All Guests</option>
               <option value="sent">Invite Sent</option>
@@ -457,7 +457,7 @@ export default function GuestsTabContent({
             <Button
               onClick={exportGuests}
               disabled={exporting}
-              className="h-10 px-4 font-medium bg-slate-900 hover:bg-slate-800 text-white"
+              className="h-9 px-3 text-sm font-medium bg-secondary hover:bg-secondary/80 text-white"
             >
               {exporting ? <Loader className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               {exporting ? "Exporting..." : "CSV"}
@@ -465,10 +465,10 @@ export default function GuestsTabContent({
           </div>
           <Link
             href={`/dashboard/events/${eventId}/report`}
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
           >
             <Printer className="w-4 h-4" />
-            Detailed Report
+            Report
           </Link>
         </div>
       </div>
@@ -501,7 +501,7 @@ export default function GuestsTabContent({
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex gap-2">
               {["email", "whatsapp", "sms"].map((ch) => (
-                <label key={ch} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium cursor-pointer transition-colors ${channels.includes(ch) ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"}`}>
+                <label key={ch} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-pointer transition-colors ${channels.includes(ch) ? "bg-primary text-white border-primary" : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"}`}>
                   <input type="checkbox" checked={channels.includes(ch)} onChange={() => setChannels(channels.includes(ch) ? channels.filter(c => c !== ch) : [...channels, ch])} className="sr-only" />
                   <span className="capitalize">{ch}</span>
                 </label>
@@ -518,7 +518,7 @@ export default function GuestsTabContent({
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              <Button onClick={() => sendInvites(false)} disabled={sending || !canSendInvites} className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-3 sm:px-4 font-medium rounded-lg disabled:opacity-50 flex items-center gap-1.5 text-xs sm:text-sm">
+              <Button onClick={() => sendInvites(false)} disabled={sending || !canSendInvites} className="bg-primary hover:bg-primary/90 text-white h-9 px-3 font-medium rounded-lg disabled:opacity-50 flex items-center gap-1.5 text-xs">
                 {sending ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {sending ? "Sending..." : <><span className="hidden sm:inline">Send </span>Invites</>}
               </Button>
@@ -574,7 +574,7 @@ export default function GuestsTabContent({
                         triggerSearch(e.target.value, guestRsvpFilter, 0);
                       }, 300);
                     }}
-                    className="flex h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="flex h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <select
@@ -583,7 +583,7 @@ export default function GuestsTabContent({
                     setGuestRsvpFilter(e.target.value);
                     triggerSearch(guestSearch, e.target.value, 0);
                   }}
-                  className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  className="flex h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">All Guests</option>
                   <option value="accepted">Accepted</option>
@@ -619,13 +619,13 @@ export default function GuestsTabContent({
 
             {/* Bulk Actions */}
             {selectedGuests.size > 0 && (
-              <div className="bg-slate-900 text-white rounded-lg p-4 flex items-center justify-between">
+              <div className="bg-secondary text-white rounded-lg p-3 flex items-center justify-between">
                 <p className="text-sm font-medium">{selectedGuests.size} guest{selectedGuests.size !== 1 ? 's' : ''} selected</p>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     onClick={() => setSelectedGuests(new Set())}
-                    className="bg-slate-700 hover:bg-slate-600 text-white"
+                    className="bg-white/20 hover:bg-white/30 text-white"
                   >
                     Deselect
                   </Button>
@@ -644,7 +644,7 @@ export default function GuestsTabContent({
             {/* Guest Table */}
             <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
               <table className="w-full">
-                <thead className="bg-slate-100 border-b border-slate-200">
+                <thead className="bg-slate-100 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-3 text-left">
                       <input
@@ -746,9 +746,12 @@ export default function GuestsTabContent({
                                   : info.status === "sent" ? <Circle className="w-3 h-3" />
                                   : info.status === "failed" ? <X className="w-3 h-3" />
                                   : <Minus className="w-3 h-3" />;
+                                const ts = info.delivered_at || info.opened_at || info.sent_at;
+                                const timeStr = ts ? (() => { const d = new Date(ts); const now = new Date(); const diff = now.getTime() - d.getTime(); if (diff < 60000) return "now"; if (diff < 3600000) return `${Math.floor(diff / 60000)}m`; if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`; if (diff < 172800000) return "yesterday"; return d.toLocaleDateString(); })() : null;
                                 return (
-                                  <span key={ch} className={`px-2 py-1 rounded-full font-medium flex items-center gap-1 ${statusColor}`} title={`${ch}: ${info.status}${info.delivered_at ? ` delivered ${new Date(info.delivered_at).toLocaleString()}` : ""}${info.opened_at ? ` opened ${new Date(info.opened_at).toLocaleString()}` : ""}`}>
+                                  <span key={ch} className={`px-2 py-1 rounded-full font-medium flex items-center gap-1 ${statusColor}`}>
                                     {statusIcon} <span className="capitalize">{ch}</span>
+                                    {timeStr && <span className="text-[10px] opacity-70 hidden sm:inline">{timeStr}</span>}
                                   </span>
                                 );
                               })}
@@ -761,6 +764,7 @@ export default function GuestsTabContent({
                                 <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-medium flex items-center gap-1">
                                   <Check className="w-3 h-3" />
                                   Viewed
+                                  {(() => { const d = new Date(guest.invite_viewed_at); const diff = Date.now() - d.getTime(); const t = diff < 60000 ? "now" : diff < 3600000 ? `${Math.floor(diff / 60000)}m` : diff < 86400000 ? `${Math.floor(diff / 3600000)}h` : d.toLocaleDateString(); return <span className="text-[10px] opacity-70 hidden sm:inline">{t}</span>; })()}
                                 </span>
                               )}
                               {!guest.invite_sent && (!guest.communication_status || Object.keys(guest.communication_status).length === 0) && (
@@ -834,7 +838,7 @@ export default function GuestsTabContent({
                     }
                     if (pageNum < 0 || pageNum >= pageCount) return null;
                     return (
-                      <button key={pageNum} onClick={() => goToPage(pageNum)} className={`px-3 py-1.5 text-xs rounded border ${pageNum === currentPage ? "bg-slate-900 text-white border-slate-900 font-bold" : "border-slate-200 hover:bg-slate-50"}`}>{pageNum + 1}</button>
+                      <button key={pageNum} onClick={() => goToPage(pageNum)} className={`px-3 py-1.5 text-xs rounded border ${pageNum === currentPage ? "bg-primary text-white border-primary font-bold" : "border-slate-200 hover:bg-slate-50"}`}>{pageNum + 1}</button>
                     );
                   })}
                   <button className="px-2 py-1.5 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(currentPage + 1)} title="Next page">›</button>
@@ -1124,7 +1128,7 @@ export default function GuestsTabContent({
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Enter guest name"
-                  className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 {!editName.trim() && (
                   <p className="text-xs text-red-600 mt-1.5">Name is required</p>
@@ -1139,7 +1143,7 @@ export default function GuestsTabContent({
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
                     placeholder={guests.find(g => g.id === editingGuest)?.phone || "Enter phone"}
-                    className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div>
@@ -1149,7 +1153,7 @@ export default function GuestsTabContent({
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}
                     placeholder={guests.find(g => g.id === editingGuest)?.email || "Enter email"}
-                    className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -1162,7 +1166,7 @@ export default function GuestsTabContent({
                   onChange={(e) => setEditNotes(e.target.value)}
                   placeholder="Internal notes about this guest"
                   rows={2}
-                  className="flex w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 resize-none"
+                  className="flex w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
               </div>
 

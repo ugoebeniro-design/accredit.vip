@@ -687,16 +687,16 @@ function EventDetailContent() {
       <button
         key={t.id}
         onClick={() => { setActiveTab(t.id); router.replace(`/dashboard/events/${id}?tab=${t.id}`, { scroll: false }); }}
-        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+        className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${
           isActive
-            ? "bg-slate-900 text-white shadow-md"
+            ? "bg-primary text-white shadow-md"
             : "text-slate-700 hover:bg-slate-100"
         }`}
       >
         <IconComp className="w-4 h-4" />
         <span>{t.label}</span>
         {t.badge !== undefined && t.badge > 0 && (
-          <span className="ml-auto inline-flex items-center justify-center h-5 px-2 rounded-full text-xs font-bold bg-slate-200 text-slate-900">
+          <span className="ml-auto inline-flex items-center justify-center h-5 px-2 rounded-full text-xs font-bold bg-secondary/10 text-secondary">
             {t.badge}
           </span>
         )}
@@ -705,7 +705,7 @@ function EventDetailContent() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen" style={{ backgroundColor: "#f5f7fa" }}>
       <div className={`sticky top-0 z-30 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
         <DashboardTopbar
           title={event.title}
@@ -724,8 +724,11 @@ function EventDetailContent() {
 
         <div className={`flex-1 min-w-0 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
           <div className="sticky top-16 z-20 bg-slate-50 pb-2 pt-2 px-4 sm:px-6 shadow-sm border-b border-slate-200">
-            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
-              {allTabs}
+            <div className="relative">
+              <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
+                {allTabs}
+              </div>
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent sm:hidden" />
             </div>
           </div>
 
@@ -813,7 +816,7 @@ function EventDetailContent() {
 
                   {/* Quick Actions */}
                   <div className="flex flex-wrap gap-3">
-                    <button onClick={() => setActiveTab("guests")} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                    <button onClick={() => setActiveTab("guests")} className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-secondary text-white text-sm font-medium hover:bg-secondary/80 transition-colors">
                       <Users className="w-4 h-4" />
                       Manage Guests
                     </button>
@@ -912,12 +915,12 @@ function EventDetailContent() {
                       <div className="flex flex-wrap gap-2">
                         {["email", "whatsapp", "sms"].map((ch) => (
                           <button key={ch} type="button" onClick={() => setPublishChannel(ch)}
-                            className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all capitalize ${publishChannel === ch ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400"}`}>{ch}</button>
+                            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all capitalize ${publishChannel === ch ? "bg-primary text-white border-primary" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400"}`}>{ch}</button>
                         ))}
                       </div>
-                      <input type="text" placeholder="Coupon code (optional)" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+                      <input type="text" placeholder="Coupon code (optional)" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                       {publishError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{publishError}</p>}
-                      <button onClick={handlePublish} disabled={publishing} className="w-full h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                      <button onClick={handlePublish} disabled={publishing} className="w-full h-9 rounded-lg bg-primary hover:bg-primary/90 text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
                         {publishing ? <><Loader className="w-4 h-4 animate-spin" /> Publishing...</> : <><Zap className="w-4 h-4" /> Publish Event</>}
                       </button>
                     </div>
@@ -1051,9 +1054,9 @@ function EventDetailContent() {
                     <h2 className="text-lg font-bold text-slate-900">Event Settings</h2>
                     <p className="text-sm text-slate-500 mt-1">Manage event details, cover image, and fliers</p>
                   </div>
-                  <Link href={`/dashboard/events/${id}/edit`} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm">
+                  <Link href={`/dashboard/events/${id}/edit`} className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-secondary text-white text-sm font-medium hover:bg-secondary/80 transition-colors shadow-sm">
                     <Edit2 className="w-4 h-4" />
-                    Edit Details
+                    Edit
                   </Link>
                 </div>
 

@@ -18,7 +18,7 @@ export default function CouponsTabContent({ eventId }: CouponsTabContentProps) {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <h2 className="text-lg font-bold text-secondary flex items-center gap-2">
           <Ticket className="w-5 h-5" />
           Applied Coupons
           <span className="text-sm font-normal text-slate-400 ml-1">({coupons.length})</span>
@@ -37,11 +37,11 @@ export default function CouponsTabContent({ eventId }: CouponsTabContentProps) {
           {coupons.map((c) => (
             <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-5 hover:shadow-md transition-shadow flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center text-white">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white">
                   {c.discount_percent ? <Percent className="w-5 h-5" /> : <Coins className="w-5 h-5" />}
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900 text-lg tracking-wide">{c.code}</p>
+                  <p className="font-bold text-secondary text-lg tracking-wide">{c.code}</p>
                   <p className="text-sm text-slate-500">
                     {c.discount_percent
                       ? `${c.discount_percent}% off`
@@ -52,7 +52,7 @@ export default function CouponsTabContent({ eventId }: CouponsTabContentProps) {
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-sm font-semibold text-slate-900">{c.used_count}/{c.max_uses || "∞"}</p>
+                <p className="text-sm font-semibold text-secondary">{c.used_count}/{c.max_uses || "∞"}</p>
                 <p className="text-xs text-slate-400">used</p>
               </div>
             </div>

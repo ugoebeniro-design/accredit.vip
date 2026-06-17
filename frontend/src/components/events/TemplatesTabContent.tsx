@@ -54,7 +54,7 @@ export default function TemplatesTabContent({ eventId }: TemplatesTabContentProp
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <h2 className="text-lg font-bold text-secondary flex items-center gap-2">
           <Copy className="w-5 h-5" />
           Event Templates
         </h2>
@@ -62,7 +62,7 @@ export default function TemplatesTabContent({ eventId }: TemplatesTabContentProp
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-4">
+        <h3 className="font-semibold text-secondary flex items-center gap-2 mb-4">
           <Save className="w-4 h-4" />
           Save Current Event as Template
         </h3>
@@ -71,16 +71,16 @@ export default function TemplatesTabContent({ eventId }: TemplatesTabContentProp
             placeholder="e.g. Monthly Networking, Annual Conference"
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 placeholder:text-slate-400"
+            className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-400"
           />
-          <button onClick={saveAsTemplate} disabled={!templateName || saving} className="w-full h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+          <button onClick={saveAsTemplate} disabled={!templateName || saving} className="w-full h-9 rounded-lg bg-primary hover:bg-primary/90 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm">
             {saving ? "Saving..." : "Save Template"}
           </button>
         </div>
       </div>
 
       <div>
-        <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+        <h3 className="text-sm font-bold text-secondary mb-3 flex items-center gap-2">
           <FolderOpen className="w-4 h-4" />
           Your Templates ({templates.length})
         </h3>
@@ -95,14 +95,14 @@ export default function TemplatesTabContent({ eventId }: TemplatesTabContentProp
             {templates.map((t) => (
               <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-slate-900">{t.name}</p>
+                  <p className="font-semibold text-secondary">{t.name}</p>
                   <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
                     <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-medium uppercase">{t.mode}</span>
                     <span>·</span>
                     {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </p>
                 </div>
-                <button onClick={() => loadTemplate(t)} className="ml-4 px-4 py-2 text-sm font-medium text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors flex-shrink-0 shadow-sm">
+                <button onClick={() => loadTemplate(t)} className="ml-4 px-3 py-1.5 text-sm font-medium text-secondary border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors flex-shrink-0">
                   Use Template
                 </button>
               </div>

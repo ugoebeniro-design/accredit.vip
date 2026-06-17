@@ -34,7 +34,7 @@ export default function WaitlistTabContent({ eventId }: WaitlistTabContentProps)
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <h2 className="text-lg font-bold text-secondary flex items-center gap-2">
           <Users className="w-5 h-5" />
           Waitlist
         </h2>
@@ -44,7 +44,7 @@ export default function WaitlistTabContent({ eventId }: WaitlistTabContentProps)
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Waiting</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">{entries.length}</p>
+          <p className="text-3xl font-bold text-secondary mt-1">{entries.length}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Notified</p>
@@ -63,7 +63,7 @@ export default function WaitlistTabContent({ eventId }: WaitlistTabContentProps)
           {entries.map((e) => (
             <div key={e.id} className="rounded-xl border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow flex items-center justify-between">
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-slate-900">{e.name}</p>
+                <p className="font-semibold text-secondary">{e.name}</p>
                 <p className="text-xs text-slate-500 mt-0.5">{e.email}{e.phone && ` • ${e.phone}`}</p>
                 <p className="text-xs text-slate-400 mt-0.5">Qty: {e.quantity}</p>
               </div>
@@ -79,7 +79,7 @@ export default function WaitlistTabContent({ eventId }: WaitlistTabContentProps)
                     Mark Notified
                   </button>
                 )}
-                <button onClick={() => promoteToGuest(e)} className="px-3 py-1.5 text-xs font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors shadow-sm inline-flex items-center gap-1.5">
+                <button onClick={() => promoteToGuest(e)} className="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-sm inline-flex items-center gap-1.5">
                   <UserPlus className="w-3.5 h-3.5" />
                   Promote
                 </button>
