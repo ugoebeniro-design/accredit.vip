@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
-import { Printer, Download, ArrowLeft } from "lucide-react";
+import { Printer, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { DashboardSidebar } from "@/components/dashboard/sidebar";
+import { DashboardTopbar } from "@/components/dashboard/topbar";
 
 type Guest = {
   id: number;
@@ -25,6 +27,8 @@ type Guest = {
 export default function EventReportPage() {
   const params = useParams();
   const id = params?.id as string;
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [event, setEvent] = useState<any>(null);
   const [guests, setGuests] = useState<Guest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +66,7 @@ export default function EventReportPage() {
   const withTags = guests.filter((g) => g.tags && g.tags.length > 0);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Print-optimized styles */}
       <style>{`
         @media print {
@@ -75,24 +79,38 @@ export default function EventReportPage() {
         .print-only { display: none; }
       `}</style>
 
+      <div className={`transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
+        <DashboardTopbar
+          title="Event Report"
+          subtitle={event?.title}
+          onMenuClick={() => setMobileNavOpen(true)}
+        />
+      </div>
+
+      <div className="flex flex-1">
+        <DashboardSidebar
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          mobileNavOpen={mobileNavOpen}
+          onMobileNavClose={() => setMobileNavOpen(false)}
+        />
+
+        <div className={`flex-1 px-4 py-6 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-20"}`}>
+          <div className="container mx-auto max-w-7xl">
+
       {/* Toolbar */}
-      <div className="sticky top-0 bg-white border-b border-slate-200 z-10 no-print">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href={`/dashboard/events/${id}?tab=guests`} className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Event
-          </Link>
-          <div className="flex items-center gap-2">
-            <button onClick={() => window.print()} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
-              <Printer className="w-4 h-4" />
-              Print / Save PDF
-            </button>
-          </div>
-        </div>
+      <div className="flex items-center justify-between mb-6 no-print">
+        <Link href={`/dashboard/events/${id}?tab=guests`} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Event
+        </Link>
+        <button onClick={() => window.print()} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+          <Printer className="w-4 h-4" />
+          Print / Save PDF
+        </button>
       </div>
 
       {/* Report Content */}
-      <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-slate-900">{event?.title || "Event Report"}</h1>
@@ -227,6 +245,9 @@ export default function EventReportPage() {
         {/* Footer */}
         <div className="mt-12 pt-6 border-t border-slate-200 text-center text-xs text-slate-400">
           <p>Accredit.vip — {event?.title} — Report generated {new Date().toLocaleString()}</p>
+        </div>
+
+          </div>
         </div>
       </div>
     </div>
