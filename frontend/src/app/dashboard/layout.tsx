@@ -56,7 +56,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           if (res.ok) sessionStorage.removeItem("post_event_trial_data");
         }
       } catch (err) {
-        console.error("Trial migration failed:", err);
+
       }
       router.refresh();
     };

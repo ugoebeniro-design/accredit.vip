@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Skeleton } from "@/components/shared/loading-skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
+import { API_BASE } from "@/lib/api-client";
 
 type TicketData = {
   reference: string;
@@ -24,8 +25,6 @@ type TicketData = {
     host_name: string;
   };
 };
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 function TicketContent() {
   const { reference } = useParams<{ reference: string }>();

@@ -9,6 +9,7 @@ import { Footer } from "@/components/shared/footer";
 import { ReminderBanner } from "@/components/shared/reminder-banner";
 import { X, Share2, Bookmark, BookmarkCheck } from "lucide-react";
 import { getCurrencySymbol } from "@/lib/event-form-options";
+import { API_BASE } from "@/lib/api-client";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -68,7 +69,7 @@ function BookmarkBtn({ event }: { event: EventData }) {
   );
 }
 
-const UPLOAD_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1").replace(/\/api\/v1\/?$/, "");
+const UPLOAD_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
 
 function coverImgUrl(path: string | null): string | null {
   if (!path) return null;

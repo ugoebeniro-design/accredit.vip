@@ -62,7 +62,7 @@ export const TrialStore = {
       }
       localStorage.setItem(TRIAL_STORAGE_KEY, JSON.stringify(events));
     } catch (e) {
-      console.error('Failed to save trial event:', e);
+
     }
   },
 
@@ -83,7 +83,7 @@ export const TrialStore = {
       const events = this.getAll().filter(e => e.id !== id);
       localStorage.setItem(TRIAL_STORAGE_KEY, JSON.stringify(events));
     } catch (e) {
-      console.error('Failed to delete trial event:', e);
+
     }
   },
 
@@ -102,7 +102,7 @@ export const TrialStore = {
     try {
       localStorage.removeItem(TRIAL_STORAGE_KEY);
     } catch (e) {
-      console.error('Failed to clear trial events:', e);
+
     }
   },
 };

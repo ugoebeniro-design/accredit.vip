@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getEvent, type EventData } from "@/lib/api/events";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, API_BASE } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { ReminderBanner } from "@/components/shared/reminder-banner";
 import { formatTimeForDisplay, getCurrencySymbol } from "@/lib/event-form-options";
 
-const UPLOAD_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1").replace(/\/api\/v1\/?$/, "");
+const UPLOAD_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
 
 const PLATFORM_FEE_PERCENT = 5;
 const VAT_PERCENT = 2.5;

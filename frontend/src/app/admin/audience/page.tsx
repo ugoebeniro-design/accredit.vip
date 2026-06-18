@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts/auth-context";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, API_BASE } from "@/lib/api-client";
 import {
   BarChart3, Calendar, Users, Settings, LogOut, Menu, X, Loader, Clock,
   AlertTriangle, CreditCard, DollarSign, Search, Download, RefreshCw, Lock, Eye, EyeOff,
@@ -205,7 +205,7 @@ export default function AdminAudiencePage() {
       if (filterGender) params.set("gender", filterGender);
       if (filterAgeBracket) params.set("age_bracket", filterAgeBracket);
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/admin/audience/export?${params}`,
+        `${API_BASE}/admin/audience/export?${params}`,
         { headers: { "X-Audience-Auth": token || "" }, credentials: "include" }
       );
       if (!res.ok) throw new Error("Export failed");

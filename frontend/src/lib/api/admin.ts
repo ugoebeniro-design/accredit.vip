@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import { apiClient, API_BASE } from "@/lib/api-client";
 
 export type AdminStats = {
   users: number;
@@ -427,9 +427,8 @@ export async function createAdminCommunityPost(data: {
   author?: string;
   is_published?: boolean;
 }): Promise<CommunityPost> {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const res = await fetch(`${base}/posts`, {
+  const res = await fetch(`${API_BASE}/posts`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(data),
@@ -447,9 +446,8 @@ export async function updateAdminCommunityPost(postId: number, data: {
   author?: string;
   is_published?: boolean;
 }): Promise<CommunityPost> {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const res = await fetch(`${base}/posts/${postId}`, {
+  const res = await fetch(`${API_BASE}/posts/${postId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(data),
@@ -459,18 +457,16 @@ export async function updateAdminCommunityPost(postId: number, data: {
 }
 
 export async function deleteAdminCommunityPost(postId: number): Promise<void> {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  await fetch(`${base}/posts/${postId}`, {
+  await fetch(`${API_BASE}/posts/${postId}`, {
     method: "DELETE",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 }
 
 export async function downloadAdminExport(resource: string): Promise<void> {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const res = await fetch(`${base}/admin/export/${resource}`, {
+  const res = await fetch(`${API_BASE}/admin/export/${resource}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("Export failed");
@@ -520,7 +516,6 @@ export async function getAdminDeliveries(
     search?: string;
   }
 ): Promise<DeliveriesResponse> {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   const params = new URLSearchParams({
@@ -534,7 +529,7 @@ export async function getAdminDeliveries(
   if (filters?.channel) params.append("channel", filters.channel);
   if (filters?.search) params.append("search", filters.search);
 
-  const res = await fetch(`${base}/admin/deliveries?${params}`, {
+  const res = await fetch(`${API_BASE}/admin/deliveries?${params}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 
@@ -622,9 +617,8 @@ export async function getDataProfiles(groupId: number, page: number = 1, per_pag
 }
 
 export async function importDataProfiles(groupId: number, profiles: Partial<DataProfile>[]): Promise<{ message: string; count: number }> {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const res = await fetch(`${base}/admin/data/groups/${groupId}/profiles`, {
+  const res = await fetch(`${API_BASE}/admin/data/groups/${groupId}/profiles`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(profiles),
@@ -642,8 +636,7 @@ export async function getDataRequests(status?: string): Promise<DataRequest[]> {
 export async function submitDataRequest(requester_name: string, requester_email: string, group_id: number, purpose: string, requester_org?: string): Promise<{ id: number; status: string }> {
   const params = new URLSearchParams({ requester_name, requester_email, group_id: String(group_id), purpose });
   if (requester_org) params.set("requester_org", requester_org);
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-  const res = await fetch(`${base}/admin/data/requests?${params}`, { method: "POST" });
+  const res = await fetch(`${API_BASE}/admin/data/requests?${params}`, { method: "POST" });
   if (!res.ok) throw new Error("Failed to submit request");
   return res.json();
 }
@@ -655,9 +648,8 @@ export async function resolveDataRequest(requestId: number, status: string, note
 }
 
 export async function downloadDataExport(groupId: number): Promise<void> {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const res = await fetch(`${base}/admin/data/export/${groupId}`, {
+  const res = await fetch(`${API_BASE}/admin/data/export/${groupId}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("Export failed");

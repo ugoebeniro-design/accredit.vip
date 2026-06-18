@@ -44,7 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     if (typeof window !== "undefined") {
       localStorage.removeItem("last_activity");
-      localStorage.removeItem("user_data");
       localStorage.removeItem("remember_me");
       sessionStorage.clear();
     }
@@ -53,7 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setOnUnauthorized(() => {
       setUser(null);
-      localStorage.removeItem("user_data");
     });
   }, []);
 
@@ -61,7 +59,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const u = await apiClient<User>("/auth/me");
       setUser(u);
-      localStorage.setItem("user_data", JSON.stringify(u));
     } catch {
       setUser(null);
     }
@@ -72,7 +69,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         if (checkIdleTimeout()) {
           setUser(null);
-          localStorage.removeItem("user_data");
           setLoading(false);
           return;
         }
@@ -80,10 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const u = await apiClient<User>("/auth/me");
           setUser(u);
-          localStorage.setItem("user_data", JSON.stringify(u));
         } catch {
           setUser(null);
-          localStorage.removeItem("user_data");
         }
       } finally {
         setLoading(false);
@@ -106,7 +100,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     touchActivity(rememberMe);
     setUser(res.user);
-    localStorage.setItem("user_data", JSON.stringify(res.user));
   };
 
   const socialLogin = async (provider: string, idToken: string, email?: string, fullName?: string) => {
@@ -116,7 +109,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     touchActivity();
     setUser(res.user);
-    localStorage.setItem("user_data", JSON.stringify(res.user));
   };
 
   const register = async (data: {
@@ -133,7 +125,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     touchActivity();
     setUser(res.user);
-    localStorage.setItem("user_data", JSON.stringify(res.user));
   };
 
   return (

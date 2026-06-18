@@ -33,6 +33,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return {"key": "auth", "max": 5, "window": 60}
         if path.startswith("/api/v1/auth/forgot-password"):
             return {"key": "auth", "max": 3, "window": 60}
+        if path.startswith("/api/v1/auth/reset-password"):
+            return {"key": "auth", "max": 5, "window": 60}
+        if path.startswith("/api/v1/auth/change-password"):
+            return {"key": "auth", "max": 5, "window": 60}
         if path.startswith("/api/v1/rsvp"):
             return {"key": "rsvp", "max": 30, "window": 60}
         if path.startswith("/api/v1/tickets/purchase") and method == "POST":

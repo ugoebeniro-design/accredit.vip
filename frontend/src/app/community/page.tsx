@@ -5,8 +5,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+import { API_BASE } from "@/lib/api-client";
 
 interface Post {
   id: number;

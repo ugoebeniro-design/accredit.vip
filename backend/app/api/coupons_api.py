@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.core.database import get_db
 from app.models.coupon import Coupon
@@ -21,6 +21,13 @@ class CreateCouponRequest(BaseModel):
     discount_fixed: int | None = None
     max_uses: int = 0
     expires_at: str | None = None
+
+    @field_validator("discount_percent")
+    @classmethod
+    def cap_discount(cls, v):
+        if v is not None and v > 100:
+            raise ValueError("discount_percent cannot exceed 100")
+        return v
 
 
 class ApplyCouponRequest(BaseModel):

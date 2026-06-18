@@ -71,7 +71,7 @@ export default function WalletPage() {
         setWallets(Array.isArray(data) ? data : data.wallets || []);
       }
     } catch (err) {
-      console.error("Failed to fetch wallets:", err);
+
     }
   };
 
@@ -83,7 +83,7 @@ export default function WalletPage() {
         setBankAccounts(Array.isArray(data) ? data : data.accounts || []);
       }
     } catch (err) {
-      console.error("Failed to fetch bank accounts:", err);
+
     }
   };
 

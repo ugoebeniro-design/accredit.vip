@@ -90,14 +90,14 @@ function OnboardingContent() {
             return;
           }
         } catch (err) {
-          console.error("POST EVENT migration failed:", err);
+
         }
       }
 
       // Redirect to dashboard with success message
       router.push("/dashboard?migrated=true");
     } catch (err) {
-      console.error("Trial migration failed:", err);
+
       router.push("/dashboard");
     }
   };

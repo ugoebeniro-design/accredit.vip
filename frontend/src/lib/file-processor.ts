@@ -68,7 +68,7 @@ export const FileProcessor = {
         extracted: true,
       };
     } catch (error) {
-      console.error('PDF extraction failed:', error);
+
       return {
         text: '',
         extracted: false,

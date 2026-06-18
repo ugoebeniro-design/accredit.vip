@@ -51,7 +51,7 @@ export default function ManageEventsPage() {
       const data = await response.json();
       setEvents(data.events || []);
     } catch (error) {
-      console.error("Error fetching events:", error);
+
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +74,7 @@ export default function ManageEventsPage() {
 
       setEvents(events.filter((e) => e.id !== eventId));
     } catch (error) {
-      console.error("Error deleting event:", error);
+
       alert("Failed to delete event");
     } finally {
       setActionLoading(null);
@@ -94,7 +94,7 @@ export default function ManageEventsPage() {
       // Refresh events
       await fetchUserEvents();
     } catch (error) {
-      console.error("Error submitting event:", error);
+
       alert("Failed to submit event for approval");
     } finally {
       setActionLoading(null);

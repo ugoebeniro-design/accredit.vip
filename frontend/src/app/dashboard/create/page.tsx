@@ -618,12 +618,12 @@ export default function CreateEventPage() {
             const { data } = await Tesseract.recognize(dataUrl, "eng", { logger: () => {} });
             allText = data.text;
           } catch (ocrErr) {
-            console.warn("OCR failed:", ocrErr);
+
             allText = file.name.replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
           }
 
           const result = dashboardRegexParseFlier(allText);
-          console.log("OCR text:", allText, "Parsed result:", result);
+
           const str = (v: unknown) => (typeof v === "string" ? v : "");
           const num = (v: unknown) => (typeof v === "number" ? v : 0);
           const nextForm = {

@@ -878,7 +878,7 @@ export default function CreateEventPage() {
         });
         allText = data.text;
       } catch (ocrErr) {
-        console.warn("OCR failed:", ocrErr);
+
       }
 
       // Always also parse the filename as a fallback
@@ -887,7 +887,7 @@ export default function CreateEventPage() {
 
       setTimeout(() => {
         const result = regexParseFlier(allText);
-        console.log("OCR text:", JSON.stringify(allText), "Parsed:", result);
+
 
         const str = (v: unknown) => (typeof v === "string" ? v : "");
         const nextForm = {

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, API_BASE } from "@/lib/api-client";
 import Link from "next/link";
 import { Plus, Upload, Users, Mail, Trash2, Edit2, Loader, Search, Check, Download, QrCode, Tag, Send, Eye, X, Circle, Minus, Printer, ChevronDown, MoreHorizontal } from "lucide-react";
 
@@ -1217,7 +1217,7 @@ export default function GuestsTabContent({
                   let failed = 0;
                   const errors: string[] = [];
                   const token = localStorage.getItem("access_token");
-                  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+                  const baseUrl = API_BASE;
                   setBulkSending(true);
 
                   for (let i = 0; i < total; i += 5) {

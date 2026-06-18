@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { getEvent, deleteEvent, type EventData } from "@/lib/api/events";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, API_BASE } from "@/lib/api-client";
 import { initiatePayment } from "@/lib/api/payments";
 import { EventDetailSkeleton } from "@/components/shared/loading-skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
@@ -293,7 +293,7 @@ function EventDetailContent() {
       const token = localStorage.getItem("access_token");
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/events/${id}/upload-cover`, {
+      const res = await fetch(`${API_BASE}/events/${id}/upload-cover`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
@@ -318,7 +318,7 @@ function EventDetailContent() {
       const token = localStorage.getItem("access_token");
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/events/${id}/upload-flier`, {
+      const res = await fetch(`${API_BASE}/events/${id}/upload-flier`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
@@ -338,7 +338,7 @@ function EventDetailContent() {
   const deleteCover = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/events/${id}/cover`, {
+      const res = await fetch(`${API_BASE}/events/${id}/cover`, {
         method: "DELETE",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -353,7 +353,7 @@ function EventDetailContent() {
   const deleteFlier = async (flierId: number) => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/events/${id}/fliers/${flierId}`, {
+      const res = await fetch(`${API_BASE}/events/${id}/fliers/${flierId}`, {
         method: "DELETE",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -400,7 +400,7 @@ function EventDetailContent() {
       const token = localStorage.getItem("access_token");
       const formData = new FormData();
       formData.append("file", csvFile);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/events/${id}/guests/upload`, {
+      const res = await fetch(`${API_BASE}/events/${id}/guests/upload`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
@@ -582,8 +582,7 @@ function EventDetailContent() {
     setExporting(true);
     try {
       const token = localStorage.getItem("access_token");
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-      const res = await fetch(`${baseUrl}/events/${id}/export-guests?status=${exportStatus}`, {
+      const res = await fetch(`${API_BASE}/events/${id}/export-guests?status=${exportStatus}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error("Export failed");
@@ -602,8 +601,7 @@ function EventDetailContent() {
     setExportingMsg(true);
     try {
       const token = localStorage.getItem("access_token");
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-      const res = await fetch(`${baseUrl}/events/${id}/export-messages?status=${exportMsgStatus}&channel=${exportMsgChannel}`, {
+      const res = await fetch(`${API_BASE}/events/${id}/export-messages?status=${exportMsgStatus}&channel=${exportMsgChannel}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error("Export failed");

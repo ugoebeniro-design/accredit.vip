@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, API_BASE } from "@/lib/api-client";
 import type { EventData } from "@/lib/api/events";
 import { Skeleton } from "@/components/shared/loading-skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
@@ -27,8 +27,6 @@ type PurchaseStatus = {
   quantity: number;
   amount: number;
 };
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 function PublicEventContent() {
   const { slug } = useParams<{ slug: string }>();
