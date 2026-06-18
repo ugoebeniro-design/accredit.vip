@@ -54,8 +54,8 @@ def is_valid_phone(value: str | None) -> bool:
 
 async def _send_whatsapp(to: str, message: str, media_url: str | None = None) -> tuple[bool, str | None]:
     if settings.WHATSAPP_CLOUD_TOKEN and settings.WHATSAPP_CLOUD_PHONE_ID:
-        ok = await send_whatsapp_cloud(to, message, media_url)
-        return ok, None
+        ok, provider_id = await send_whatsapp_cloud(to, message, media_url)
+        return ok, provider_id
     return await send_whatsapp(to, message, media_url)
 
 

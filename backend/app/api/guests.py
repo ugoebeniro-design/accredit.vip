@@ -80,8 +80,8 @@ async def list_guests(
     offset: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(10, ge=1, le=100, description="Page size"),
 ):
-    base = select(Guest).where(Guest.event_id == event_id)
-    count_base = select(func.count()).select_from(Guest).where(Guest.event_id == event_id)
+    base = select(Guest).where(Guest.event_id == event_id, Guest.deleted_at == None)
+    count_base = select(func.count()).select_from(Guest).where(Guest.event_id == event_id, Guest.deleted_at == None)
 
     filters = []
     if search:
@@ -235,6 +235,7 @@ async def delete_guest(
     guest_id: int,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    permanent: bool = Query(False, description="Hard-delete instead of soft-delete"),
 ):
     result = await db.execute(
         select(Event).where(Event.id == event_id, Event.organizer_id == user.id)
@@ -249,13 +250,40 @@ async def delete_guest(
     if not guest:
         raise HTTPException(status_code=404, detail="Guest not found")
 
-    # Delete related records to avoid FK violations
-    for table in ("invite_messages", "qr_codes", "checkins", "scan_attempts", "payments"):
-        await db.execute(text(f"DELETE FROM {table} WHERE guest_id = :gid"), {"gid": guest_id})
+    if permanent:
+        for table in ("invite_messages", "qr_codes", "checkins", "scan_attempts", "payments"):
+            await db.execute(text(f"DELETE FROM {table} WHERE guest_id = :gid"), {"gid": guest_id})
+        await db.delete(guest)
+    else:
+        guest.deleted_at = func.now()
 
-    await db.delete(guest)
     await db.commit()
     return {"message": "Guest deleted"}
+
+
+@router.post("/{event_id}/guests/{guest_id}/restore")
+async def restore_guest(
+    event_id: int,
+    guest_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Event).where(Event.id == event_id, Event.organizer_id == user.id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    g_result = await db.execute(
+        select(Guest).where(Guest.id == guest_id, Guest.event_id == event_id)
+    )
+    guest = g_result.scalar_one_or_none()
+    if not guest or not guest.deleted_at:
+        raise HTTPException(status_code=404, detail="Guest not found or not deleted")
+
+    guest.deleted_at = None
+    await db.commit()
+    return {"message": "Guest restored"}
 
 
 @router.get("/{event_id}/rsvp-stats")

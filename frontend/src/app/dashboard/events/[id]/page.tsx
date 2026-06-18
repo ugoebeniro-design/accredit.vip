@@ -91,6 +91,7 @@ function EventDetailContent() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
+  const [toastAction, setToastAction] = useState<{ label: string; onClick: () => void } | undefined>(undefined);
   const [editingGuest, setEditingGuest] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
@@ -365,9 +366,10 @@ function EventDetailContent() {
     }
   };
 
-  const showToast = (message: string, type: "success" | "error" = "success") => {
+  const showToast = (message: string, type: "success" | "error" = "success", action?: { label: string; onClick: () => void }) => {
     setToastMessage(message);
     setToastType(type);
+    setToastAction(action);
     setToastVisible(true);
   };
 
@@ -674,12 +676,22 @@ function EventDetailContent() {
     }
   };
 
+  const [undoGuestId, setUndoGuestId] = useState<number | null>(null);
+  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleDeleteGuest = async (guestId: number) => {
     try {
       const deletedGuest = guests.find((g) => g.id === guestId);
       await apiClient(`/events/${id}/guests/${guestId}`, { method: "DELETE" });
       setDeleteConfirm(null);
-      showToast(`${deletedGuest?.name || "Guest"} deleted successfully`);
+      const undo = () => {
+        apiClient(`/events/${id}/guests/${guestId}/restore`, { method: "POST" }).then(() => {
+          loadGuests(); loadRsvpStats();
+        }).catch(() => {});
+        setUndoGuestId(null);
+      };
+      setUndoGuestId(guestId);
+      showToast(`${deletedGuest?.name || "Guest"} deleted`, "success", { label: "Undo", onClick: undo });
       loadGuests(); loadRsvpStats();
     } catch {
       showToast("Could not delete guest. They may have existing invites or payments.", "error");
@@ -1184,7 +1196,8 @@ function EventDetailContent() {
         message={toastMessage}
         type={toastType}
         visible={toastVisible}
-        onClose={() => setToastVisible(false)}
+        action={toastAction}
+        onClose={() => { setToastVisible(false); setToastAction(undefined); }}
       />
     </div>
   );

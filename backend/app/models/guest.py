@@ -23,6 +23,7 @@ class Guest(Base):
     notes = Column(String, nullable=True)
     tags = Column(JSON, nullable=True, default=[])
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     qr_codes = relationship("QRCode", backref="guest", lazy="selectin")
 

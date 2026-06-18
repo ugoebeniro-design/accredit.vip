@@ -4,7 +4,7 @@ import csv
 import io
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, func
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -227,7 +227,7 @@ async def list_guests(
     if event.status == "trial":
         return []
 
-    query = select(Guest).where(Guest.event_id == event_id)
+    query = select(Guest).where(Guest.event_id == event_id, Guest.deleted_at == None)
     if rsvp_status:
         query = query.where(Guest.rsvp_status == rsvp_status)
 
@@ -283,6 +283,7 @@ async def delete_guest(
     guest_id: int,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    permanent: bool = Query(False, description="Hard-delete instead of soft-delete"),
 ):
     """Delete a guest."""
     result = await db.execute(
@@ -299,9 +300,39 @@ async def delete_guest(
     if not event_result.scalar_one_or_none():
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    await db.delete(guest)
+    if permanent:
+        await db.delete(guest)
+    else:
+        guest.deleted_at = func.now()
+
     await db.commit()
     return {"status": "deleted"}
+
+
+@router.post("/guests/{guest_id}/restore")
+async def restore_guest(
+    guest_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Restore a soft-deleted guest."""
+    result = await db.execute(
+        select(Guest).where(Guest.id == guest_id)
+    )
+    guest = result.scalar_one_or_none()
+    if not guest or not guest.deleted_at:
+        raise HTTPException(status_code=404, detail="Guest not found or not deleted")
+
+    # Verify ownership
+    event_result = await db.execute(
+        select(Event).where(Event.id == guest.event_id, Event.organizer_id == user.id)
+    )
+    if not event_result.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    guest.deleted_at = None
+    await db.commit()
+    return {"status": "restored"}
 
 
 @router.get("/guests/{event_id}/stats")

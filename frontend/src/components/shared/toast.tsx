@@ -1,16 +1,22 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { CheckCircle, XCircle, X } from "lucide-react";
+import { CheckCircle, XCircle, X, RotateCcw } from "lucide-react";
+
+type ToastAction = {
+  label: string;
+  onClick: () => void;
+};
 
 type ToastProps = {
   message: string;
   type?: "success" | "error";
   visible: boolean;
   onClose: () => void;
+  action?: ToastAction;
   duration?: number;
 };
 
-export function Toast({ message, type = "success", visible, onClose }: ToastProps) {
+export function Toast({ message, type = "success", visible, onClose, action }: ToastProps) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -18,15 +24,14 @@ export function Toast({ message, type = "success", visible, onClose }: ToastProp
   useEffect(() => {
     if (visible) {
       if (timerRef.current) clearTimeout(timerRef.current);
-      // Only auto-dismiss success toasts; errors stay until dismissed
       if (type === "success") {
-        timerRef.current = setTimeout(() => onCloseRef.current(), 10000);
+        timerRef.current = setTimeout(() => onCloseRef.current(), action ? 8000 : 10000);
       }
     }
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [visible, type]);
+  }, [visible, type, action]);
 
   if (!visible) return null;
 
@@ -44,7 +49,16 @@ export function Toast({ message, type = "success", visible, onClose }: ToastProp
         <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
       )}
       <span className="text-sm font-medium">{message}</span>
-      <button onClick={onClose} className="ml-2 flex-shrink-0 opacity-60 hover:opacity-100">
+      {action && (
+        <button
+          onClick={() => { action.onClick(); onClose(); }}
+          className="ml-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-emerald-200 text-emerald-800 hover:bg-emerald-300 transition-colors"
+        >
+          <RotateCcw className="w-3 h-3" />
+          {action.label}
+        </button>
+      )}
+      <button onClick={onClose} className="ml-1 flex-shrink-0 opacity-60 hover:opacity-100">
         <X className="w-4 h-4" />
       </button>
     </div>
