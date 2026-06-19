@@ -51,7 +51,7 @@ export default function RSVPPage() {
   const [selectedResponse, setSelectedResponse] = useState<"yes" | "no" | null>(null);
   const [declineNote, setDeclineNote] = useState("");
   const [showSplash, setShowSplash] = useState(true);
-  const splashTimer = useRef<ReturnType<typeof setTimeout>>();
+  const splashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const themeColor = rsvpData?.event_theme_color || "#E91E8C";
 
   useEffect(() => {
