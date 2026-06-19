@@ -99,6 +99,11 @@ export default function AccreditationScanPage() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [activityLive, setActivityLive] = useState(true);
   const [lastActivityRefresh, setLastActivityRefresh] = useState<Date | null>(null);
+  const [Html5QrcodeLib, setHtml5QrcodeLib] = useState<any>(null);
+
+  useEffect(() => {
+    import("html5-qrcode").then((mod) => setHtml5QrcodeLib(mod.Html5Qrcode));
+  }, []);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [selectedManualGuests, setSelectedManualGuests] = useState<Set<number>>(new Set());
 
@@ -213,13 +218,14 @@ export default function AccreditationScanPage() {
   const startScanner = async () => {
     setError("");
     setScanResult(null);
+    if (!Html5QrcodeLib) return;
+
     // Render qr-reader div first, then create the scanner once DOM is updated
     setScannerStarted(true);
     await new Promise((r) => setTimeout(r, 100));
 
     try {
-      const { Html5Qrcode } = await import("html5-qrcode");
-      const scanner = new Html5Qrcode("qr-reader");
+      const scanner = new Html5QrcodeLib("qr-reader");
       scannerRef.current = scanner;
 
       // Scroll scanner into view on mobile
@@ -230,7 +236,7 @@ export default function AccreditationScanPage() {
 
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 15, qrbox: { width: 280, height: 280 } },
+        { fps: 15, qrbox: { width: 200, height: 200 } },
         async (decodedText: string) => {
           scanner.stop().catch(() => {});
           setScannerStarted(false);
