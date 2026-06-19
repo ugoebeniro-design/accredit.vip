@@ -22,8 +22,8 @@ export function DashboardTopbar({
           <Menu className="w-5 h-5 text-[#0D1B2A]" />
         </button>
         <div className="min-w-0">
-          <h1 className="text-sm sm:text-lg font-bold text-[#0D1B2A] truncate">{title}</h1>
-          {subtitle && <p className="text-xs text-gray-400 truncate">{subtitle}</p>}
+          <h1 className="text-sm sm:text-lg font-bold text-[#0D1B2A] sm:truncate">{title}</h1>
+          {subtitle && <p className="text-xs text-gray-400 sm:truncate">{subtitle}</p>}
         </div>
       </div>
       <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">

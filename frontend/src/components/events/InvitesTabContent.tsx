@@ -569,29 +569,18 @@ export default function InvitesTabContent({
             <CheckCircle className="w-5 h-5" />
             Delivery History
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {logs.map((log: any) => (
-              <div key={log.id} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-slate-900 capitalize">{log.channel}</p>
-                    <p className="text-xs text-slate-600 mt-1">{log.total_sent} sent &middot; Status: {log.status}</p>
-                  </div>
-                  <div className="text-right">
-                    {log.status === "sent" || log.status === "completed" ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                        <CheckCircle className="w-3 h-3" /> Complete
-                      </span>
-                    ) : log.status === "pending" ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">
-                        <Loader className="w-3 h-3 animate-spin" /> In Progress
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1 rounded-full">
-                        <AlertTriangle className="w-3 h-3" /> Failed
-                      </span>
-                    )}
-                  </div>
+              <div key={log.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 text-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="font-medium text-slate-900 truncate">{log.guest_name || `Guest #${log.guest_id}`}</span>
+                  <span className="text-xs text-slate-400 capitalize whitespace-nowrap">{log.channel || "—"}</span>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className={`text-xs font-medium ${log.status === "delivered" || log.status === "sent" ? "text-emerald-600" : log.status === "failed" ? "text-red-600" : "text-slate-400"}`}>
+                    {log.status || "pending"}
+                  </span>
+                  {log.sent_at && <span className="text-xs text-slate-400 whitespace-nowrap">{new Date(log.sent_at).toLocaleString()}</span>}
                 </div>
               </div>
             ))}

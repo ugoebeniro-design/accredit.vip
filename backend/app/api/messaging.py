@@ -678,10 +678,37 @@ async def delivery_logs(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(InviteBatch).where(InviteBatch.event_id == event_id)
-        .order_by(InviteBatch.created_at.desc())
+        select(
+            InviteMessage.id,
+            InviteMessage.guest_id,
+            Guest.name.label("guest_name"),
+            InviteMessage.channel,
+            InviteMessage.status,
+            InviteMessage.sent_at,
+            InviteMessage.delivered_at,
+            InviteMessage.opened_at,
+            InviteMessage.error,
+        )
+        .join(InviteBatch, InviteMessage.batch_id == InviteBatch.id)
+        .join(Guest, InviteMessage.guest_id == Guest.id)
+        .where(InviteBatch.event_id == event_id)
+        .order_by(InviteMessage.sent_at.desc().nulls_last(), InviteMessage.created_at.desc())
     )
-    return result.scalars().all()
+    rows = result.all()
+    return [
+        {
+            "id": r.id,
+            "guest_id": r.guest_id,
+            "guest_name": r.guest_name,
+            "channel": r.channel,
+            "status": r.status,
+            "sent_at": r.sent_at.isoformat() if r.sent_at else None,
+            "delivered_at": r.delivered_at.isoformat() if r.delivered_at else None,
+            "opened_at": r.opened_at.isoformat() if r.opened_at else None,
+            "error": r.error,
+        }
+        for r in rows
+    ]
 
 
 class SendInvitesBatchRequest(BaseModel):
