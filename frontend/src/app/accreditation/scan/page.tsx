@@ -369,18 +369,18 @@ export default function AccreditationScanPage() {
                     {scannerStarted ? (
                       <div id="qr-reader" className="w-full max-w-sm mx-auto rounded-xl overflow-hidden [&_video]:rounded-xl [&_img]:rounded-xl" />
                     ) : (
-                      <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-white/30 relative">
-                        <Camera className="w-16 h-16 mb-4 opacity-40" />
-                        <p className="font-medium text-white/50">Scanner idle</p>
-                        <p className="text-sm mt-1 text-center px-4">Point your camera at a guest's QR code</p>
-                        <button
-                          onClick={startScanner}
-                          className="mt-6 flex items-center gap-2.5 px-8 py-3.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-base font-bold transition min-h-[52px] shadow-lg shadow-pink-600/30 animate-pulse hover:animate-none"
-                        >
-                          <Camera className="w-5 h-5" />
-                          Start Live Scanner
-                        </button>
-                      </div>
+                      <button
+                        onClick={startScanner}
+                        className="w-full flex flex-col items-center justify-center py-12 sm:py-16 text-white/30 relative cursor-pointer hover:bg-white/[0.02] transition rounded-xl group"
+                      >
+                        <div className="relative mb-4">
+                          <Camera className="w-20 h-20 text-pink-500/60 group-hover:text-pink-400/80 transition" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
+                          <div className="absolute inset-0 rounded-full bg-pink-500/10 blur-xl" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
+                        </div>
+                        <p className="font-semibold text-base text-white/60 group-hover:text-white/80 transition">Start Live Scanner</p>
+                        <p className="text-xs mt-1.5 text-white/30">Tap anywhere to activate the camera</p>
+                        <style>{`@keyframes breathe { 0%,100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.06); opacity: 1; } }`}</style>
+                      </button>
                     )}
                   </div>
                 </div>
