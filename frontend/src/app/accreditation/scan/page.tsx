@@ -514,22 +514,24 @@ export default function AccreditationScanPage() {
                         </button>
                       </div>
                     )}
-                  <div className="p-4 relative">
-                    <div id="qr-reader" className={`w-full max-w-sm mx-auto rounded-xl overflow-hidden [&_video]:rounded-xl [&_img]:rounded-xl ${scannerStarted ? "" : "hidden"}`} />
-                    {!scannerStarted && (
-                      <button
-                        onClick={startScanner}
-                        className="w-full flex flex-col items-center justify-center py-12 sm:py-16 text-white/30 relative cursor-pointer hover:bg-white/[0.02] transition rounded-xl group"
-                      >
-                        <div className="relative mb-4">
-                          <Camera className="w-20 h-20 text-pink-500/60 group-hover:text-pink-400/80 transition" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
-                          <div className="absolute inset-0 rounded-full bg-pink-500/10 blur-xl" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
-                        </div>
-                        <p className="font-semibold text-base text-white/60 group-hover:text-white/80 transition">Start Live Scanner</p>
-                        <p className="text-xs mt-1.5 text-white/30">Tap anywhere to activate the camera</p>
-                        <style>{`@keyframes breathe { 0%,100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.06); opacity: 1; } }`}</style>
-                      </button>
-                    )}
+                  <div className="p-4">
+                    <div className="relative w-full max-w-sm mx-auto min-h-[280px]">
+                      <div id="qr-reader" className={`w-full rounded-xl overflow-hidden [&_video]:rounded-xl [&_img]:rounded-xl ${scannerStarted ? "" : "invisible"}`} />
+                      {!scannerStarted && (
+                        <button
+                          onClick={startScanner}
+                          className="absolute inset-0 flex flex-col items-center justify-center text-white/30 cursor-pointer hover:bg-white/[0.02] transition rounded-xl group"
+                        >
+                          <div className="relative mb-4">
+                            <Camera className="w-20 h-20 text-pink-500/60 group-hover:text-pink-400/80 transition" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
+                            <div className="absolute inset-0 rounded-full bg-pink-500/10 blur-xl" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
+                          </div>
+                          <p className="font-semibold text-base text-white/60 group-hover:text-white/80 transition">Start Live Scanner</p>
+                          <p className="text-xs mt-1.5 text-white/30">Tap anywhere to activate the camera</p>
+                          <style>{`@keyframes breathe { 0%,100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.06); opacity: 1; } }`}</style>
+                        </button>
+                      )}
+                    </div>
                   </div>
                   </div>
                 </div>
