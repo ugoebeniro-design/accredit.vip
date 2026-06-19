@@ -232,7 +232,7 @@ export default function AccreditationScanPage() {
       <div className="min-h-screen bg-[#0D1B2A] text-white flex flex-col">
         <header className="border-b border-white/10 bg-[#0D1B2A]/95 px-4 py-3">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <Image src="/logo-white.png" alt="accredit.vip" width={380} height={70} className="h-16 w-auto object-contain" />
+            <Image src="/logo-dark-trim.png" alt="accredit.vip" width={480} height={90} className="h-20 w-auto object-contain" />
             <button onClick={handleLogout} className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-semibold transition min-h-[44px]">
               <LogOut className="w-4 h-4" />
               Sign Out
@@ -264,7 +264,7 @@ export default function AccreditationScanPage() {
       <header className="border-b border-white/10 bg-[#0D1B2A]/95 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Image src="/logo-white.png" alt="accredit.vip" width={380} height={70} className="h-16 w-auto object-contain flex-shrink-0" />
+            <Image src="/logo-dark-trim.png" alt="accredit.vip" width={480} height={90} className="h-20 w-auto object-contain flex-shrink-0" />
             {selectedEvent && (
               <div className="hidden sm:flex items-center gap-3 min-w-0">
                 <span className="text-white/20">|</span>
