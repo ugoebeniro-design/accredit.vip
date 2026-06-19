@@ -40,7 +40,7 @@ export default function AccreditationLoginPage() {
           alt="accredit.vip"
           width={4071}
           height={761}
-          className="h-16 w-auto object-contain"
+          className="h-24 w-auto object-contain"
         />
       </Link>
 
