@@ -729,6 +729,7 @@ function EventDetailContent() {
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "guests", label: "Guests", icon: Users, badge: totalGuests },
+    { id: "invites", label: "Invites", icon: Send },
     { id: "questions", label: "Questions", icon: HelpCircle },
     { id: "reminders", label: "Reminders", icon: Bell },
     { id: "coupons", label: "Coupons", icon: Ticket },

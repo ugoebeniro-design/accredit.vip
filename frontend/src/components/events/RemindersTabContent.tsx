@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
-import { Plus, Bell, Save, Info } from "lucide-react";
+import { Plus, Bell, Save, Info, Loader, AlertTriangle } from "lucide-react";
 
 type Rule = {
   id?: number;
@@ -29,13 +29,24 @@ type RemindersTabContentProps = {
 
 export default function RemindersTabContent({ eventId }: RemindersTabContentProps) {
   const [rules, setRules] = useState<Rule[]>([{ ...DEFAULT_RULE }]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState("");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
-    apiClient<any>(`/events/${eventId}/settings`).then((s) => {
-      if (s.reminder_rules?.length) setRules(s.reminder_rules);
-    }).catch(() => {});
+    setLoading(true);
+    setError(null);
+
+    apiClient<any>(`/events/${eventId}/settings`)
+      .then((s) => {
+        if (s.reminder_rules) {
+          setRules(s.reminder_rules.length > 0 ? s.reminder_rules : [{ ...DEFAULT_RULE }]);
+        }
+      })
+      .catch(() => setError("Failed to load reminder settings."))
+      .finally(() => setLoading(false));
   }, [eventId]);
 
   const updateRule = (i: number, field: string, value: any) => {
@@ -48,12 +59,13 @@ export default function RemindersTabContent({ eventId }: RemindersTabContentProp
 
   const saveRules = async () => {
     setSaving(true);
-    setSaveMsg("");
+    setSaveError(null);
+    setSaveSuccess(false);
     try {
       await apiClient(`/events/${eventId}/settings`, { method: "PUT", body: { reminder_rules: rules } });
-      setSaveMsg("Reminder rules saved!");
+      setSaveSuccess(true);
     } catch (err: any) {
-      setSaveMsg(err.message || "Error saving rules");
+      setSaveError(err.message || "Error saving rules");
     }
     setSaving(false);
   };
@@ -76,75 +88,92 @@ export default function RemindersTabContent({ eventId }: RemindersTabContentProp
         </div>
       </div>
 
-      {saveMsg && (
-        <div className={`rounded-lg p-3 text-sm font-medium ${saveMsg === "Reminder rules saved!" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-          {saveMsg}
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-4 flex gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
 
-      <div className="space-y-3">
-        {rules.map((rule, i) => (
-          <div key={i} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-secondary flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">{i + 1}</span>
-                Rule {i + 1}
-              </h3>
-              {rules.length > 1 && (
-                <button onClick={() => removeRule(i)} className="text-xs text-red-600 hover:text-red-700 font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">Remove</button>
-              )}
-            </div>
+      {saveSuccess && (
+        <div className="rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 p-3 text-sm font-medium">
+          Reminder rules saved!
+        </div>
+      )}
 
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-sm text-slate-600">Send</span>
-                <select value={rule.offset_value} onChange={(e) => updateRule(i, "offset_value", Number(e.target.value))} className="h-9 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                  {[1, 2, 3, 7, 14].map((n) => (<option key={n} value={n}>{n}</option>))}
-                </select>
-                <select value={rule.offset_unit} onChange={(e) => updateRule(i, "offset_unit", e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="hours">hour(s)</option>
-                  <option value="days">day(s)</option>
-                  <option value="weeks">week(s)</option>
-                </select>
-                <select value={rule.trigger} onChange={(e) => updateRule(i, "trigger", e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="before_event">before event</option>
-                  <option value="after_rsvp">after RSVP</option>
-                </select>
-              </div>
+      {saveError && (
+        <div className="rounded-lg bg-red-50 text-red-700 border border-red-200 p-3 text-sm font-medium">
+          {saveError}
+        </div>
+      )}
 
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">Delivery Channel</label>
-                <select value={rule.channel} onChange={(e) => updateRule(i, "channel", e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="email">Email</option>
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="sms">SMS</option>
-                </select>
-              </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader className="w-6 h-6 animate-spin text-slate-400" />
+        </div>
+      ) : (
+        <>
+          <div className="space-y-3">
+            {rules.map((rule, i) => (
+              <div key={i} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition-shadow">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-secondary flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">{i + 1}</span>
+                    Rule {i + 1}
+                  </h3>
+                  <button onClick={() => removeRule(i)} className="text-sm text-red-600 hover:text-red-700 font-medium px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors">Remove</button>
+                </div>
 
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1.5 block">Message Template</label>
-                <textarea
-                  placeholder='Message (use {{event_title}}, {{event_date}}, {{venue}})'
-                  value={rule.message}
-                  onChange={(e) => updateRule(i, "message", e.target.value)}
-                  rows={3}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                />
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <span className="text-sm text-slate-600">Send</span>
+                    <select value={rule.offset_value} onChange={(e) => updateRule(i, "offset_value", Number(e.target.value))} className="h-10 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                      {[1, 2, 3, 7, 14].map((n) => (<option key={n} value={n}>{n}</option>))}
+                    </select>
+                    <select value={rule.offset_unit} onChange={(e) => updateRule(i, "offset_unit", e.target.value)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                      <option value="hours">hour(s)</option>
+                      <option value="days">day(s)</option>
+                      <option value="weeks">week(s)</option>
+                    </select>
+                    <select value={rule.trigger} onChange={(e) => updateRule(i, "trigger", e.target.value)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                      <option value="before_event">before event</option>
+                      <option value="after_rsvp">after RSVP</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Delivery Channel</label>
+                    <select value={rule.channel} onChange={(e) => updateRule(i, "channel", e.target.value)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                      <option value="email">Email</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="sms">SMS</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 mb-1.5 block">Message Template</label>
+                    <textarea
+                      placeholder='Message (use {{event_title}}, {{event_date}}, {{venue}})'
+                      value={rule.message}
+                      onChange={(e) => updateRule(i, "message", e.target.value)}
+                      rows={3}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <button onClick={addRule} className="w-full h-10 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-medium hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 bg-white hover:bg-slate-50">
-        <Plus className="w-4 h-4" /> Add Rule
-      </button>
+          <button onClick={addRule} className="w-full h-10 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-medium hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 bg-white hover:bg-slate-50">
+            <Plus className="w-4 h-4" /> Add Rule
+          </button>
 
-      {rules.length > 0 && (
-        <button onClick={saveRules} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium transition-colors disabled:opacity-50 h-9 px-4 text-sm shadow-sm">
-          <Save className="w-4 h-4" />
-          {saving ? "Saving..." : "Save Reminder Rules"}
-        </button>
+          <button onClick={saveRules} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium transition-colors disabled:opacity-50 h-10 px-4 text-sm shadow-sm">
+            {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? "Saving..." : "Save Reminder Rules"}
+          </button>
+        </>
       )}
     </div>
   );
