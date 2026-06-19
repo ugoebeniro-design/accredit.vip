@@ -447,14 +447,14 @@ export default function GuestsTabContent({
           <Upload className="w-5 h-5" />
           Bulk Import
         </h2>
-        <div className="text-sm text-slate-600 mb-4 space-y-1">
-          <p>Upload a CSV file with these columns:</p>
-          <ul className="list-disc list-inside text-xs text-slate-500 space-y-0.5 ml-1">
-            <li><strong>name</strong> <span className="text-red-500">*</span> — Guest full name</li>
-            <li><strong>phone</strong> — <span className="font-mono">+2348012345678</span> or local format (recommended for WhatsApp/SMS)</li>
-            <li><strong>email</strong> — <span className="font-mono">guest@example.com</span></li>
+        <div className="text-sm text-slate-600 mb-4 space-y-2">
+          <p className="font-medium">Upload a CSV file with these columns:</p>
+          <ul className="space-y-1.5 text-xs text-slate-500 ml-1">
+            <li><strong className="text-slate-700">Name</strong> <span className="text-red-500">*</span> — Guest full name</li>
+            <li><strong className="text-slate-700">Phone</strong> — <span className="font-mono">+2348012345678</span> or local format (recommended for WhatsApp/SMS)</li>
+            <li><strong className="text-slate-700">Email</strong> — <span className="font-mono">guest@example.com</span></li>
           </ul>
-          <p className="text-xs text-slate-400 mt-1">The first row must be column headers. Invalid rows are skipped with a warning.</p>
+          <p className="text-xs text-slate-400">The first row must be column headers. Invalid rows are skipped with a warning.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
