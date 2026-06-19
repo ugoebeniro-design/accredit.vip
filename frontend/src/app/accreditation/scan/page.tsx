@@ -43,6 +43,11 @@ export default function AccreditationScanPage() {
   const [activityLoading, setActivityLoading] = useState(false);
   const [error, setError] = useState("");
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [eventSearch, setEventSearch] = useState("");
+
+  const filteredEvents = events.filter((ev) =>
+    ev.title?.toLowerCase().includes(eventSearch.toLowerCase())
+  );
 
   useEffect(() => {
     apiClient<{ id: number; email: string; full_name: string; role: string }>("/auth/me")
@@ -279,20 +284,29 @@ export default function AccreditationScanPage() {
                 <span className="flex items-center gap-1"><User className="w-3 h-3" /> {stats.total_guests}</span>
               </div>
             )}
-            {events.length > 1 ? (
+            {events.length > 1 && !selectedEvent ? (
+              <input
+                value={eventSearch}
+                onChange={(e) => setEventSearch(e.target.value)}
+                placeholder="Search events..."
+                className="bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/30 w-40 focus:outline-none focus:border-pink-500"
+              />
+            ) : null}
+            {events.length > 1 && filteredEvents.length > 0 && (
               <div className="relative">
                 <select
                   value={selectedEvent?.id || ""}
                   onChange={(e) => handleEventChange(Number(e.target.value))}
                   className="appearance-none bg-white/10 border border-white/20 rounded-xl pl-3 pr-8 py-2 text-sm text-white max-w-[200px] truncate cursor-pointer"
                 >
-                  {events.map((ev) => (
+                  {!selectedEvent && <option value="">Select event</option>}
+                  {filteredEvents.map((ev) => (
                     <option key={ev.id} value={ev.id}>{ev.title}</option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
               </div>
-            ) : selectedEvent ? null : null}
+            )}
             <button onClick={handleLogout} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-semibold transition min-h-[44px]">
               <LogOut className="w-4 h-4" />
               Sign Out

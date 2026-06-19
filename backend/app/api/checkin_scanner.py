@@ -133,7 +133,7 @@ async def scanner_checkin(req: ScanTokenRequest, request: Request, db: AsyncSess
 @router.get("/scanner/events")
 async def scanner_events(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(Event).where(Event.organizer_id == user.id).order_by(Event.event_date.desc())
+        select(Event).order_by(Event.event_date.desc())
     )
     events = result.scalars().all()
     return [{"id": e.id, "title": e.title, "event_date": str(e.event_date), "status": e.status} for e in events]
@@ -142,7 +142,7 @@ async def scanner_events(user: User = Depends(get_current_user), db: AsyncSessio
 @router.get("/scanner/events/{event_id}/stats")
 async def scanner_event_stats(event_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     event = await db.get(Event, event_id)
-    if not event or event.organizer_id != user.id:
+    if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     checked_in = await db.scalar(select(func.count(CheckIn.id)).where(CheckIn.event_id == event_id))
     total = await db.scalar(select(func.count(Guest.id)).where(Guest.event_id == event_id))
@@ -157,7 +157,7 @@ async def scanner_search_guests(
     db: AsyncSession = Depends(get_db),
 ):
     event = await db.get(Event, event_id)
-    if not event or event.organizer_id != user.id:
+    if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     if not q.strip():
         return {"guests": []}
@@ -198,7 +198,7 @@ async def scanner_recent_activity(
     db: AsyncSession = Depends(get_db),
 ):
     event = await db.get(Event, event_id)
-    if not event or event.organizer_id != user.id:
+    if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     result = await db.execute(
         select(CheckIn, Guest.name, Guest.phone, Guest.email)
