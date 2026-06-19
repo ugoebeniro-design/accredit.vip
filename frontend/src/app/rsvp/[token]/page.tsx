@@ -98,32 +98,26 @@ export default function RSVPPage() {
 
   if (showSplash) {
     return (
-      <div className="min-h-screen bg-[#0D1B2A] flex flex-col items-center justify-center px-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-pink-600/10 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute top-1/4 -left-20 w-60 h-60 rounded-full bg-pink-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 -right-20 w-60 h-60 rounded-full bg-pink-500/10 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col items-center text-center motion-pop">
+      <div className="min-h-screen bg-white relative overflow-hidden">
+        <iframe src="/" className="absolute inset-0 w-full h-full border-0" title="accredit.vip" />
+        <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0D1B2A] via-[#0D1B2A]/90 to-transparent pb-8 pt-24 px-6 text-center z-10">
           <Image
             src="/logo-dark-trim.png"
             alt="accredit.vip"
-            width={360}
-            height={68}
-            className="h-14 sm:h-16 w-auto object-contain mb-8"
+            width={260}
+            height={50}
+            className="h-10 w-auto object-contain mx-auto mb-3"
             priority
           />
-
-          <p className="text-white/50 text-xs uppercase tracking-[0.2em] font-medium mb-2">Event Invitation</p>
+          <p className="text-white/50 text-xs uppercase tracking-[0.2em] font-medium mb-1">Event Invitation</p>
           <p className="text-white/30 text-sm">Preparing your invitation...</p>
-
-          <div className="mt-10 flex items-center gap-2">
+          <div className="mt-4 flex items-center justify-center gap-2">
             <div className="w-2 h-2 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: "0s" }} />
             <div className="w-2 h-2 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: "0.15s" }} />
             <div className="w-2 h-2 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: "0.3s" }} />
           </div>
         </div>
-
-        <p className="absolute bottom-8 text-white/15 text-xs">Accredit.vip — Event Management Made Simple</p>
       </div>
     );
   }
