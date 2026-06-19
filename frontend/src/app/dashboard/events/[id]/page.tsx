@@ -1114,6 +1114,7 @@ function EventDetailContent() {
 
             {activeTab === "invites" && (
               <InvitesTabContent
+                eventId={id}
                 channels={channels}
                 setChannels={setChannels}
                 sending={sending}
@@ -1134,6 +1135,7 @@ function EventDetailContent() {
                 exportMsgChannel={exportMsgChannel}
                 setExportMsgChannel={setExportMsgChannel}
                 exportMessages={exportMessages}
+                onDataChange={() => { loadGuests(); loadLogs(); }}
               />
             )}
 

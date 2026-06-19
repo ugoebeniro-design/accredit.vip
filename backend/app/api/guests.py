@@ -78,7 +78,7 @@ async def list_guests(
     rsvp_status: str = Query(None, description="Filter by RSVP status (accepted/declined/pending/maybe)"),
     invite_status: str = Query(None, description="Filter by invite delivery status (sent/not_sent/delivered/failed)"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    limit: int = Query(10, ge=1, le=100, description="Page size"),
+    limit: int = Query(10, ge=1, le=1000, description="Page size"),
 ):
     base = select(Guest).where(Guest.event_id == event_id, Guest.deleted_at == None)
     count_base = select(func.count()).select_from(Guest).where(Guest.event_id == event_id, Guest.deleted_at == None)

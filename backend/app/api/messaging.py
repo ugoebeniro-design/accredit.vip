@@ -32,6 +32,8 @@ router = APIRouter()
 class SendInvitesRequest(BaseModel):
     channel: str = "email"
     channels: Optional[List[str]] = None
+    message_subject: Optional[str] = None
+    message_body: Optional[str] = None
 
     def get_channels(self) -> List[str]:
         return self.channels if self.channels else [self.channel]
@@ -40,6 +42,8 @@ class SendInvitesRequest(BaseModel):
 class SendGuestInviteRequest(BaseModel):
     channel: str = "email"
     channels: Optional[List[str]] = None
+    message_subject: Optional[str] = None
+    message_body: Optional[str] = None
 
     def get_channels(self) -> List[str]:
         return self.channels if self.channels else [self.channel]
@@ -118,11 +122,13 @@ def _build_invite_message(
     flyer_url: str | None = None,
     qr_image_url: str | None = None,
     message_id: int | None = None,
+    custom_subject: str | None = None,
+    custom_body: str | None = None,
 ) -> tuple[str, str, str]:
     rsvp_link = f"{settings.FRONTEND_URL}/rsvp/{guest.rsvp_token}"
-    subject = f"You're Invited: {event.title}"
+    subject = custom_subject or f"You're Invited: {event.title}"
     invitation_text = event.description or "You are cordially invited."
-    body = (
+    body = custom_body or (
         f"Dear {guest.name},\n\n"
         f"{invitation_text}\n\n"
         f"Event Details:\n"
@@ -215,6 +221,8 @@ async def _send_to_guest(
     channel: str,
     batch_id: int,
     db: AsyncSession,
+    custom_subject: str | None = None,
+    custom_body: str | None = None,
 ) -> tuple[bool, str]:
     if guest.invite_attempts >= MAX_INVITE_ATTEMPTS:
         return False, "max_attempts"
@@ -229,7 +237,7 @@ async def _send_to_guest(
     db.add(msg)
     await db.flush()
 
-    subject, body, html = _build_invite_message(guest, event, flyer_url=flyer_url, message_id=msg.id)
+    subject, body, html = _build_invite_message(guest, event, flyer_url=flyer_url, message_id=msg.id, custom_subject=custom_subject, custom_body=custom_body)
 
     try:
         if channel == "email" and guest.email:
@@ -432,7 +440,7 @@ async def send_invites(
         sent = 0
         skipped_attempts = 0
         for guest in eligible:
-            ok, status = await _send_to_guest(guest, event, ch, batch.id, db)
+            ok, status = await _send_to_guest(guest, event, ch, batch.id, db, custom_subject=req.message_subject, custom_body=req.message_body)
             if status == "max_attempts":
                 skipped_attempts += 1
                 continue
@@ -503,7 +511,7 @@ async def send_guest_invite(
         db.add(batch)
         await db.flush()
 
-        ok, status = await _send_to_guest(guest, event, ch, batch.id, db)
+        ok, status = await _send_to_guest(guest, event, ch, batch.id, db, custom_subject=req.message_subject, custom_body=req.message_body)
 
         if status == "max_attempts":
             batch.total_sent = 0
@@ -680,6 +688,8 @@ class SendInvitesBatchRequest(BaseModel):
     channel: str = "email"
     channels: Optional[List[str]] = None
     guest_ids: list[int]
+    message_subject: Optional[str] = None
+    message_body: Optional[str] = None
 
     def get_channels(self) -> List[str]:
         return self.channels if self.channels else [self.channel]
@@ -738,7 +748,7 @@ async def send_invites_batch(
         sent = 0
         results = []
         for guest in eligible:
-            ok, status = await _send_to_guest(guest, event, ch, batch.id, db)
+            ok, status = await _send_to_guest(guest, event, ch, batch.id, db, custom_subject=req.message_subject, custom_body=req.message_body)
             if status == "max_attempts":
                 results.append({"guest_id": guest.id, "name": guest.name, "status": "max_attempts"})
                 continue
