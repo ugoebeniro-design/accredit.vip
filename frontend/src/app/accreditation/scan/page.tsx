@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-
-// Force chunk generation for html5-qrcode (statically analyzable by Next.js)
-const _html5QrcodeChunk = import("html5-qrcode");
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { apiClient, API_BASE } from "@/lib/api-client";
 import { useAuth } from "@/contexts/auth-context";
-import { Check, X, Search, Camera, User, RefreshCw, Clock, Loader, ChevronDown, QrCode, LogOut, Radio } from "lucide-react";
+import { Check, X, Search, Camera, User, RefreshCw, Clock, Loader, ChevronDown, QrCode, LogOut } from "lucide-react";
+
+const QRScanner = dynamic(() => import("@/components/accreditation/QRScanner"), { ssr: false });
 
 function EventDropdown({ events, selectedEvent, onEventChange, label }: { events: any[], selectedEvent: any, onEventChange: (id: number) => void, label?: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -82,11 +82,9 @@ interface ActivityItem {
 export default function AccreditationScanPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout, refetchUser } = useAuth();
-  const scannerRef = useRef<any>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [stats, setStats] = useState({ checked_in: 0, total_guests: 0 });
-  const [scannerStarted, setScannerStarted] = useState(false);
   const [scanResult, setScanResult] = useState<{ status: string; message: string; guest?: any } | null>(null);
   const [manualQuery, setManualQuery] = useState("");
   const [manualResults, setManualResults] = useState<GuestResult[]>([]);
@@ -199,7 +197,6 @@ export default function AccreditationScanPage() {
   }, [selectedEvent, loadStats, loadActivity]);
 
   const handleEventChange = (eventId: number) => {
-    stopScanner();
     setScanResult(null);
     setManualResults([]);
     setManualQuery("");
@@ -213,62 +210,13 @@ export default function AccreditationScanPage() {
     }
   };
 
-  const startScanner = async () => {
+  const handleScannerStart = () => {
     setError("");
     setScanResult(null);
-
-    // Render qr-reader div first
-    setScannerStarted(true);
-    await new Promise((r) => setTimeout(r, 100));
-
-    try {
-      const mod = await import("html5-qrcode");
-      const Html5Qrcode = mod.Html5Qrcode;
-      const scanner = new Html5Qrcode("qr-reader");
-      scannerRef.current = scanner;
-
-      // Scroll scanner into view on mobile
-      setTimeout(() => {
-        const el = document.getElementById("qr-reader");
-        el?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-
-      await scanner.start(
-        { facingMode: "environment" },
-        { fps: 15, qrbox: { width: 200, height: 200 } },
-        async (decodedText: string) => {
-          scanner.stop().catch(() => {});
-          setScannerStarted(false);
-          const token = decodedText.split("/").pop() || decodedText;
-          await handleVerify(token);
-        },
-        () => {}
-      );
-    } catch (err: any) {
-      setScannerStarted(false);
-      const errorMsg = err.message || "";
-      let userMessage = "Camera access denied. Use manual search instead.";
-
-      if (errorMsg.includes("NotAllowedError") || errorMsg.includes("Permission denied")) {
-        userMessage = "Camera permission denied. Please enable camera access in your browser settings and try again.";
-      } else if (errorMsg.includes("NotFoundError") || errorMsg.includes("No camera")) {
-        userMessage = "No camera found. Please use manual search to check in guests.";
-      } else if (errorMsg.includes("NotSupportedError")) {
-        userMessage = "Your browser doesn't support camera access. Use manual search instead.";
-      } else if (errorMsg.includes("HTTPS")) {
-        userMessage = "Camera access requires HTTPS. Please ensure you're using a secure connection.";
-      }
-
-      setError(userMessage);
-    }
   };
 
-  const stopScanner = () => {
-    if (scannerRef.current) {
-      scannerRef.current.stop().catch(() => {});
-      scannerRef.current = null;
-    }
-    setScannerStarted(false);
+  const handleScannerStop = () => {
+    // scanner component handles cleanup internally
   };
 
   const handleVerify = async (token: string) => {
@@ -365,14 +313,10 @@ export default function AccreditationScanPage() {
         e.preventDefault();
         document.getElementById("manual-search-input")?.focus();
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        if (!scannerStarted) startScanner();
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [scannerStarted, startScanner]);
+  }, []);
 
   const handleScanCheckin = async () => {
     if (!scanResult?.guest) return;
@@ -521,56 +465,12 @@ export default function AccreditationScanPage() {
                     <QrCode className="w-4 h-4 text-pink-500" />
                     Live Scanner
                   </h2>
-                  <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
-                    {scannerStarted && (
-                      <div className="p-4 border-b border-white/10 flex items-center justify-between">
-                        <p className="text-xs font-semibold text-green-400 flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                          SCANNING
-                        </p>
-                        <button onClick={stopScanner} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-600/80 hover:bg-red-700 text-sm font-semibold transition min-h-[44px]">
-                          <X className="w-4 h-4" />
-                          Stop
-                        </button>
-                      </div>
-                    )}
-                    <div className={`relative w-full ${scannerStarted ? "min-h-[350px]" : "min-h-[280px]"}`}>
-                      {scannerStarted ? (
-                        <div className="relative w-full h-full">
-                          <div id="qr-reader" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_img]:w-full [&_img]:h-full" />
-                          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                            <div
-                              className="absolute left-0 right-0 h-1 bg-gradient-to-b from-pink-500 to-transparent"
-                              style={{
-                                animation: "scannerLine 2s ease-in-out infinite",
-                                boxShadow: "0 0 20px rgba(236, 72, 153, 0.8)"
-                              }}
-                            />
-                          </div>
-                          <style>{`
-                            @keyframes scannerLine {
-                              0% { top: 5%; }
-                              50% { top: 95%; }
-                              100% { top: 5%; }
-                            }
-                          `}</style>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={startScanner}
-                          className="w-full h-full flex flex-col items-center justify-center text-white/30 cursor-pointer hover:bg-white/[0.02] transition group"
-                        >
-                          <div className="relative mb-4">
-                            <Camera className="w-20 h-20 text-pink-500/60 group-hover:text-pink-400/80 transition" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
-                            <div className="absolute inset-0 rounded-full bg-pink-500/10 blur-xl" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
-                          </div>
-                          <p className="font-semibold text-base text-white/60 group-hover:text-white/80 transition">Start Live Scanner</p>
-                          <p className="text-xs mt-1.5 text-white/30">Tap anywhere to activate the camera</p>
-                          <style>{`@keyframes breathe { 0%,100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.06); opacity: 1; } }`}</style>
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  <QRScanner
+                    onScan={handleVerify}
+                    onError={setError}
+                    onStart={handleScannerStart}
+                    onStop={handleScannerStop}
+                  />
                 </div>
 
                 {/* Scanner Result - Sticky Modal on Mobile */}
