@@ -182,10 +182,6 @@ def _build_invite_message(
     tracking_pixel = f'<img src="{settings.FRONTEND_URL}/api/v1/track/open/{message_id}" alt="" width="1" height="1" style="display:none" />' if message_id else ''
     html = (
         '<div style="max-width:600px;margin:0 auto;font-family:Georgia,serif;color:#1a1a2e">'
-        '<div style="background:linear-gradient(to right,#E91E8C,#C4166F);padding:20px;text-align:center;display:flex;align-items:center;justify-content:space-between;gap:20px">'
-        f'<img src="{settings.FRONTEND_URL}/logo-dark-trim.png" alt="accredit.vip" style="height:32px;width:auto;opacity:1" />'
-        '<a href="https://accredit.vip" style="background:#ffffff;color:#E91E8C;padding:10px 24px;text-decoration:none;font-weight:bold;font-size:13px;font-family:Arial,sans-serif;border-radius:6px;display:inline-block;white-space:nowrap">Create Your Event</a>'
-        '</div>'
         f'{flyer_html}'
         '<div style="padding:32px 28px;background:#ffffff">'
         f'<p style="font-size:13px;color:#888;text-transform:uppercase;letter-spacing:2px;margin:0 0 4px">You are cordially invited to</p>'
@@ -288,11 +284,7 @@ def _build_qr_message(guest: Guest, event: Event, qr_image_url: str | None = Non
             qr_img_html = f'<img src="{absolute_qr}" alt="Entry QR Code" style="width:200px;height:200px;display:block;margin:0 auto" />'
     html = (
         '<div style="max-width:600px;margin:0 auto;font-family:Georgia,serif;color:#1a1a2e">'
-        '<style>@keyframes accredit-text{0%,10%{opacity:1}20%,70%{opacity:1}85%,100%{opacity:0}}@keyframes accredit-btn{0%,35%{opacity:1}45%,70%{opacity:1}85%,100%{opacity:0}}@keyframes accredit-pulse{0%,100%{box-shadow:0 0 0 0 rgba(233,30,140,0.3)}50%{box-shadow:0 0 0 12px rgba(233,30,140,0)}}</style>'
-        '<div style="background:linear-gradient(to right,#E91E8C,#C4166F);padding:20px;text-align:center;display:flex;align-items:center;justify-content:space-between;gap:20px">'
-        f'<img src="{settings.FRONTEND_URL}/logo-dark-trim.png" alt="accredit.vip" style="height:32px;width:auto;opacity:1" />'
-        '<a href="https://accredit.vip" style="background:#ffffff;color:#E91E8C;padding:10px 24px;text-decoration:none;font-weight:bold;font-size:13px;font-family:Arial,sans-serif;border-radius:6px;display:inline-block;white-space:nowrap">Create Your Event</a>'
-        '</div>'
+        '<style>@keyframes accredit-pulse{0%,100%{box-shadow:0 0 0 0 rgba(233,30,140,0.3)}50%{box-shadow:0 0 0 12px rgba(233,30,140,0)}}</style>'
         '<div style="background:#07182f;color:#fff;padding:32px 28px;text-align:center">'
         '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#ffb4d9;margin-bottom:8px">QR Access Code</div>'
         f'<h1 style="margin:0 0 4px;font-size:30px;line-height:1.1;color:#fff">{event.title}</h1>'
