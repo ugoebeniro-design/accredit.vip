@@ -15,6 +15,8 @@ interface RSVPData {
   guest_name: string;
   cover_image: string | null;
   event_theme_color?: string;
+  rsvp_status?: string;
+  rsvp_note?: string | null;
 }
 
 function formatDate(dateStr: string) {
@@ -46,6 +48,8 @@ export default function RSVPPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submittedResponse, setSubmittedResponse] = useState<"yes" | "no">("yes");
   const [guestName, setGuestName] = useState("");
+  const [selectedResponse, setSelectedResponse] = useState<"yes" | "no" | null>(null);
+  const [declineNote, setDeclineNote] = useState("");
   const themeColor = rsvpData?.event_theme_color || "#E91E8C";
 
   useEffect(() => {
@@ -53,6 +57,12 @@ export default function RSVPPage() {
       try {
         const data = await apiClient<RSVPData>(`/rsvp/${token}`);
         setRsvpData(data);
+        if (data.rsvp_status === "accepted" || data.rsvp_status === "declined") {
+          setSubmittedResponse(data.rsvp_status === "accepted" ? "yes" : "no");
+          setGuestName(data.guest_name);
+          setDeclineNote(data.rsvp_note || "");
+          setSubmitted(true);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load invitation");
       } finally {
@@ -68,7 +78,7 @@ export default function RSVPPage() {
     try {
       const res = await apiClient<any>(`/rsvp/${token}`, {
         method: "POST",
-        body: { response: selected },
+        body: { response: selected, note: selected === "no" ? declineNote || null : null },
       });
       setSubmittedResponse(selected);
       setGuestName(res.guest_name || rsvpData?.guest_name || "");
@@ -121,6 +131,9 @@ export default function RSVPPage() {
           </div>
           {submittedResponse === "yes" ? (
             <>
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#f0fdf4]">
+                <Check className="w-8 h-8 text-[#10b981]" />
+              </div>
               <h1 className="text-2xl font-bold text-[#0D1B2A]">You&apos;re Confirmed</h1>
               <p className="mt-2 text-[#64748b] leading-relaxed">
                 Thank you, {guestName || rsvpData?.guest_name || "Guest"}. Your attendance has been recorded.
@@ -131,10 +144,19 @@ export default function RSVPPage() {
             </>
           ) : (
             <>
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#fef2f2]">
+                <X className="w-8 h-8 text-[#dc2626]" />
+              </div>
               <h1 className="text-2xl font-bold text-[#0D1B2A]">Response Recorded</h1>
               <p className="mt-2 text-[#64748b] leading-relaxed">
                 Thank you, {guestName || rsvpData?.guest_name || "Guest"}. Your response has been received and noted.
               </p>
+              {declineNote && (
+                <div className="mt-4 rounded-xl bg-[#f8f9fc] border border-[#e8edf2] p-4 text-left">
+                  <p className="text-xs text-[#94a3b8] uppercase tracking-wider mb-1">Your reason</p>
+                  <p className="text-sm text-[#64748b]">{declineNote}</p>
+                </div>
+              )}
               <p className="mt-3 text-sm text-[#94a3b8]">
                 We appreciate your reply and wish you all the best.
               </p>
@@ -225,23 +247,57 @@ export default function RSVPPage() {
 
               <div className="space-y-3">
                 <button
-                  onClick={() => submitRsvp("yes")}
-                  disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.3)] hover:shadow-[0_6px_16px_rgba(22,163,74,0.45)] hover:scale-[1.02] transition-all disabled:opacity-60"
+                  type="button"
+                  onClick={() => setSelectedResponse("yes")}
+                  className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base transition-all ${
+                    selectedResponse === "yes"
+                      ? "bg-[#16a34a] text-white shadow-[0_4px_12px_rgba(22,163,74,0.3)] ring-2 ring-[#16a34a] ring-offset-2"
+                      : "bg-white text-[#64748b] border-2 border-[#e8edf2] hover:border-[#16a34a] hover:text-[#16a34a]"
+                  }`}
                 >
                   <Check className="w-5 h-5" />
-                  {submitting ? "Submitting..." : "Yes, I'll Attend"}
+                  Yes, I'll Attend
                 </button>
 
                 <button
-                  onClick={() => submitRsvp("no")}
-                  disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(220,38,38,0.3)] hover:shadow-[0_6px_16px_rgba(220,38,38,0.45)] hover:scale-[1.02] transition-all disabled:opacity-60"
+                  type="button"
+                  onClick={() => setSelectedResponse("no")}
+                  className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base transition-all ${
+                    selectedResponse === "no"
+                      ? "bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(220,38,38,0.3)] ring-2 ring-[#dc2626] ring-offset-2"
+                      : "bg-white text-[#64748b] border-2 border-[#e8edf2] hover:border-[#dc2626] hover:text-[#dc2626]"
+                  }`}
                 >
                   <X className="w-5 h-5" />
-                  {submitting ? "Submitting..." : "Sorry, Can't Attend"}
+                  Sorry, Can't Attend
                 </button>
               </div>
+
+              {selectedResponse === "no" && (
+                <div className="mt-4">
+                  <textarea
+                    placeholder="Optional: let us know why you can't make it..."
+                    value={declineNote}
+                    onChange={(e) => setDeclineNote(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-xl border border-[#e8edf2] bg-white px-4 py-3 text-sm text-[#0D1B2A] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#dc2626] resize-none"
+                  />
+                </div>
+              )}
+
+              {selectedResponse && (
+                <button
+                  onClick={() => submitRsvp(selectedResponse)}
+                  disabled={submitting}
+                  className={`w-full mt-4 flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base text-white transition-all disabled:opacity-60 ${
+                    selectedResponse === "yes"
+                      ? "bg-[#16a34a] shadow-[0_4px_12px_rgba(22,163,74,0.3)] hover:shadow-[0_6px_16px_rgba(22,163,74,0.45)] hover:scale-[1.02]"
+                      : "bg-[#dc2626] shadow-[0_4px_12px_rgba(220,38,38,0.3)] hover:shadow-[0_6px_16px_rgba(220,38,38,0.45)] hover:scale-[1.02]"
+                  }`}
+                >
+                  {submitting ? "Submitting..." : selectedResponse === "yes" ? "Confirm Attendance" : "Submit Response"}
+                </button>
+              )}
             </div>
           </div>
 

@@ -153,6 +153,8 @@ async def get_rsvp_data(
         "guest_name": guest.name,
         "cover_image": event.cover_image or None,
         "event_theme_color": getattr(event, "theme_color", "#E91E8C") or "#E91E8C",
+        "rsvp_status": guest.rsvp_status,
+        "rsvp_note": guest.rsvp_note,
     }
 
 
