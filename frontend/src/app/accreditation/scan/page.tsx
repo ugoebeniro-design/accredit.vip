@@ -582,10 +582,10 @@ export default function AccreditationScanPage() {
                     {/* Modal */}
                     <div className="fixed top-0 left-0 right-0 z-40 p-4 lg:static lg:p-0">
                       <div className={`rounded-2xl border p-4 sm:p-5 lg:rounded-b-none lg:border-b-0 ${
-                      scanResult.status === "approved" ? "bg-green-900/30 border-green-500/50" :
-                      scanResult.status === "found" ? "bg-blue-900/30 border-blue-500/50" :
-                      scanResult.status === "declined" ? "bg-amber-900/30 border-amber-500/50" :
-                      "bg-red-900/30 border-red-500/50"
+                      scanResult.status === "approved" ? "bg-green-900/70 border-green-500/60" :
+                      scanResult.status === "found" ? "bg-blue-900/70 border-blue-500/60" :
+                      scanResult.status === "declined" ? "bg-amber-900/70 border-amber-500/60" :
+                      "bg-red-900/70 border-red-500/60"
                     }`} style={{ marginTop: "60px" }}>
                       <div className="space-y-3">
                         {/* Header */}
@@ -604,7 +604,7 @@ export default function AccreditationScanPage() {
 
                         {/* Guest Info */}
                         {scanResult.guest && (
-                          <div className="space-y-2 bg-white/5 rounded-lg p-3 border border-white/10">
+                           <div className="space-y-2 bg-white/10 rounded-lg p-3 border border-white/20">
                             <div>
                               <p className="text-xs text-white/50 uppercase tracking-wide">Name</p>
                               <p className="font-semibold text-white break-words">{scanResult.guest.name}</p>
