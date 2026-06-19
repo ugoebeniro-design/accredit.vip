@@ -731,7 +731,6 @@ function EventDetailContent() {
     { id: "guests", label: "Guests", icon: Users, badge: totalGuests },
     { id: "questions", label: "Questions", icon: HelpCircle },
     { id: "reminders", label: "Reminders", icon: Bell },
-    { id: "invites", label: "Invites", icon: Send },
     { id: "coupons", label: "Coupons", icon: Ticket },
     { id: "templates", label: "Templates", icon: Copy },
     { id: "waitlist", label: "Waitlist", icon: Users },
