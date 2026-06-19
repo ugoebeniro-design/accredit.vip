@@ -18,6 +18,11 @@ export async function apiClient<T>(path: string, opts: RequestOptions = {}): Pro
     ...opts.headers,
   };
 
+  const token = typeof window !== "undefined" ? sessionStorage.getItem("accreditation_token") : null;
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60000);
   try {

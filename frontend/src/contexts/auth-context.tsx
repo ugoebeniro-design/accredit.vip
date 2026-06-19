@@ -30,6 +30,7 @@ type AuthContextType = {
   }) => Promise<void>;
   socialLogin: (provider: string, idToken: string, email?: string, fullName?: string) => Promise<void>;
   logout: () => void;
+  refetchUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -59,7 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const u = await apiClient<User>("/auth/me");
       setUser(u);
-    } catch {
+    } catch (e) {
+      console.log("[auth/me refetch] error:", e instanceof Error ? e.message : e);
       setUser(null);
     }
   }, []);
@@ -76,7 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const u = await apiClient<User>("/auth/me");
           setUser(u);
-        } catch {
+        } catch (e) {
+          console.log("[auth/me init] error:", e instanceof Error ? e.message : e);
           setUser(null);
         }
       } finally {
@@ -128,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, socialLogin, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, socialLogin, logout, refetchUser: fetchUser }}>
       {children}
     </AuthContext.Provider>
   );

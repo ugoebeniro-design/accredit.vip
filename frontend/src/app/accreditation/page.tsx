@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Eye, EyeOff, Shield } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 
 export default function AccreditationLoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,15 +21,18 @@ export default function AccreditationLoginPage() {
     setLoading(true);
 
     try {
-      await apiClient<{ access_token: string; user: any }>("/auth/login", {
+      const res = await apiClient<{ access_token: string; user: any }>("/auth/login", {
         method: "POST",
         body: { email, password },
       });
 
-      window.location.href = "/accreditation/scan";
+      if (res.access_token) {
+        sessionStorage.setItem("accreditation_token", res.access_token);
+      }
+
+      router.push("/accreditation/scan");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
