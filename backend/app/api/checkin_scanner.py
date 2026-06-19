@@ -16,6 +16,16 @@ from app.models.user import User
 router = APIRouter()
 
 
+@router.get("/scanner/check-access")
+async def scanner_check_access(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    event_count = await db.scalar(select(func.count(Event.id)).where(Event.organizer_id == user.id))
+    return {
+        "access_granted": True,
+        "event_count": event_count or 0,
+        "message": "Accreditation access is available on your current plan." if event_count > 0 else "Create an event first to use accreditation.",
+    }
+
+
 class ScanTokenRequest(BaseModel):
     token: str
 

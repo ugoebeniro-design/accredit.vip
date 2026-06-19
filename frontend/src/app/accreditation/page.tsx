@@ -42,6 +42,8 @@ export default function AccreditationPage() {
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [error, setError] = useState("");
+  const [accessChecking, setAccessChecking] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -49,7 +51,16 @@ export default function AccreditationPage() {
 
   useEffect(() => {
     if (user) {
-      apiClient<any[]>("/scanner/events").then(setEvents).catch(() => {});
+      apiClient<{ access_granted: boolean; event_count: number; message: string }>("/scanner/check-access")
+        .then((res) => {
+          if (res.access_granted) {
+            apiClient<any[]>("/scanner/events").then(setEvents).catch(() => {});
+          } else {
+            setAccessDenied(true);
+          }
+        })
+        .catch(() => setAccessDenied(true))
+        .finally(() => setAccessChecking(false));
     }
   }, [user]);
 
@@ -176,10 +187,39 @@ export default function AccreditationPage() {
     }
   };
 
-  if (loading) {
+  if (loading || accessChecking) {
     return (
       <div className="min-h-screen bg-[#0D1B2A] flex items-center justify-center">
         <Loader className="w-8 h-8 animate-spin text-pink-500" />
+      </div>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-[#0D1B2A] flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-pink-600/20 flex items-center justify-center">
+            <svg className="w-8 h-8 text-pink-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-white">Accreditation</h1>
+          <p className="text-white/60 mt-3 leading-relaxed">
+            Accreditation is a premium feature for event organizers who need live QR check-in at their venue.
+          </p>
+          <p className="text-sm text-white/40 mt-2">
+            Create an event or upgrade your plan to access the accreditation dashboard.
+          </p>
+          <div className="flex flex-col gap-3 mt-8">
+            <button onClick={() => router.push("/dashboard/create")} className="w-full rounded-xl bg-pink-600 hover:bg-pink-700 py-3.5 font-bold text-sm transition">
+              Create an Event
+            </button>
+            <button onClick={() => router.push("/dashboard")} className="w-full rounded-xl bg-white/10 hover:bg-white/20 py-3.5 font-bold text-sm transition">
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
