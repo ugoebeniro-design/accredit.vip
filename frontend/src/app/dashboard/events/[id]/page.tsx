@@ -11,7 +11,7 @@ import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Toast } from "@/components/shared/toast";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, BarChart3, Users, Mail, Settings, Share2, Loader, HelpCircle, Bell, Ticket, Copy, Edit2, Zap, Calendar, Clock, MapPin, ExternalLink, ImageIcon, Shirt, ChevronRight } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, Users, Mail, Send, Settings, Share2, Loader, HelpCircle, Bell, Ticket, Copy, Edit2, Zap, Calendar, Clock, MapPin, ExternalLink, ImageIcon, Shirt, ChevronRight } from "lucide-react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import GuestsTabContent from "@/components/events/GuestsTabContent";
@@ -20,6 +20,7 @@ import RemindersTabContent from "@/components/events/RemindersTabContent";
 import CouponsTabContent from "@/components/events/CouponsTabContent";
 import TemplatesTabContent from "@/components/events/TemplatesTabContent";
 import WaitlistTabContent from "@/components/events/WaitlistTabContent";
+import InvitesTabContent from "@/components/events/InvitesTabContent";
 
 type Guest = {
   id: number;
@@ -730,6 +731,7 @@ function EventDetailContent() {
     { id: "guests", label: "Guests", icon: Users, badge: totalGuests },
     { id: "questions", label: "Questions", icon: HelpCircle },
     { id: "reminders", label: "Reminders", icon: Bell },
+    { id: "invites", label: "Invites", icon: Send },
     { id: "coupons", label: "Coupons", icon: Ticket },
     { id: "templates", label: "Templates", icon: Copy },
     { id: "waitlist", label: "Waitlist", icon: Users },
@@ -1108,6 +1110,31 @@ function EventDetailContent() {
 
             {activeTab === "waitlist" && (
               <WaitlistTabContent eventId={id} />
+            )}
+
+            {activeTab === "invites" && (
+              <InvitesTabContent
+                channels={channels}
+                setChannels={setChannels}
+                sending={sending}
+                canSendInvites={canSendInvites}
+                sendInvites={sendInvites}
+                sendAllQrs={sendAllQrs}
+                testSend={testSend}
+                sendResult={sendResult}
+                sendError={sendError}
+                logs={logs}
+                guests={guests}
+                invalidPhoneGuests={invalidPhoneGuests}
+                guestsWithMissingContact={guestsWithMissingContact}
+                guestCountRange={event.guest_count_range}
+                exportingMsg={exportingMsg}
+                exportMsgStatus={exportMsgStatus}
+                setExportMsgStatus={setExportMsgStatus}
+                exportMsgChannel={exportMsgChannel}
+                setExportMsgChannel={setExportMsgChannel}
+                exportMessages={exportMessages}
+              />
             )}
 
             {activeTab === "settings" && (

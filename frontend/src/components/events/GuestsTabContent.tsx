@@ -198,6 +198,7 @@ export default function GuestsTabContent({
   const [sendReviewForce, setSendReviewForce] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (openMenuId === null) return;
@@ -357,35 +358,45 @@ export default function GuestsTabContent({
           <Plus className="w-5 h-5" />
           Add Guest
         </h2>
-        <form onSubmit={(e) => addGuest(e, customFieldValues)} className="space-y-4">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const errors: Record<string, string> = {};
+          if (!guestName.trim()) errors.name = "Name is required";
+          if (guestPhone && !/^\+?\d{7,15}$/.test(guestPhone.replace(/[\s().-]/g, ""))) errors.phone = "Invalid phone format (e.g. +2348012345678)";
+          if (guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) errors.email = "Invalid email format";
+          setFieldErrors(errors);
+          if (Object.keys(errors).length === 0) addGuest(e, customFieldValues);
+        }} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-xs font-medium text-slate-700 block mb-1.5">Full Name *</label>
               <input
                 placeholder="Guest name"
                 value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                required
+                onChange={(e) => { setGuestName(e.target.value); setFieldErrors((prev) => ({ ...prev, name: "" })); }}
+                className={`flex h-10 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${fieldErrors.name ? "border-red-400 focus:ring-red-400" : "border-slate-200"}`}
               />
+              {fieldErrors.name && <p className="text-xs text-red-500 mt-1">{fieldErrors.name}</p>}
             </div>
             <div>
               <label className="text-xs font-medium text-slate-700 block mb-1.5">Phone</label>
               <input
                 placeholder="Phone number"
                 value={guestPhone}
-                onChange={(e) => setGuestPhone(e.target.value)}
-                className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                onChange={(e) => { setGuestPhone(e.target.value); setFieldErrors((prev) => ({ ...prev, phone: "" })); }}
+                className={`flex h-10 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${fieldErrors.phone ? "border-red-400 focus:ring-red-400" : "border-slate-200"}`}
               />
+              {fieldErrors.phone && <p className="text-xs text-red-500 mt-1">{fieldErrors.phone}</p>}
             </div>
             <div>
               <label className="text-xs font-medium text-slate-700 block mb-1.5">Email</label>
               <input
                 placeholder="Email address"
                 value={guestEmail}
-                onChange={(e) => setGuestEmail(e.target.value)}
-                className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                onChange={(e) => { setGuestEmail(e.target.value); setFieldErrors((prev) => ({ ...prev, email: "" })); }}
+                className={`flex h-10 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${fieldErrors.email ? "border-red-400 focus:ring-red-400" : "border-slate-200"}`}
               />
+              {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
             </div>
           </div>
 
@@ -428,7 +439,15 @@ export default function GuestsTabContent({
           <Upload className="w-5 h-5" />
           Bulk Import
         </h2>
-        <p className="text-sm text-slate-600 mb-4">Upload CSV with columns: name, phone, email</p>
+        <div className="text-sm text-slate-600 mb-4 space-y-1">
+          <p>Upload a CSV file with these columns:</p>
+          <ul className="list-disc list-inside text-xs text-slate-500 space-y-0.5 ml-1">
+            <li><strong>name</strong> <span className="text-red-500">*</span> — Guest full name</li>
+            <li><strong>phone</strong> — <span className="font-mono">+2348012345678</span> or local format (recommended for WhatsApp/SMS)</li>
+            <li><strong>email</strong> — <span className="font-mono">guest@example.com</span></li>
+          </ul>
+          <p className="text-xs text-slate-400 mt-1">The first row must be column headers. Invalid rows are skipped with a warning.</p>
+        </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             ref={resolvedFileRef}
@@ -567,7 +586,14 @@ export default function GuestsTabContent({
         {guests.length === 0 ? (
           <div className="bg-slate-50 rounded-lg border border-slate-200 border-dashed p-12 text-center">
             <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-sm text-slate-600">No guests yet. Add your first guest above.</p>
+            {guestSearch || guestRsvpFilter ? (
+              <div>
+                <p className="text-sm font-medium text-slate-700 mb-1">No guests match your search</p>
+                <button onClick={() => { setGuestSearch(""); setGuestRsvpFilter(""); triggerSearch("", "", 0); }} className="text-sm text-primary hover:underline">Clear filters</button>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600">No guests yet. Add your first guest above.</p>
+            )}
           </div>
         ) : (
           <>
@@ -660,12 +686,14 @@ export default function GuestsTabContent({
                 <thead className="bg-slate-100 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-3 text-left">
-                      <input
-                        type="checkbox"
-                        checked={selectedGuests.size === guests.length && guests.length > 0}
-                        onChange={toggleAllSelection}
-                        className="rounded border-slate-300 cursor-pointer"
-                      />
+                      <label className="flex items-center justify-center w-11 h-11 -ml-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedGuests.size === guests.length && guests.length > 0}
+                          onChange={toggleAllSelection}
+                          className="rounded border-slate-300 cursor-pointer w-4 h-4"
+                        />
+                      </label>
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Guest</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">Contact</th>
@@ -696,12 +724,14 @@ export default function GuestsTabContent({
                       ) : (
                         <>
                           <td className="px-4 py-4">
-                            <input
-                              type="checkbox"
-                              checked={selectedGuests.has(guest.id)}
-                              onChange={() => toggleGuestSelection(guest.id)}
-                              className="rounded border-slate-300 cursor-pointer"
-                            />
+                            <label className="flex items-center justify-center w-11 h-11 -ml-2.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedGuests.has(guest.id)}
+                                onChange={() => toggleGuestSelection(guest.id)}
+                                className="rounded border-slate-300 cursor-pointer w-4 h-4"
+                              />
+                            </label>
                           </td>
                           <td className="px-4 py-4">
                             <p className="text-sm font-semibold text-slate-900">{guest.name}</p>
@@ -799,7 +829,7 @@ export default function GuestsTabContent({
                                 variant="ghost"
                                 onClick={() => setSendReviewGuest(guest)}
                                 title="Send message"
-                                className="h-8 w-8 p-0 hover:bg-blue-50"
+                                className="h-10 w-10 p-0 hover:bg-blue-50"
                               >
                                 <Mail className="w-4 h-4 text-blue-600" />
                               </Button>
@@ -808,7 +838,7 @@ export default function GuestsTabContent({
                                 variant="ghost"
                                 onClick={() => startEdit(guest)}
                                 title="Edit"
-                                className="h-8 w-8 p-0 hover:bg-slate-100"
+                                className="h-10 w-10 p-0 hover:bg-slate-100"
                               >
                                 <Edit2 className="w-4 h-4 text-slate-600" />
                               </Button>
@@ -817,7 +847,7 @@ export default function GuestsTabContent({
                                 variant="ghost"
                                 onClick={() => setDeleteConfirm(guest.id)}
                                 title="Delete"
-                                className="h-8 w-8 p-0 hover:bg-red-50"
+                                className="h-10 w-10 p-0 hover:bg-red-50"
                               >
                                 <Trash2 className="w-4 h-4 text-red-600" />
                               </Button>
@@ -836,12 +866,14 @@ export default function GuestsTabContent({
               {/* Select All */}
               {guests.length > 0 && (
                 <div className="flex items-center gap-2 px-1 py-1">
-                  <input
-                    type="checkbox"
-                    checked={selectedGuests.size === guests.length}
-                    onChange={toggleAllSelection}
-                    className="rounded border-slate-300 cursor-pointer"
-                  />
+                  <label className="flex items-center justify-center w-11 h-11 -ml-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedGuests.size === guests.length}
+                      onChange={toggleAllSelection}
+                      className="rounded border-slate-300 cursor-pointer w-4 h-4"
+                    />
+                  </label>
                   <span className="text-xs font-medium text-slate-600">
                     {selectedGuests.size === 0
                       ? "Select all"
@@ -855,20 +887,22 @@ export default function GuestsTabContent({
                     <div className="space-y-3">
                       <p className="text-sm font-medium text-slate-900">Delete {guest.name}?</p>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="destructive" onClick={() => handleDeleteGuest(guest.id)} className="h-8 text-xs">Delete</Button>
-                        <Button size="sm" variant="outline" onClick={() => setDeleteConfirm(null)} className="h-8 text-xs">Cancel</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleDeleteGuest(guest.id)} className="h-10 text-xs">Delete</Button>
+                        <Button size="sm" variant="outline" onClick={() => setDeleteConfirm(null)} className="h-10 text-xs">Cancel</Button>
                       </div>
                     </div>
                   ) : (
                     <>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-start gap-2 min-w-0">
-                          <input
-                            type="checkbox"
-                            checked={selectedGuests.has(guest.id)}
-                            onChange={() => toggleGuestSelection(guest.id)}
-                            className="rounded border-slate-300 mt-0.5 cursor-pointer shrink-0"
-                          />
+                          <label className="flex items-center justify-center w-11 h-11 -ml-2.5 -mt-1.5 cursor-pointer shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={selectedGuests.has(guest.id)}
+                              onChange={() => toggleGuestSelection(guest.id)}
+                              className="rounded border-slate-300 cursor-pointer w-4 h-4"
+                            />
+                          </label>
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-slate-900 truncate">{guest.name}</p>
                             {guest.notes && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{guest.notes}</p>}
@@ -891,33 +925,33 @@ export default function GuestsTabContent({
                         <div className="relative shrink-0" data-menu-id={guest.id}>
                           <button
                             onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === guest.id ? null : guest.id); }}
-                            className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
+                            className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
                           >
                             <MoreHorizontal className="w-4 h-4 text-slate-500" />
                           </button>
                           {openMenuId === guest.id && (
-                            <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1">
+                            <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1">
                               <button
                                 onClick={() => { setSendReviewGuest(guest); setOpenMenuId(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
                               >
                                 <Send className="w-3.5 h-3.5 text-blue-600" /> Send Invite
                               </button>
                               <button
                                 onClick={() => { generateQR(guest.id); setOpenMenuId(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
                               >
                                 <QrCode className="w-3.5 h-3.5 text-violet-600" /> Generate QR
                               </button>
                               <button
                                 onClick={() => { startEdit(guest); setOpenMenuId(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 min-h-[44px]"
                               >
                                 <Edit2 className="w-3.5 h-3.5 text-slate-600" /> Edit
                               </button>
                               <button
                                 onClick={() => { setDeleteConfirm(guest.id); setOpenMenuId(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 min-h-[44px]"
                               >
                                 <Trash2 className="w-3.5 h-3.5" /> Delete
                               </button>
@@ -995,8 +1029,8 @@ export default function GuestsTabContent({
               <div className="flex items-center justify-between pt-4 border-t border-slate-200">
                 <p className="text-xs text-slate-500">Page {currentPage + 1} of {pageCount}</p>
                 <div className="flex items-center gap-1">
-                  <button className="px-2 py-1.5 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30" disabled={currentPage === 0} onClick={() => goToPage(0)} title="First page">«</button>
-                  <button className="px-2 py-1.5 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30" disabled={currentPage === 0} onClick={() => goToPage(currentPage - 1)} title="Previous page">‹</button>
+                  <button className="min-w-[44px] h-11 px-2 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30" disabled={currentPage === 0} onClick={() => goToPage(0)} title="First page">«</button>
+                  <button className="min-w-[44px] h-11 px-2 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30" disabled={currentPage === 0} onClick={() => goToPage(currentPage - 1)} title="Previous page">‹</button>
                   {Array.from({ length: Math.min(pageCount, 10) }, (_, i) => {
                     let pageNum: number;
                     if (pageCount <= 10) {
@@ -1010,11 +1044,11 @@ export default function GuestsTabContent({
                     }
                     if (pageNum < 0 || pageNum >= pageCount) return null;
                     return (
-                      <button key={pageNum} onClick={() => goToPage(pageNum)} className={`px-3 py-1.5 text-xs rounded border ${pageNum === currentPage ? "bg-primary text-white border-primary font-bold" : "border-slate-200 hover:bg-slate-50"}`}>{pageNum + 1}</button>
+                      <button key={pageNum} onClick={() => goToPage(pageNum)} className={`min-w-[44px] h-11 px-2 text-xs rounded border ${pageNum === currentPage ? "bg-primary text-white border-primary font-bold" : "border-slate-200 hover:bg-slate-50"}`}>{pageNum + 1}</button>
                     );
                   })}
-                  <button className="px-2 py-1.5 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(currentPage + 1)} title="Next page">›</button>
-                  <button className="px-2 py-1.5 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(pageCount - 1)} title="Last page">»</button>
+                  <button className="min-w-[44px] h-11 px-2 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(currentPage + 1)} title="Next page">›</button>
+                  <button className="min-w-[44px] h-11 px-2 text-xs rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-30" disabled={currentPage >= pageCount - 1} onClick={() => goToPage(pageCount - 1)} title="Last page">»</button>
                 </div>
               </div>
             )}
