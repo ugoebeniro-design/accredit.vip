@@ -1,8 +1,9 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useEffect, useRef, useState, useCallback } from "react";
+
+// Force chunk generation for html5-qrcode (statically analyzable by Next.js)
+const _html5QrcodeChunk = import("html5-qrcode");
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { apiClient, API_BASE } from "@/lib/api-client";
