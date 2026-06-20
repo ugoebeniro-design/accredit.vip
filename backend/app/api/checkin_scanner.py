@@ -204,7 +204,7 @@ async def scanner_recent_activity(
         select(CheckIn, Guest.name, Guest.phone, Guest.email)
         .join(Guest, CheckIn.guest_id == Guest.id)
         .where(CheckIn.event_id == event_id)
-        .order_by(CheckIn.created_at.desc())
+        .order_by(CheckIn.checked_in_at.desc())
         .limit(limit)
     )
     rows = result.all()
@@ -216,7 +216,7 @@ async def scanner_recent_activity(
                 "guest_name": r.name,
                 "guest_phone": r.phone,
                 "guest_email": r.email,
-                "checked_in_at": r.CheckIn.created_at.isoformat() if r.CheckIn.created_at else None,
+                "checked_in_at": r.CheckIn.checked_in_at.isoformat() if r.CheckIn.checked_in_at else None,
             }
             for r in rows
         ]

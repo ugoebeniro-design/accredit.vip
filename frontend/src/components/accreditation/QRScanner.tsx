@@ -12,13 +12,28 @@ interface QRScannerProps {
 
 export default function QRScanner({ onScan, onError, onStart, onStop }: QRScannerProps) {
   const scannerRef = useRef<any>(null);
+  const stoppingRef = useRef(false);
+  const mountedRef = useRef(true);
   const [scannerStarted, setScannerStarted] = useState(false);
   const [error, setError] = useState("");
   const [Html5QrcodeLib, setHtml5QrcodeLib] = useState<any>(null);
 
   useEffect(() => {
     import("html5-qrcode").then((mod) => setHtml5QrcodeLib(mod.Html5Qrcode)).catch(() => {});
+    return () => { mountedRef.current = false; };
   }, []);
+
+  const safeStop = async () => {
+    if (stoppingRef.current || !scannerRef.current) return;
+    stoppingRef.current = true;
+    try {
+      await scannerRef.current.stop();
+    } catch {
+      // ignore stop errors
+    }
+    scannerRef.current = null;
+    stoppingRef.current = false;
+  };
 
   const startScanner = async () => {
     setError("");
@@ -27,6 +42,8 @@ export default function QRScanner({ onScan, onError, onStart, onStop }: QRScanne
     onStart();
     setScannerStarted(true);
     await new Promise((r) => setTimeout(r, 100));
+
+    if (!mountedRef.current) return;
 
     try {
       const scanner = new Html5QrcodeLib("qr-reader");
@@ -40,16 +57,17 @@ export default function QRScanner({ onScan, onError, onStart, onStop }: QRScanne
       await scanner.start(
         { facingMode: "environment" },
         { fps: 15, qrbox: { width: 200, height: 200 } },
-        async (decodedText: string) => {
-          scanner.stop().catch(() => {});
+        (decodedText: string) => {
+          safeStop();
           setScannerStarted(false);
           onStop();
           const token = decodedText.split("/").pop() || decodedText;
-          await onScan(token);
+          onScan(token);
         },
         () => {}
       );
     } catch (err: any) {
+      if (!mountedRef.current) return;
       setScannerStarted(false);
       onStop();
       const errorMsg = err.message || "";
@@ -71,10 +89,7 @@ export default function QRScanner({ onScan, onError, onStart, onStop }: QRScanne
   };
 
   const stopScanner = () => {
-    if (scannerRef.current) {
-      scannerRef.current.stop().catch(() => {});
-      scannerRef.current = null;
-    }
+    safeStop();
     setScannerStarted(false);
     onStop();
   };
