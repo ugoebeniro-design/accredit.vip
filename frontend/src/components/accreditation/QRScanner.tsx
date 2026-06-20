@@ -124,7 +124,7 @@ export default function QRScanner({ onScan, onError, onStart, onStop, scanningDi
         ) : (
           <button
             onClick={startScanner}
-            className="w-full h-full flex flex-col items-center justify-center text-white/30 cursor-pointer hover:bg-white/[0.02] transition group"
+            className="w-full min-h-[280px] flex flex-col items-center justify-center text-white/30 cursor-pointer hover:bg-white/[0.02] transition group"
           >
             <div className="relative mb-4">
               <Camera className="w-20 h-20 text-pink-500/60 group-hover:text-pink-400/80 transition" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
