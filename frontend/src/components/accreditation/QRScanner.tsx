@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { Check, X, Loader } from "lucide-react";
+import { Camera, X, Loader } from "lucide-react";
 
 interface QRScannerProps {
   onScan: (token: string) => void;
@@ -127,7 +127,7 @@ export default function QRScanner({ onScan, onError, onStart, onStop, scanningDi
             className="w-full h-full flex flex-col items-center justify-center text-white/30 cursor-pointer hover:bg-white/[0.02] transition group"
           >
             <div className="relative mb-4">
-              <Check className="w-20 h-20 text-pink-500/60 group-hover:text-pink-400/80 transition" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
+              <Camera className="w-20 h-20 text-pink-500/60 group-hover:text-pink-400/80 transition" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
               <div className="absolute inset-0 rounded-full bg-pink-500/10 blur-xl" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
             </div>
             <p className="font-semibold text-base text-white/60 group-hover:text-white/80 transition">Start Live Scanner</p>
