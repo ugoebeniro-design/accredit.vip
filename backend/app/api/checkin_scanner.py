@@ -65,15 +65,37 @@ async def scanner_verify_token(req: ScanTokenRequest, request: Request, db: Asyn
     if not guest or not event:
         return {"valid": False, "reason": "invalid", "message": "Invalid QR code"}
 
+    already_checked_in = False
+    if event and guest:
+        c = await db.execute(
+            select(CheckIn.id).where(CheckIn.guest_id == guest.id, CheckIn.event_id == event.id).limit(1)
+        )
+        already_checked_in = c.first() is not None
+
+    if already_checked_in:
+        return {
+            "valid": False,
+            "reason": "used",
+            "message": f"{guest.name} is already checked in.",
+            "guest": {"id": guest.id, "name": guest.name, "phone": guest.phone, "email": guest.email, "rsvp_token": guest.rsvp_token, "checked_in": True},
+            "event": {"id": event.id, "title": event.title},
+        }
+
     if qr and qr.is_used:
-        return {"valid": False, "reason": "used", "message": "Already checked in"}
+        return {
+            "valid": False,
+            "reason": "used",
+            "message": "Already checked in",
+            "guest": {"id": guest.id, "name": guest.name, "phone": guest.phone, "email": guest.email, "rsvp_token": guest.rsvp_token, "checked_in": True},
+            "event": {"id": event.id, "title": event.title},
+        }
 
     if guest.rsvp_status == "declined":
         return {
             "valid": False,
             "reason": "declined",
             "message": f"{guest.name} declined the invitation and cannot be checked in.",
-            "guest": {"id": guest.id, "name": guest.name, "phone": guest.phone, "email": guest.email},
+            "guest": {"id": guest.id, "name": guest.name, "phone": guest.phone, "email": guest.email, "rsvp_token": guest.rsvp_token, "checked_in": False},
             "event": {"id": event.id, "title": event.title},
         }
 
@@ -82,7 +104,7 @@ async def scanner_verify_token(req: ScanTokenRequest, request: Request, db: Asyn
             "valid": False,
             "reason": "event_ended",
             "message": f"The event '{event.title}' has already ended.",
-            "guest": {"id": guest.id, "name": guest.name, "phone": guest.phone, "email": guest.email},
+            "guest": {"id": guest.id, "name": guest.name, "phone": guest.phone, "email": guest.email, "rsvp_token": guest.rsvp_token, "checked_in": False},
             "event": {"id": event.id, "title": event.title},
         }
 
@@ -90,7 +112,7 @@ async def scanner_verify_token(req: ScanTokenRequest, request: Request, db: Asyn
         "valid": True,
         "reason": "verified",
         "message": f"{guest.name} can be checked in.",
-        "guest": {"id": guest.id, "name": guest.name, "phone": guest.phone, "email": guest.email, "rsvp_status": guest.rsvp_status},
+        "guest": {"id": guest.id, "name": guest.name, "phone": guest.phone, "email": guest.email, "rsvp_status": guest.rsvp_status, "rsvp_token": guest.rsvp_token, "checked_in": False},
         "event": {"id": event.id, "title": event.title},
     }
 
@@ -104,6 +126,12 @@ async def scanner_checkin(req: ScanTokenRequest, request: Request, db: AsyncSess
 
     if not guest or not event:
         return {"status": "error", "message": "Invalid QR code"}
+
+    existing = await db.execute(
+        select(CheckIn.id).where(CheckIn.guest_id == guest.id, CheckIn.event_id == event.id).limit(1)
+    )
+    if existing.first() is not None:
+        return {"status": "error", "message": f"{guest.name} is already checked in."}
 
     if guest.rsvp_status == "declined":
         scan = ScanAttempt(guest_id=guest.id, event_id=event.id, token=raw_token, status="declined", device_info=ua, ip_address=ip)
