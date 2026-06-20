@@ -20,7 +20,13 @@ export default function QRScanner({ onScan, onError, onStart, onStop }: QRScanne
 
   useEffect(() => {
     import("html5-qrcode").then((mod) => setHtml5QrcodeLib(mod.Html5Qrcode)).catch(() => {});
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+        scannerRef.current = null;
+      }
+    };
   }, []);
 
   const safeStop = async () => {
@@ -58,11 +64,11 @@ export default function QRScanner({ onScan, onError, onStart, onStop }: QRScanne
         { facingMode: "environment" },
         { fps: 15, qrbox: { width: 200, height: 200 } },
         (decodedText: string) => {
-          safeStop();
           setScannerStarted(false);
           onStop();
           const token = decodedText.split("/").pop() || decodedText;
           onScan(token);
+          setTimeout(() => safeStop(), 100);
         },
         () => {}
       );
