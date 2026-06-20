@@ -534,7 +534,7 @@ export function AccreditationScanClient() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
-                {mode === "scanner" ? (
+                {mode === "scanner" ? (<>
                 <div>
                   <h2 className="text-xs font-bold uppercase tracking-wide text-white/60 mb-3 flex items-center gap-2">
                     <QrCode className="w-4 h-4 text-pink-500" />
@@ -549,7 +549,6 @@ export function AccreditationScanClient() {
                   />
                 </div>
 
-                {/* Scanner Result - Sticky Modal on Mobile */}
                 {scanResult && (
                   <>
                     <div className="fixed inset-0 bg-black/60 z-30 lg:hidden" onClick={() => setScanResult(null)} />
@@ -832,7 +831,7 @@ export function AccreditationScanClient() {
                     )}
                   </div>
                 </div>
-                )}
+                </>)}
               </div>
 
               <div>
