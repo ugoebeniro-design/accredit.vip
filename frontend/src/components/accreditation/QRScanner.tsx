@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Html5Qrcode } from "html5-qrcode";
 import { Check, X, Loader } from "lucide-react";
 
 interface QRScannerProps {
@@ -16,10 +17,8 @@ export default function QRScanner({ onScan, onError, onStart, onStop, scanningDi
   const mountedRef = useRef(true);
   const [scannerStarted, setScannerStarted] = useState(false);
   const [error, setError] = useState("");
-  const [Html5QrcodeLib, setHtml5QrcodeLib] = useState<any>(null);
 
   useEffect(() => {
-    import("html5-qrcode").then((mod) => setHtml5QrcodeLib(mod.Html5Qrcode)).catch(() => {});
     return () => {
       mountedRef.current = false;
       if (scannerRef.current) {
@@ -41,16 +40,13 @@ export default function QRScanner({ onScan, onError, onStart, onStop, scanningDi
 
   const startScanner = async () => {
     setError("");
-    if (!Html5QrcodeLib) return;
-
     onStart();
     setScannerStarted(true);
     await new Promise((r) => setTimeout(r, 100));
-
     if (!mountedRef.current) return;
 
     try {
-      const scanner = new Html5QrcodeLib("qr-reader");
+      const scanner = new Html5Qrcode("qr-reader");
       scannerRef.current = scanner;
 
       setTimeout(() => {
@@ -128,8 +124,7 @@ export default function QRScanner({ onScan, onError, onStart, onStop, scanningDi
         ) : (
           <button
             onClick={startScanner}
-            disabled={!Html5QrcodeLib}
-            className="w-full h-full flex flex-col items-center justify-center text-white/30 cursor-pointer hover:bg-white/[0.02] transition group disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-full flex flex-col items-center justify-center text-white/30 cursor-pointer hover:bg-white/[0.02] transition group"
           >
             <div className="relative mb-4">
               <Check className="w-20 h-20 text-pink-500/60 group-hover:text-pink-400/80 transition" style={{ animation: "breathe 2.5s ease-in-out infinite" }} />
