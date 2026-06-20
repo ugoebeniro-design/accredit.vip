@@ -8,11 +8,11 @@ interface QRScannerProps {
   onError: (message: string) => void;
   onStart: () => void;
   onStop: () => void;
+  scanningDisabled?: boolean;
 }
 
-export default function QRScanner({ onScan, onError, onStart, onStop }: QRScannerProps) {
+export default function QRScanner({ onScan, onError, onStart, onStop, scanningDisabled }: QRScannerProps) {
   const scannerRef = useRef<any>(null);
-  const stoppingRef = useRef(false);
   const mountedRef = useRef(true);
   const [scannerStarted, setScannerStarted] = useState(false);
   const [error, setError] = useState("");
@@ -29,16 +29,14 @@ export default function QRScanner({ onScan, onError, onStart, onStop }: QRScanne
     };
   }, []);
 
-  const safeStop = async () => {
-    if (stoppingRef.current || !scannerRef.current) return;
-    stoppingRef.current = true;
+  const stopScanner = async () => {
+    if (!scannerRef.current) return;
     try {
       await scannerRef.current.stop();
-    } catch {
-      // ignore stop errors
-    }
+    } catch {}
     scannerRef.current = null;
-    stoppingRef.current = false;
+    setScannerStarted(false);
+    onStop();
   };
 
   const startScanner = async () => {
@@ -64,11 +62,9 @@ export default function QRScanner({ onScan, onError, onStart, onStop }: QRScanne
         { facingMode: "environment" },
         { fps: 15, qrbox: { width: 200, height: 200 } },
         (decodedText: string) => {
-          setScannerStarted(false);
-          onStop();
+          if (scanningDisabled) return;
           const token = decodedText.split("/").pop() || decodedText;
           onScan(token);
-          setTimeout(() => safeStop(), 100);
         },
         () => {}
       );
@@ -92,12 +88,6 @@ export default function QRScanner({ onScan, onError, onStart, onStop }: QRScanne
       setError(userMessage);
       onError(userMessage);
     }
-  };
-
-  const stopScanner = () => {
-    safeStop();
-    setScannerStarted(false);
-    onStop();
   };
 
   return (

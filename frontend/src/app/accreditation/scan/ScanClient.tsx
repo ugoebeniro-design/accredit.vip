@@ -459,6 +459,7 @@ export function AccreditationScanClient() {
                     onError={setError}
                     onStart={() => { setError(""); setScanResult(null); }}
                     onStop={() => {}}
+                    scanningDisabled={!!scanResult}
                   />
                 </div>
 
