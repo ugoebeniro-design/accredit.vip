@@ -92,6 +92,9 @@ export function AccreditationScanClient() {
   const [checkingIn, setCheckingIn] = useState<number | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityTotal, setActivityTotal] = useState(0);
+  const [activitySearch, setActivitySearch] = useState("");
   const [error, setError] = useState("");
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [eventSearch, setEventSearch] = useState("");
@@ -175,33 +178,50 @@ export function AccreditationScanClient() {
     } catch {}
   }, []);
 
-  const loadActivity = useCallback(async (eventId: number) => {
+  const loadActivity = useCallback(async (eventId: number, page: number = 1, q: string = "") => {
     setActivityLoading(true);
     try {
-      const d = await apiClient<{ activity: ActivityItem[] }>(`/scanner/events/${eventId}/activity?limit=500`);
+      const params = new URLSearchParams({ page: String(page), per_page: "20" });
+      if (q) params.set("q", q);
+      const d = await apiClient<{ activity: ActivityItem[]; total: number }>(`/scanner/events/${eventId}/activity?${params}`);
       setActivity(d.activity || []);
+      setActivityTotal(d.total || 0);
+      setActivityPage(page);
       setLastActivityRefresh(new Date());
       setActivityLive(true);
     } catch { setActivity([]); }
     setActivityLoading(false);
   }, []);
 
+  const handleActivitySearch = (q: string) => {
+    setActivitySearch(q);
+    if (selectedEvent) loadActivity(selectedEvent.id, 1, q);
+  };
+
+  const handleActivityPage = (page: number) => {
+    if (selectedEvent) loadActivity(selectedEvent.id, page, activitySearch);
+  };
+
   useEffect(() => {
     if (selectedEvent) {
       localStorage.setItem("accreditation_event_id", String(selectedEvent.id));
       loadStats(selectedEvent.id);
-      loadActivity(selectedEvent.id);
+      setActivityPage(1);
+      setActivitySearch("");
+      loadActivity(selectedEvent.id, 1, "");
     }
   }, [selectedEvent, loadStats, loadActivity]);
 
   useEffect(() => {
     if (!selectedEvent) return;
     const interval = setInterval(() => {
-      loadActivity(selectedEvent.id);
+      if (activityPage === 1 && !activitySearch) {
+        loadActivity(selectedEvent.id, 1, "");
+      }
       loadStats(selectedEvent.id);
     }, 10000);
     return () => clearInterval(interval);
-  }, [selectedEvent, loadActivity, loadStats]);
+  }, [selectedEvent, loadActivity, loadStats, activityPage, activitySearch]);
 
   const handleEventChange = (eventId: number) => {
     setScanResult(null);
@@ -689,7 +709,7 @@ export function AccreditationScanClient() {
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-xs font-bold uppercase tracking-wide text-white/60 flex items-center gap-2">
                     <Clock className="w-4 h-4 text-pink-500" />
-                    Recent Activity
+                    Checked In Guests
                   </h2>
                   <div className="flex items-center gap-2">
                     {activityLive && (
@@ -706,6 +726,15 @@ export function AccreditationScanClient() {
                   </div>
                 </div>
                 <div className="rounded-2xl bg-white/5 border border-white/10 p-4 min-h-[500px] flex flex-col lg:sticky lg:top-20">
+                  <div className="relative mb-3">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                    <input
+                      value={activitySearch}
+                      onChange={(e) => handleActivitySearch(e.target.value)}
+                      placeholder="Search checked-in guests..."
+                      className="w-full rounded-xl bg-white/10 border border-white/20 pl-9 pr-3 py-2.5 text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500"
+                    />
+                  </div>
                 {activityLoading && activity.length === 0 ? (
                   <div className="flex-1 flex items-center justify-center text-center text-white/30">
                     <div>
@@ -717,8 +746,8 @@ export function AccreditationScanClient() {
                   <div className="flex-1 flex items-center justify-center text-center text-white/30">
                     <div>
                       <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No check-ins yet</p>
-                      <p className="text-xs mt-1">Guest check-ins will appear here</p>
+                      <p className="text-sm">{activitySearch ? "No matching check-ins" : "No check-ins yet"}</p>
+                      <p className="text-xs mt-1">{activitySearch ? "Try a different search term" : "Guest check-ins will appear here"}</p>
                     </div>
                   </div>
                 ) : (
@@ -744,11 +773,26 @@ export function AccreditationScanClient() {
                     ))}
                   </div>
                 )}
-                {activity.length > 0 && (
-                  <button onClick={() => selectedEvent && loadActivity(selectedEvent.id)} className="mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold transition min-h-[44px]">
-                    <RefreshCw className="w-3 h-3" />
-                    Refresh
-                  </button>
+                {activityTotal > 20 && (
+                  <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-white/10">
+                    <button
+                      onClick={() => handleActivityPage(activityPage - 1)}
+                      disabled={activityPage <= 1}
+                      className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 text-xs font-semibold transition min-h-[36px]"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs text-white/50">
+                      Page {activityPage} of {Math.ceil(activityTotal / 20)}
+                    </span>
+                    <button
+                      onClick={() => handleActivityPage(activityPage + 1)}
+                      disabled={activityPage >= Math.ceil(activityTotal / 20)}
+                      className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 text-xs font-semibold transition min-h-[36px]"
+                    >
+                      Next
+                    </button>
+                  </div>
                 )}
                 </div>
               </div>

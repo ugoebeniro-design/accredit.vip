@@ -193,19 +193,38 @@ async def scanner_search_guests(
 @router.get("/scanner/events/{event_id}/activity")
 async def scanner_recent_activity(
     event_id: int,
-    limit: int = 20,
+    page: int = 1,
+    per_page: int = 20,
+    q: str = "",
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     event = await db.get(Event, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    result = await db.execute(
+
+    base_query = (
         select(CheckIn, Guest.name, Guest.phone, Guest.email)
         .join(Guest, CheckIn.guest_id == Guest.id)
         .where(CheckIn.event_id == event_id)
+    )
+
+    if q:
+        like = f"%{q}%"
+        base_query = base_query.where(
+            Guest.name.ilike(like) | Guest.email.ilike(like) | Guest.phone.ilike(like)
+        )
+
+    count_result = await db.execute(
+        select(func.count()).select_from(base_query.subquery())
+    )
+    total = count_result.scalar() or 0
+
+    result = await db.execute(
+        base_query
         .order_by(CheckIn.checked_in_at.desc())
-        .limit(limit)
+        .offset((page - 1) * per_page)
+        .limit(per_page)
     )
     rows = result.all()
     return {
@@ -219,5 +238,8 @@ async def scanner_recent_activity(
                 "checked_in_at": r.CheckIn.checked_in_at.isoformat() if r.CheckIn.checked_in_at else None,
             }
             for r in rows
-        ]
+        ],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
     }
