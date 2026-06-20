@@ -271,3 +271,68 @@ async def scanner_recent_activity(
         "page": page,
         "per_page": per_page,
     }
+
+
+@router.get("/scanner/audience")
+async def scanner_audience(
+    page: int = 1,
+    per_page: int = 50,
+    q: str = "",
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    base = (
+        select(Guest, Event.title.label("event_title"))
+        .join(Event, Guest.event_id == Event.id)
+        .where(Guest.deleted_at == None)
+    )
+
+    if q:
+        like = f"%{q}%"
+        base = base.where(
+            Guest.name.ilike(like) | Guest.email.ilike(like) | Guest.phone.ilike(like) | Event.title.ilike(like)
+        )
+
+    count_result = await db.execute(
+        select(func.count()).select_from(base.subquery())
+    )
+    total = count_result.scalar() or 0
+
+    result = await db.execute(
+        base
+        .order_by(Guest.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    )
+    rows = result.all()
+
+    guest_ids = [r.Guest.id for r in rows]
+    checkin_map = {}
+    if guest_ids:
+        cr = await db.execute(
+            select(CheckIn.guest_id, func.max(CheckIn.checked_in_at))
+            .where(CheckIn.guest_id.in_(guest_ids))
+            .group_by(CheckIn.guest_id)
+        )
+        for gid, ctime in cr:
+            checkin_map[gid] = ctime.isoformat() if ctime else None
+
+    return {
+        "guests": [
+            {
+                "id": r.Guest.id,
+                "name": r.Guest.name,
+                "phone": r.Guest.phone,
+                "email": r.Guest.email,
+                "rsvp_status": r.Guest.rsvp_status,
+                "event_id": r.Guest.event_id,
+                "event_title": r.event_title,
+                "checked_in_at": checkin_map.get(r.Guest.id),
+                "created_at": r.Guest.created_at.isoformat() if r.Guest.created_at else None,
+            }
+            for r in rows
+        ],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+    }

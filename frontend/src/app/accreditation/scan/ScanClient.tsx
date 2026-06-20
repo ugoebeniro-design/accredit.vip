@@ -90,6 +90,12 @@ export function AccreditationScanClient() {
   const [manualResults, setManualResults] = useState<GuestResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [checkingIn, setCheckingIn] = useState<number | null>(null);
+  const [mode, setMode] = useState<"scanner" | "audience">("scanner");
+  const [audience, setAudience] = useState<any[]>([]);
+  const [audienceLoading, setAudienceLoading] = useState(false);
+  const [audiencePage, setAudiencePage] = useState(1);
+  const [audienceTotal, setAudienceTotal] = useState(0);
+  const [audienceSearch, setAudienceSearch] = useState("");
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityPage, setActivityPage] = useState(1);
@@ -200,6 +206,35 @@ export function AccreditationScanClient() {
 
   const handleActivityPage = (page: number) => {
     if (selectedEvent) loadActivity(selectedEvent.id, page, activitySearch);
+  };
+
+  const loadAudience = useCallback(async (page: number = 1, q: string = "") => {
+    setAudienceLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(page), per_page: "50" });
+      if (q) params.set("q", q);
+      const d = await apiClient<{ guests: any[]; total: number }>(`/scanner/audience?${params}`);
+      setAudience(d.guests || []);
+      setAudienceTotal(d.total || 0);
+      setAudiencePage(page);
+    } catch {}
+    setAudienceLoading(false);
+  }, []);
+
+  const handleAudienceSearch = (q: string) => {
+    setAudienceSearch(q);
+    loadAudience(1, q);
+  };
+
+  const handleAudiencePage = (page: number) => {
+    loadAudience(page, audienceSearch);
+  };
+
+  const handleModeChange = (newMode: "scanner" | "audience") => {
+    setMode(newMode);
+    if (newMode === "audience") {
+      loadAudience(1, audienceSearch);
+    }
   };
 
   useEffect(() => {
@@ -476,8 +511,30 @@ export function AccreditationScanClient() {
               </div>
             </div>
 
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => handleModeChange("scanner")}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition min-h-[44px] ${
+                  mode === "scanner" ? "bg-pink-600 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"
+                }`}
+              >
+                <QrCode className="w-4 h-4 inline-block mr-1.5" />
+                Scanner
+              </button>
+              <button
+                onClick={() => handleModeChange("audience")}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition min-h-[44px] ${
+                  mode === "audience" ? "bg-pink-600 text-white" : "bg-white/10 text-white/60 hover:bg-white/20"
+                }`}
+              >
+                <User className="w-4 h-4 inline-block mr-1.5" />
+                Audience Data
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
+                {mode === "scanner" ? (
                 <div>
                   <h2 className="text-xs font-bold uppercase tracking-wide text-white/60 mb-3 flex items-center gap-2">
                     <QrCode className="w-4 h-4 text-pink-500" />
@@ -703,6 +760,79 @@ export function AccreditationScanClient() {
                   )}
                   </div>
                 </div>
+              </div>
+                ) : (
+                <div>
+                  <h2 className="text-xs font-bold uppercase tracking-wide text-white/60 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4 text-pink-500" />
+                    Audience Data
+                  </h2>
+                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-3">
+                    <div className="relative">
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                      <input
+                        value={audienceSearch}
+                        onChange={(e) => handleAudienceSearch(e.target.value)}
+                        placeholder="Search by name, email, phone, or event..."
+                        className="w-full rounded-xl bg-white/10 border border-white/20 pl-9 pr-3 py-2.5 text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500"
+                      />
+                    </div>
+                    {audienceLoading && audience.length === 0 ? (
+                      <div className="flex items-center justify-center py-12 text-white/30">
+                        <Loader className="w-6 h-6 animate-spin" />
+                      </div>
+                    ) : audience.length === 0 ? (
+                      <div className="flex items-center justify-center py-12 text-white/30">
+                        <div className="text-center">
+                          <User className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">{audienceSearch ? "No matching guests" : "No guests yet"}</p>
+                          <p className="text-xs mt-1">{audienceSearch ? "Try a different search term" : "Guests will appear here as organizers create events"}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                        {audience.map((g: any) => (
+                          <div key={g.id} className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 p-3">
+                            <div className="w-9 h-9 rounded-full bg-pink-600/30 flex items-center justify-center flex-shrink-0">
+                              <User className="w-4 h-4 text-pink-400" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold truncate">{g.name}</p>
+                              <p className="text-xs text-white/50 truncate">{g.email || g.phone || "\u2014"}</p>
+                              <p className="text-[10px] text-white/40 truncate">{g.event_title}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              {g.checked_in_at ? (
+                                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-900/40 text-green-400 text-[10px] font-medium">
+                                  <Check className="w-2.5 h-2.5" /> Checked In
+                                </div>
+                              ) : (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                  g.rsvp_status === "accepted" ? "bg-green-900/40 text-green-400" :
+                                  g.rsvp_status === "declined" ? "bg-red-900/40 text-red-400" :
+                                  "bg-amber-900/40 text-amber-400"
+                                }`}>
+                                  {g.rsvp_status || "pending"}
+                                </span>
+                              )}
+                              <p className="text-[10px] text-white/40 mt-0.5">
+                                {g.created_at ? new Date(g.created_at).toLocaleDateString() : ""}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {audienceTotal > 50 && (
+                      <div className="flex items-center justify-between gap-2 pt-3 border-t border-white/10">
+                        <button onClick={() => handleAudiencePage(audiencePage - 1)} disabled={audiencePage <= 1} className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 text-xs font-semibold transition min-h-[36px]">Previous</button>
+                        <span className="text-xs text-white/50">Page {audiencePage} of {Math.ceil(audienceTotal / 50)}</span>
+                        <button onClick={() => handleAudiencePage(audiencePage + 1)} disabled={audiencePage >= Math.ceil(audienceTotal / 50)} className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 text-xs font-semibold transition min-h-[36px]">Next</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                )}
               </div>
 
               <div>
