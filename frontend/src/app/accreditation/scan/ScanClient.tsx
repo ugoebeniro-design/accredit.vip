@@ -178,7 +178,7 @@ export function AccreditationScanClient() {
   const loadActivity = useCallback(async (eventId: number) => {
     setActivityLoading(true);
     try {
-      const d = await apiClient<{ activity: ActivityItem[] }>(`/scanner/events/${eventId}/activity`);
+      const d = await apiClient<{ activity: ActivityItem[] }>(`/scanner/events/${eventId}/activity?limit=500`);
       setActivity(d.activity || []);
       setLastActivityRefresh(new Date());
       setActivityLive(true);
@@ -193,6 +193,15 @@ export function AccreditationScanClient() {
       loadActivity(selectedEvent.id);
     }
   }, [selectedEvent, loadStats, loadActivity]);
+
+  useEffect(() => {
+    if (!selectedEvent) return;
+    const interval = setInterval(() => {
+      loadActivity(selectedEvent.id);
+      loadStats(selectedEvent.id);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [selectedEvent, loadActivity, loadStats]);
 
   const handleEventChange = (eventId: number) => {
     setScanResult(null);
