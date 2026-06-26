@@ -54,7 +54,7 @@ export function WithdrawalForm({
     }
 
     if (selectedCurrency && numAmount < selectedCurrency.min_fund) {
-      setError(`Minimum withdrawal is ${selectedCurrency.symbol}${selectedCurrency.min_fund}`);
+      setError(`Minimum withdrawal is ${formatCurrencyAmount(selectedCurrency.min_fund, selectedCurrency.code)}`);
       return;
     }
 
@@ -87,6 +87,8 @@ export function WithdrawalForm({
   const verificationThreshold = selectedCurrency?.verification_threshold || 0;
   const willRequireVerification = parseFloat(amount) > verificationThreshold;
 
+  const [showDetails, setShowDetails] = useState(false);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
@@ -114,7 +116,7 @@ export function WithdrawalForm({
           value={selectedAccountId || ""}
           onChange={(e) => setSelectedAccountId(parseInt(e.target.value) || null)}
           disabled={loading || bankAccounts.length === 0}
-          className="w-full h-11 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] disabled:opacity-50"
+          className="w-full h-12 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] focus:ring-1 focus:ring-[#E91E8C] disabled:bg-[#f8fafc] disabled:opacity-50"
         >
           <option value="">Select a bank account...</option>
           {bankAccounts.map((account) => (
@@ -134,7 +136,7 @@ export function WithdrawalForm({
           <label className="block text-sm font-semibold text-[#0D1B2A] mb-2">Amount</label>
           <div className="space-y-2">
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[#0D1B2A]">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base font-bold text-[#0D1B2A]">
                 {selectedCurrency?.symbol}
               </span>
               <input
@@ -145,8 +147,8 @@ export function WithdrawalForm({
                 min={selectedCurrency?.min_fund || 0}
                 max={selectedWallet.balance}
                 step={selectedCurrency?.symbol === "₦" ? "1" : "0.01"}
-                placeholder="0"
-                className="w-full h-11 rounded-xl border border-[#d9e2ec] px-3 pl-8 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc]"
+                placeholder="0.00"
+                className="w-full h-12 rounded-xl border border-[#d9e2ec] px-3 pl-10 text-base font-semibold outline-none focus:border-[#E91E8C] focus:ring-1 focus:ring-[#E91E8C] disabled:bg-[#f8fafc]"
               />
             </div>
             <div className="flex items-center justify-between">
@@ -158,7 +160,7 @@ export function WithdrawalForm({
                 onClick={() => setAmount(selectedWallet.balance.toString())}
                 className="text-xs font-semibold text-[#E91E8C] hover:underline"
               >
-                Max
+                Use Max
               </button>
             </div>
           </div>
@@ -175,70 +177,82 @@ export function WithdrawalForm({
           disabled={loading}
           placeholder="e.g., For project fees"
           maxLength={100}
-          className="w-full h-11 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc]"
+          className="w-full h-12 rounded-xl border border-[#d9e2ec] px-3 text-sm outline-none focus:border-[#E91E8C] focus:ring-1 focus:ring-[#E91E8C] disabled:bg-[#f8fafc]"
         />
       </div>
 
-      {/* Withdrawal Fee & Net Amount */}
+      {/* Summary Card */}
       {selectedCurrency && amount && selectedWallet && (
-        <div className="space-y-3 rounded-xl border border-[#e8edf2] bg-[#f8f9fc] p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-[#64748b]">Withdrawal Amount</p>
-            <p className="font-semibold text-[#0D1B2A]">{selectedCurrency.symbol}{parseFloat(amount).toLocaleString()}</p>
-          </div>
-
-          <div className="flex items-center justify-between pb-3 border-b border-[#e8edf2]">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-[#0D1B2A]" />
-              <p className="text-sm text-[#64748b]">Withdrawal Fee</p>
+        <div className="rounded-xl border border-[#e8edf2] bg-gradient-to-br from-[#E91E8C]/5 to-[#E91E8C]/10 p-4 sm:p-5">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[#64748b]">Amount</p>
+              <p className="text-lg font-bold text-[#0D1B2A]">{formatCurrencyAmount(parseFloat(amount) || 0, selectedCurrency.code)}</p>
             </div>
-            <p className="font-semibold text-[#E91E8C]">{selectedCurrency.symbol}50</p>
+
+            <div className="flex items-center justify-between pb-3 border-b border-[#E91E8C]/20">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-[#E91E8C]" />
+                <p className="text-sm text-[#64748b]">Fee</p>
+              </div>
+              <p className="font-semibold text-[#E91E8C]">{selectedCurrency.symbol}50.00</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-[#0D1B2A]">You'll Receive</p>
+              <p className="text-lg font-bold text-emerald-600">{formatCurrencyAmount((parseFloat(amount) || 0) - 50, selectedCurrency.code)}</p>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-[#0D1B2A]">You'll Receive</p>
-            <p className="text-lg font-bold text-emerald-600">{selectedCurrency.symbol}{(parseFloat(amount) - 50).toLocaleString()}</p>
+          {/* Expandable Details */}
+          <button
+            type="button"
+            onClick={() => setShowDetails(!showDetails)}
+            className="w-full mt-4 pt-3 border-t border-[#E91E8C]/20 text-xs font-semibold text-[#E91E8C] hover:text-[#C4166F] transition-colors text-center"
+          >
+            {showDetails ? "Hide Details" : "Show Details"}
+          </button>
+        </div>
+      )}
+
+      {/* Expanded Details Section */}
+      {showDetails && selectedCurrency && amount && (
+        <div className="space-y-2 rounded-lg border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5">
+          <div className="flex gap-2 pb-3 border-b border-[#e8edf2]">
+            <Clock className="h-4 w-4 text-[#0D1B2A] flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-[#0D1B2A]">Processing Time</p>
+              <p className="text-xs text-[#64748b]">1-3 business days</p>
+            </div>
           </div>
+
+          <div className="flex gap-2 pb-3 border-b border-[#e8edf2]">
+            <Info className="h-4 w-4 text-[#0D1B2A] flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-[#0D1B2A]">Daily Limit</p>
+              <p className="text-xs text-[#64748b]">{formatCurrencyAmount(selectedCurrency.daily_withdrawal_limit, selectedCurrency.code)}</p>
+            </div>
+          </div>
+
+          {willRequireVerification && (
+            <div className="flex gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-amber-800">High Amount</p>
+                <p className="text-xs text-amber-700">Amounts over {formatCurrencyAmount(selectedCurrency.verification_threshold, selectedCurrency.code)} may require additional verification</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Account Verification Status */}
       {selectedAccount && (
-        <div className="rounded-lg border border-[#e8edf2] bg-[#f8f9fc] p-3 flex gap-2">
-          <Shield className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-[#64748b]">
-            <span className="font-semibold text-green-600">Account verified</span> - You can withdraw to this account
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 flex gap-2">
+          <Shield className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-emerald-700">
+            <span className="font-semibold">Account verified</span> — You can withdraw to this account
           </p>
-        </div>
-      )}
-
-      {/* Warnings & Info */}
-      {selectedCurrency && amount && (
-        <div className="space-y-2">
-          {willRequireVerification && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-800">
-                <span className="font-semibold">High amount:</span> Withdrawals over {selectedCurrency.symbol}
-                {selectedCurrency.verification_threshold.toLocaleString()} may require additional verification.
-              </p>
-            </div>
-          )}
-
-          <div className="rounded-lg border border-[#e8edf2] bg-[#f8f9fc] p-3 flex gap-2">
-            <Clock className="h-4 w-4 text-[#0D1B2A] flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-[#64748b]">
-              <span className="font-semibold">Processing time:</span> 1-3 business days
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-[#e8edf2] bg-[#f8f9fc] p-3 flex gap-2">
-            <Info className="h-4 w-4 text-[#0D1B2A] flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-[#64748b]">
-              <span className="font-semibold">Daily limit:</span> {selectedCurrency.symbol}
-              {selectedCurrency.daily_withdrawal_limit.toLocaleString()}
-            </p>
-          </div>
         </div>
       )}
 
@@ -249,10 +263,10 @@ export function WithdrawalForm({
           id="agree-terms"
           checked={agreedToTerms}
           onChange={(e) => setAgreedToTerms(e.target.checked)}
-          className="w-4 h-4 mt-0.5 rounded border-[#d9e2ec] cursor-pointer"
+          className="w-4 h-4 mt-1 rounded border-[#d9e2ec] cursor-pointer"
         />
-        <label htmlFor="agree-terms" className="text-xs text-[#64748b] cursor-pointer">
-          I understand that withdrawal fees apply and processing takes 1-3 business days. I also confirm the bank account details are correct.
+        <label htmlFor="agree-terms" className="text-xs text-[#64748b] cursor-pointer leading-relaxed">
+          I understand that withdrawal fees apply and processing takes 1-3 business days. I confirm the bank account details are correct.
         </label>
       </div>
 
@@ -280,17 +294,17 @@ export function WithdrawalForm({
 
               <div className="flex justify-between items-center pb-3 border-b border-[#e8edf2]">
                 <p className="text-sm text-[#64748b]">Amount</p>
-                <p className="font-bold text-[#0D1B2A]">{selectedCurrency.symbol}{parseFloat(amount).toLocaleString()}</p>
+                <p className="font-bold text-[#0D1B2A]">{formatCurrencyAmount(parseFloat(amount) || 0, selectedCurrency.code)}</p>
               </div>
 
               <div className="flex justify-between items-center pb-3 border-b border-[#e8edf2]">
                 <p className="text-sm text-[#64748b]">Fee</p>
-                <p className="font-semibold text-[#E91E8C]">{selectedCurrency.symbol}50</p>
+                <p className="font-semibold text-[#E91E8C]">{selectedCurrency.symbol}50.00</p>
               </div>
 
               <div className="flex justify-between items-center">
                 <p className="text-sm font-semibold text-[#0D1B2A]">You'll Receive</p>
-                <p className="text-lg font-bold text-emerald-600">{selectedCurrency.symbol}{(parseFloat(amount) - 50).toLocaleString()}</p>
+                <p className="text-lg font-bold text-emerald-600">{formatCurrencyAmount((parseFloat(amount) || 0) - 50, selectedCurrency.code)}</p>
               </div>
 
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex gap-2">

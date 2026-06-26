@@ -10,8 +10,8 @@ import { AddBankAccountForm } from "@/components/wallet/add-bank-account-form";
 import { WithdrawalForm } from "@/components/wallet/withdrawal-form";
 import { CurrencySelector } from "@/components/wallet/currency-selector";
 import { TransactionHistory } from "@/components/wallet/transaction-history";
-import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
-import { Menu, X, LayoutGrid, Calendar, Plus, Wallet as WalletIcon, Compass, LogOut, Lock } from "lucide-react";
+import { SUPPORTED_CURRENCIES, formatCurrencyAmount as formatAmount } from "@/lib/currencies";
+import { Menu, X, LayoutGrid, Calendar, Plus, Wallet as WalletIcon, Compass, LogOut, Lock, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 
 interface Wallet {
@@ -20,6 +20,8 @@ interface Wallet {
   balance: number;
   is_primary: boolean;
 }
+
+
 
 interface BankAccount {
   id: number;
@@ -42,9 +44,10 @@ function maskEmail(email: string) {
 
 export default function WalletPage() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "deposit" | "withdraw" | "accounts" | "history">("overview");
   const [selectedCurrency, setSelectedCurrency] = useState("");
@@ -52,16 +55,42 @@ export default function WalletPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
+  const formatCommas = (v: string) => {
+    const cleaned = v.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+    const parts = cleaned.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
+  };
   const [depositError, setDepositError] = useState<string | null>(null);
+  const [depositProvider, setDepositProvider] = useState("nomba");
 
+  // Verify Nomba transaction on mount (redirect from payment)
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("reference");
+    const prov = params.get("provider");
+    if (ref && prov === "nomba") {
+      (async () => {
+        const res = await fetch(`/api/v1/nomba/verify/${ref}`);
+        if (res.ok) {
+          await fetchWallets();
+          window.history.replaceState({}, "", "/dashboard/wallet");
+        }
+      })();
+    }
+  }, []);
+
+  // Wait for auth to initialize before checking user
+  useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push("/login");
       return;
     }
     fetchWallets();
     fetchBankAccounts();
-  }, [user, router]);
+    fetchTransactions();
+  }, [user, authLoading, router]);
 
   const fetchWallets = async () => {
     try {
@@ -70,9 +99,7 @@ export default function WalletPage() {
         const data = await res.json();
         setWallets(Array.isArray(data) ? data : data.wallets || []);
       }
-    } catch (err) {
-
-    }
+    } catch (err) {}
   };
 
   const fetchBankAccounts = async () => {
@@ -82,9 +109,31 @@ export default function WalletPage() {
         const data = await res.json();
         setBankAccounts(Array.isArray(data) ? data : data.accounts || []);
       }
-    } catch (err) {
+    } catch (err) {}
+  };
 
-    }
+  const fetchTransactions = async () => {
+    try {
+      const res = await fetch("/api/v1/wallet");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || !Array.isArray(data.transactions)) return;
+      setTransactions(
+        data.transactions.map((tx: any) => {
+          if (!tx || typeof tx !== "object") return null;
+          return {
+            id: String(tx.id ?? ""),
+            type: ["deposit", "withdrawal", "transfer"].includes(tx.type) ? tx.type : "deposit",
+            amount: Number(tx.amount) || 0,
+            currency: String(tx.currency ?? "NGN"),
+            status: ["completed", "pending", "failed"].includes(tx.status) ? tx.status : "pending",
+            date: tx.created_at || new Date().toISOString(),
+            description: String(tx.description || `Deposit via ${tx.provider || "Wallet"}`),
+            reference: String(tx.reference ?? ""),
+          };
+        }).filter(Boolean)
+      );
+    } catch (err) {}
   };
 
   const handleAddBankAccount = async (accountData: any) => {
@@ -146,7 +195,6 @@ export default function WalletPage() {
       setDepositAmount("");
       setDepositError(null);
     } else {
-      // If on overview/other tabs, just create wallet
       setSelectedCurrency(currency);
       setLoading(true);
       try {
@@ -199,6 +247,17 @@ export default function WalletPage() {
     router.push("/");
   };
 
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f8f9fc]">
+        <div className="flex items-center gap-2 text-[#64748b]">
+          <RefreshCw className="w-5 h-5 animate-spin" />
+          <span>Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) return null;
 
   return (
@@ -232,7 +291,7 @@ export default function WalletPage() {
         </div>
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar (same as before — keep unchanged) */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex-col flex-shrink-0 transition-all duration-300 ${
           mobileNavOpen ? "translate-x-0" : "-translate-x-full"
@@ -242,7 +301,6 @@ export default function WalletPage() {
           width: sidebarOpen ? "256px" : "80px",
         }}
       >
-        {/* Logo */}
         <div className="flex items-center justify-between h-24 px-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <Link href="/" onClick={() => setMobileNavOpen(false)} className="flex items-center flex-1 min-w-0">
             <Image src="/logo-dark-trim.png" alt="accredit.vip" width={4086} height={801} className="h-16 w-auto object-contain drop-shadow-[0_0_12px_rgba(233,30,140,0.25)]" />
@@ -256,11 +314,8 @@ export default function WalletPage() {
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
-          {sidebarOpen && <p className="px-3 text-[10px] font-bold text-white/25 uppercase tracking-widest mb-3">
-            Main Menu
-          </p>}
+          {sidebarOpen && <p className="px-3 text-[10px] font-bold text-white/25 uppercase tracking-widest mb-3">Main Menu</p>}
           {[
             { href: "/dashboard", label: "Dashboard", icon: <LayoutGrid className="w-4 h-4" /> },
             { href: "/dashboard/events", label: "Events", icon: <Calendar className="w-4 h-4" /> },
@@ -283,7 +338,6 @@ export default function WalletPage() {
             </Link>
           ))}
 
-          {/* Discover Section */}
           {sidebarOpen && (
             <div className="pt-4 mt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               <p className="px-3 text-[10px] font-bold text-white/25 uppercase tracking-widest mb-3">Discover</p>
@@ -299,9 +353,7 @@ export default function WalletPage() {
           )}
         </nav>
 
-        {/* User Section */}
         <div className="px-3 py-4 flex-shrink-0 space-y-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          {/* User Profile */}
           <div className="flex items-center gap-3 px-3 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ background: "linear-gradient(135deg, #E91E8C, #C4166F)" }}>
               {user.full_name?.charAt(0) || "U"}
@@ -314,7 +366,6 @@ export default function WalletPage() {
             )}
           </div>
 
-          {/* Change Password & Logout */}
           {sidebarOpen && (
             <>
               <Link
@@ -337,7 +388,6 @@ export default function WalletPage() {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
         <header className="h-16 flex items-center justify-between px-6 flex-shrink-0" style={{ background: "white", borderBottom: "1px solid #e8edf2" }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileNavOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
@@ -371,9 +421,7 @@ export default function WalletPage() {
             ))}
           </div>
 
-          {/* Tab Content */}
           <div className="space-y-6">
-            {/* Overview Tab */}
             {activeTab === "overview" && (
               <>
                 <WalletDashboard
@@ -391,46 +439,19 @@ export default function WalletPage() {
               </>
             )}
 
-            {/* Deposit Tab */}
             {activeTab === "deposit" && (
-              <div className="bg-white rounded-xl border border-[#e8edf2] p-6">
-                <h2 className="text-xl font-bold text-[#0D1B2A] mb-4">Add Funds</h2>
-                <CurrencySelector
-                  onSelect={handleCurrencySelect}
-                  selectedCurrency={selectedCurrency}
-                />
-                {selectedCurrency && (
-                  <div className="mt-8 p-6 bg-gradient-to-br from-[#E91E8C]/5 to-[#E91E8C]/10 rounded-xl border border-[#E91E8C]/20">
-                    <h3 className="text-lg font-bold text-[#0D1B2A] mb-1">Deposit {selectedCurrency}</h3>
+              <div className="bg-white rounded-xl border border-[#e8edf2] p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-bold text-[#0D1B2A] mb-6">Add Funds</h2>
 
-                    {(() => {
-                      const cur = SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency);
-                      return cur ? (
-                        <p className="text-sm text-[#64748b] mb-4">
-                          Min deposit: {cur.symbol}{cur.min_fund.toLocaleString()}
-                        </p>
-                      ) : null;
-                    })()}
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-semibold text-[#0D1B2A] mb-2">Amount</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[#0D1B2A]">
-                          {SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol}
-                        </span>
-                        <input
-                          type="number"
-                          value={depositAmount}
-                          onChange={(e) => setDepositAmount(e.target.value)}
-                          placeholder="0"
-                          min={SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency)?.min_fund || 0}
-                          className="w-full h-11 rounded-xl border border-[#d9e2ec] px-3 pl-8 text-sm outline-none focus:border-[#E91E8C]"
-                        />
-                      </div>
-                    </div>
-
+                {!selectedCurrency ? (
+                  <CurrencySelector
+                    onSelect={handleCurrencySelect}
+                    selectedCurrency={selectedCurrency}
+                  />
+                ) : (
+                  <>
                     {depositError && (
-                      <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                         <p className="text-sm text-red-600 font-medium mb-2">Error</p>
                         <p className="text-sm text-red-500 mb-3">{depositError}</p>
                         <button
@@ -442,20 +463,88 @@ export default function WalletPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-3">
+                    <div className="bg-gradient-to-br from-[#E91E8C]/5 to-[#E91E8C]/10 rounded-xl border border-[#E91E8C]/20 p-4 mb-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <p className="text-xs text-[#64748b] uppercase tracking-wide font-semibold mb-1">Selected Currency</p>
+                          <p className="text-2xl font-bold text-[#0D1B2A]">{selectedCurrency}</p>
+                          <p className="text-xs text-[#64748b] mt-2">
+                            {(() => {
+                              const cur = SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency);
+                              return cur ? `Min deposit: ${formatAmount(cur.min_fund, cur.code)}` : "";
+                            })()}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedCurrency("");
+                            setDepositAmount("");
+                            setDepositError(null);
+                          }}
+                          className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-[#E91E8C] border border-[#E91E8C] rounded-lg hover:bg-[#E91E8C]/5 transition-colors"
+                        >
+                          Change currency
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-sm font-semibold text-[#0D1B2A] mb-2">Amount to Deposit</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-[#0D1B2A]">
+                          {SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol}
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={formatCommas(depositAmount)}
+                          onChange={(e) => setDepositAmount(e.target.value.replace(/,/g, ""))}
+                          placeholder="0.00"
+                          className="w-full h-12 rounded-lg border border-[#d9e2ec] px-3 pl-10 text-base font-semibold outline-none focus:border-[#E91E8C] focus:ring-1 focus:ring-[#E91E8C]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mb-8">
+                      <p className="text-xs font-semibold text-[#0D1B2A] uppercase tracking-widest mb-3">Choose Payment Method</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {[
+                          { value: "nomba", label: "Nomba" },
+                          { value: "paystack", label: "Paystack" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setDepositProvider(opt.value)}
+                            className={`h-14 rounded-lg font-semibold text-base transition-all border-2 ${
+                              depositProvider === opt.value
+                                ? "bg-[#0D1B2A] text-white border-[#0D1B2A] shadow-md"
+                                : "bg-white text-[#0D1B2A] border-[#d9e2ec] hover:border-[#E91E8C] hover:bg-[#E91E8C]/5"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <button
                         onClick={async () => {
                           setDepositError(null);
                           const amount = parseFloat(depositAmount);
                           const cur = SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency);
                           if (!amount || amount <= 0) { setDepositError("Enter a valid amount"); return; }
-                          if (cur && amount < cur.min_fund) { setDepositError(`Minimum deposit is ${cur.symbol}${cur.min_fund.toLocaleString()}`); return; }
+                          if (cur && amount < cur.min_fund) {
+                            setDepositError(`Minimum deposit is ${formatAmount(cur.min_fund, cur.code)}`);
+                            return;
+                          }
                           setLoading(true);
                           try {
                             const res = await fetch("/api/v1/wallet/fund", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ currency: selectedCurrency, amount }),
+                              body: JSON.stringify({ currency: selectedCurrency, amount, provider: depositProvider }),
                             });
                             if (!res.ok) {
                               const err = await res.json();
@@ -476,7 +565,7 @@ export default function WalletPage() {
                           }
                         }}
                         disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0}
-                        className="flex-1 bg-[#E91E8C] text-white font-bold py-3 px-4 rounded-lg hover:bg-[#C4166F] disabled:opacity-50 transition-colors"
+                        className="sm:flex-1 bg-[#E91E8C] text-white font-bold py-3 px-4 rounded-lg hover:bg-[#C4166F] disabled:opacity-50 disabled:cursor-not-allowed transition-colors h-12"
                       >
                         {loading ? "Processing..." : `Deposit ${selectedCurrency}`}
                       </button>
@@ -486,17 +575,16 @@ export default function WalletPage() {
                           setDepositAmount("");
                           setDepositError(null);
                         }}
-                        className="px-4 py-3 border-2 border-[#e8edf2] text-[#64748b] font-semibold rounded-lg hover:bg-[#f8f9fc] transition-colors"
+                        className="sm:flex-1 px-4 py-3 border-2 border-[#e8edf2] text-[#64748b] font-semibold rounded-lg hover:bg-[#f8f9fc] transition-colors h-12"
                       >
                         Back
                       </button>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             )}
 
-            {/* Withdraw Tab */}
             {activeTab === "withdraw" && (
               <div className="bg-white rounded-xl border border-[#e8edf2] p-6">
                 <h2 className="text-xl font-bold text-[#0D1B2A] mb-6">Request Withdrawal</h2>
@@ -521,7 +609,6 @@ export default function WalletPage() {
               </div>
             )}
 
-            {/* Bank Accounts Tab */}
             {activeTab === "accounts" && (
               <div className="bg-white rounded-xl border border-[#e8edf2] p-6">
                 <h2 className="text-xl font-bold text-[#0D1B2A] mb-6">Add Bank Account</h2>
@@ -535,11 +622,10 @@ export default function WalletPage() {
               </div>
             )}
 
-            {/* Transaction History Tab */}
             {activeTab === "history" && (
               <div className="bg-white rounded-xl border border-[#e8edf2] p-6">
                 <h2 className="text-xl font-bold text-[#0D1B2A] mb-6">Transaction History</h2>
-                <TransactionHistory loading={loading} />
+                <TransactionHistory transactions={transactions} loading={loading} />
               </div>
             )}
           </div>

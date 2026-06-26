@@ -759,7 +759,7 @@ export function AccreditationScanClient() {
                   )}
                   </div>
                 </div>
-              </div>
+                </>
                 ) : (
                 <div>
                   <h2 className="text-xs font-bold uppercase tracking-wide text-white/60 mb-3 flex items-center gap-2">
@@ -831,7 +831,7 @@ export function AccreditationScanClient() {
                     )}
                   </div>
                 </div>
-                </>)}
+                )}
               </div>
 
               <div>

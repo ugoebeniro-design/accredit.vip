@@ -111,7 +111,7 @@ export function AddBankAccountForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {success && (
         <div className="rounded-xl border border-[#dcfce7] bg-[#f0fdf4] p-4">
           <div className="flex gap-3">
@@ -131,9 +131,10 @@ export function AddBankAccountForm({
       )}
 
       {/* Account Holder Name */}
-      <div>
+      <div className="rounded-lg border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5">
+        <p className="text-xs font-bold text-[#0D1B2A] uppercase tracking-widest mb-3">Account Holder</p>
         <label htmlFor="account_holder_name" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
-          Account Holder Name
+          Name
         </label>
         <input
           type="text"
@@ -143,142 +144,156 @@ export function AddBankAccountForm({
           onChange={handleInputChange}
           disabled={loading}
           placeholder={userFullName}
-          className={`w-full h-11 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] ${
+          className={`w-full h-12 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] focus:ring-1 focus:ring-[#E91E8C] disabled:bg-white disabled:opacity-50 ${
             errors.account_holder_name ? "border-[#dc2626]" : "border-[#d9e2ec]"
           }`}
         />
         {errors.account_holder_name && (
-          <p className="text-xs text-[#dc2626] mt-1">{errors.account_holder_name}</p>
+          <p className="text-xs text-[#dc2626] mt-2">{errors.account_holder_name}</p>
         )}
-        <p className="text-xs text-[#64748b] mt-1">Must match your registered name exactly</p>
-      </div>
-
-      {/* Account Number */}
-      <div>
-        <label htmlFor="account_number" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
-          Account Number
-        </label>
-        <input
-          type="text"
-          id="account_number"
-          name="account_number"
-          value={formData.account_number}
-          onChange={handleInputChange}
-          disabled={loading}
-          placeholder="Enter account number"
-          maxLength={20}
-          className={`w-full h-11 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] ${
-            errors.account_number ? "border-[#dc2626]" : "border-[#d9e2ec]"
-          }`}
-        />
-        {errors.account_number && (
-          <p className="text-xs text-[#dc2626] mt-1">{errors.account_number}</p>
+        {!errors.account_holder_name && (
+          <p className="text-xs text-[#64748b] mt-2">Must match your registered name exactly</p>
         )}
       </div>
 
-      {/* Bank Name */}
-      <div>
-        <label htmlFor="bank_name" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
-          Bank Name
-        </label>
-        <input
-          type="text"
-          id="bank_name"
-          name="bank_name"
-          value={formData.bank_name}
-          onChange={handleInputChange}
-          disabled={loading}
-          placeholder="e.g., First Bank of Nigeria"
-          className={`w-full h-11 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] ${
-            errors.bank_name ? "border-[#dc2626]" : "border-[#d9e2ec]"
-          }`}
-        />
-        {errors.bank_name && (
-          <p className="text-xs text-[#dc2626] mt-1">{errors.bank_name}</p>
-        )}
-      </div>
+      {/* Bank Details Group */}
+      <div className="rounded-lg border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5">
+        <p className="text-xs font-bold text-[#0D1B2A] uppercase tracking-widest mb-4">Bank Details</p>
+        <div className="space-y-4">
+          {/* Account Number */}
+          <div>
+            <label htmlFor="account_number" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
+              Account Number
+            </label>
+            <input
+              type="text"
+              id="account_number"
+              name="account_number"
+              value={formData.account_number}
+              onChange={handleInputChange}
+              disabled={loading}
+              placeholder="Enter account number"
+              maxLength={20}
+              className={`w-full h-12 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] focus:ring-1 focus:ring-[#E91E8C] disabled:bg-white disabled:opacity-50 ${
+                errors.account_number ? "border-[#dc2626]" : "border-[#d9e2ec]"
+              }`}
+            />
+            {errors.account_number && (
+              <p className="text-xs text-[#dc2626] mt-1">{errors.account_number}</p>
+            )}
+          </div>
 
-      {/* Bank Code */}
-      <div>
-        <label htmlFor="bank_code" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
-          Bank Code
-        </label>
-        <input
-          type="text"
-          id="bank_code"
-          name="bank_code"
-          value={formData.bank_code}
-          onChange={handleInputChange}
-          disabled={loading}
-          placeholder="e.g., 011"
-          maxLength={10}
-          className={`w-full h-11 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] ${
-            errors.bank_code ? "border-[#dc2626]" : "border-[#d9e2ec]"
-          }`}
-        />
-        {errors.bank_code && (
-          <p className="text-xs text-[#dc2626] mt-1">{errors.bank_code}</p>
-        )}
-      </div>
+          {/* Bank Name */}
+          <div>
+            <label htmlFor="bank_name" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
+              Bank Name
+            </label>
+            <input
+              type="text"
+              id="bank_name"
+              name="bank_name"
+              value={formData.bank_name}
+              onChange={handleInputChange}
+              disabled={loading}
+              placeholder="e.g., First Bank of Nigeria"
+              className={`w-full h-12 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] focus:ring-1 focus:ring-[#E91E8C] disabled:bg-white disabled:opacity-50 ${
+                errors.bank_name ? "border-[#dc2626]" : "border-[#d9e2ec]"
+              }`}
+            />
+            {errors.bank_name && (
+              <p className="text-xs text-[#dc2626] mt-1">{errors.bank_name}</p>
+            )}
+          </div>
 
-      {/* Country Code */}
-      <div>
-        <label htmlFor="country_code" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
-          Country
-        </label>
-        <div className="relative">
-          <select
-            id="country_code"
-            name="country_code"
-            value={formData.country_code}
-            onChange={handleInputChange}
-            disabled={loading}
-            className={`w-full h-11 rounded-xl border px-3 pl-10 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] appearance-none ${
-              errors.country_code ? "border-[#dc2626]" : "border-[#d9e2ec]"
-            }`}
-          >
-            <option value="">Select a country...</option>
-            {SUPPORTED_CURRENCIES.map((currency) => (
-              <option key={currency.code} value={currency.code}>
-                {getCountryFlag(currency.flag)} {currency.country} ({currency.code})
-              </option>
-            ))}
-          </select>
-          {formData.country_code && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
-              {getCountryFlag(formData.country_code)}
-            </span>
-          )}
+          {/* Bank Code */}
+          <div>
+            <label htmlFor="bank_code" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
+              Bank Code
+            </label>
+            <input
+              type="text"
+              id="bank_code"
+              name="bank_code"
+              value={formData.bank_code}
+              onChange={handleInputChange}
+              disabled={loading}
+              placeholder="e.g., 011"
+              maxLength={10}
+              className={`w-full h-12 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] focus:ring-1 focus:ring-[#E91E8C] disabled:bg-white disabled:opacity-50 ${
+                errors.bank_code ? "border-[#dc2626]" : "border-[#d9e2ec]"
+              }`}
+            />
+            {errors.bank_code && (
+              <p className="text-xs text-[#dc2626] mt-1">{errors.bank_code}</p>
+            )}
+          </div>
         </div>
-        {errors.country_code && (
-          <p className="text-xs text-[#dc2626] mt-1">{errors.country_code}</p>
-        )}
       </div>
 
-      {/* Currency */}
-      <div>
-        <label htmlFor="currency" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
-          Currency
-        </label>
-        <select
-          id="currency"
-          name="currency"
-          value={formData.currency}
-          onChange={handleInputChange}
-          disabled={loading}
-          className={`w-full h-11 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] disabled:bg-[#f8fafc] ${
-            errors.currency ? "border-[#dc2626]" : "border-[#d9e2ec]"
-          }`}
-        >
-          {SUPPORTED_CURRENCIES.map((currency) => (
-            <option key={currency.code} value={currency.code}>
-              {currency.code} - {currency.name}
-            </option>
-          ))}
-        </select>
-        {errors.currency && (
-          <p className="text-xs text-[#dc2626] mt-1">{errors.currency}</p>
-        )}
+      {/* Location & Currency Group */}
+      <div className="rounded-lg border border-[#e8edf2] bg-[#f8f9fc] p-4 sm:p-5">
+        <p className="text-xs font-bold text-[#0D1B2A] uppercase tracking-widest mb-4">Location & Currency</p>
+        <div className="space-y-4">
+          {/* Country Code */}
+          <div>
+            <label htmlFor="country_code" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
+              Country
+            </label>
+            <div className="relative">
+              <select
+                id="country_code"
+                name="country_code"
+                value={formData.country_code}
+                onChange={handleInputChange}
+                disabled={loading}
+                className={`w-full h-12 rounded-xl border px-3 pl-11 text-sm outline-none focus:border-[#E91E8C] focus:ring-1 focus:ring-[#E91E8C] disabled:bg-white disabled:opacity-50 appearance-none ${
+                  errors.country_code ? "border-[#dc2626]" : "border-[#d9e2ec]"
+                }`}
+              >
+                <option value="">Select a country...</option>
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <option key={currency.code} value={currency.code}>
+                    {getCountryFlag(currency.flag)} {currency.country} ({currency.code})
+                  </option>
+                ))}
+              </select>
+              {formData.country_code && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
+                  {getCountryFlag(formData.country_code)}
+                </span>
+              )}
+            </div>
+            {errors.country_code && (
+              <p className="text-xs text-[#dc2626] mt-1">{errors.country_code}</p>
+            )}
+          </div>
+
+          {/* Currency */}
+          <div>
+            <label htmlFor="currency" className="block text-sm font-semibold text-[#0D1B2A] mb-2">
+              Currency
+            </label>
+            <select
+              id="currency"
+              name="currency"
+              value={formData.currency}
+              onChange={handleInputChange}
+              disabled={loading}
+              className={`w-full h-12 rounded-xl border px-3 text-sm outline-none focus:border-[#E91E8C] focus:ring-1 focus:ring-[#E91E8C] disabled:bg-white disabled:opacity-50 ${
+                errors.currency ? "border-[#dc2626]" : "border-[#d9e2ec]"
+              }`}
+            >
+              {SUPPORTED_CURRENCIES.map((currency) => (
+                <option key={currency.code} value={currency.code}>
+                  {currency.code} - {currency.name}
+                </option>
+              ))}
+            </select>
+            {errors.currency && (
+              <p className="text-xs text-[#dc2626] mt-1">{errors.currency}</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Submit Button */}
@@ -291,7 +306,7 @@ export function AddBankAccountForm({
       </button>
 
       <p className="text-xs text-[#64748b] text-center">
-        Your account information is encrypted and secured
+        🔒 Your account information is encrypted and secured
       </p>
     </form>
   );

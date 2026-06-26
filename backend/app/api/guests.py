@@ -15,6 +15,7 @@ from app.models.event import Event
 from app.models.guest import Guest
 from app.models.invite import InviteMessage
 
+
 router = APIRouter()
 
 

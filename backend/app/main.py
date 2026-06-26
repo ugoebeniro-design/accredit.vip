@@ -18,7 +18,10 @@ from app.api import auth, events, guests, qr_codes, verification, payments, admi
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    from app.services.guest_sync import start_guest_sync_worker, stop_guest_sync_worker
+    start_guest_sync_worker()
     yield
+    stop_guest_sync_worker()
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)

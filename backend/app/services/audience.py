@@ -109,6 +109,38 @@ async def sync_audience_from_guests(db: AsyncSession):
     await db.commit()
 
 
+async def sync_single_guest(db: AsyncSession, guest: Guest, organizer_id: int | None = None):
+    from app.models.event import Event
+    if organizer_id is None:
+        ev = await db.get(Event, guest.event_id)
+        organizer_id = ev.organizer_id if ev else None
+    existing = await db.execute(
+        select(AudienceProfile).where(
+            AudienceProfile.source == "guest",
+            AudienceProfile.source_id == guest.id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        return
+    email = guest.email
+    profile = AudienceProfile(
+        full_name=guest.name or "",
+        email=email,
+        phone=guest.phone,
+        gender=None,
+        age_bracket=None,
+        location=None,
+        source="guest",
+        source_id=guest.id,
+        event_id=guest.event_id,
+        organizer_id=organizer_id,
+        is_hvp=is_hvp_email(email),
+        company_domain=company_domain(email),
+    )
+    db.add(profile)
+    await db.commit()
+
+
 async def sync_all_audience(db: AsyncSession):
     await sync_audience_from_users(db)
     await sync_audience_from_tickets(db)
